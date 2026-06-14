@@ -3,6 +3,6 @@ builder = "NIXPACKS"
 buildCommand = "npm install && npx prisma generate && npm run build"
 
 [deploy]
-startCommand = "npx prisma db push && npm run start"
+startCommand = "npm run start:prod"
 healthcheckPath = "/health"
 restartPolicyType = "ON_FAILURE"

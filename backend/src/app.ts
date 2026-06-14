@@ -13,6 +13,11 @@ import { billingController } from "./controllers/billing.controller";
 export function createApp() {
   const app = express();
 
+  // Registered first so health checks succeed before any other middleware runs.
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok", service: "insta-autodm-api" });
+  });
+
   app.use(cors(corsOptions));
 
   app.post(
@@ -22,10 +27,6 @@ export function createApp() {
   );
 
   app.use(express.json());
-
-  app.get("/health", (_req, res) => {
-    res.json({ status: "ok", service: "insta-autodm-api" });
-  });
 
   app.use("/api/auth", authRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
