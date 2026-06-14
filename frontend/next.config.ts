@@ -25,14 +25,6 @@ const nextConfig: NextConfig = {
     // Expose backend URL to the client at build time (API_URL works without NEXT_PUBLIC_ prefix).
     NEXT_PUBLIC_API_URL: backendUrl,
   },
-  async rewrites() {
-    return [
-      {
-        source: "/api/:path*",
-        destination: `${backendUrl}/api/:path*`,
-      },
-    ];
-  },
 };
 
 export default nextConfig;

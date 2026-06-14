@@ -3,24 +3,11 @@ export function getApiBaseUrl(): string {
   return url.replace(/\/$/, "");
 }
 
-function shouldUseSameOriginProxy(): boolean {
-  if (process.env.NODE_ENV === "production") {
-    return true;
-  }
-
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const host = window.location.hostname;
-  return host !== "localhost" && host !== "127.0.0.1";
-}
-
 function getRequestUrl(path: string): string {
-  if (shouldUseSameOriginProxy()) {
+  // Browser: same-origin /api/* handled by src/app/api/[...path]/route.ts (runtime proxy).
+  if (typeof window !== "undefined") {
     return path;
   }
-
   return `${getApiBaseUrl()}${path}`;
 }
 
@@ -69,7 +56,10 @@ async function request<T>(
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    const message = body.error ?? `Request failed (${response.status})`;
+    const message =
+      body.error ??
+      body.message ??
+      `Request failed (${response.status}) at ${url}`;
     console.error(`[API] ${method} ${url} failed:`, response.status, message);
     throw new ApiError(response.status, message);
   }
