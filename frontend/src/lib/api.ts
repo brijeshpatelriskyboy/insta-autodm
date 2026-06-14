@@ -1,7 +1,27 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-
 export function getApiBaseUrl(): string {
-  return API_URL;
+  const url = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  return url.replace(/\/$/, "");
+}
+
+function shouldUseSameOriginProxy(): boolean {
+  if (process.env.NODE_ENV === "production") {
+    return true;
+  }
+
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
+}
+
+function getRequestUrl(path: string): string {
+  if (shouldUseSameOriginProxy()) {
+    return path;
+  }
+
+  return `${getApiBaseUrl()}${path}`;
 }
 
 export class ApiError extends Error {
@@ -20,7 +40,7 @@ async function request<T>(
   token?: string | null,
 ): Promise<T> {
   const method = options.method ?? "GET";
-  const url = `${API_URL}${path}`;
+  const url = getRequestUrl(path);
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -43,7 +63,7 @@ async function request<T>(
     console.error(`[API] Network error for ${method} ${url}:`, error);
     throw new ApiError(
       0,
-      "Cannot reach the API server. Make sure the backend is running on http://localhost:4000",
+      `Cannot reach the API server (${url}). Set NEXT_PUBLIC_API_URL or API_URL to your Railway backend URL and redeploy.`,
     );
   }
 
