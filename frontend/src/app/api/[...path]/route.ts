@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+function normalizeBackendUrl(raw: string): string {
+  let url = raw.trim().replace(/\/$/, "");
+  if (!url) {
+    return "http://localhost:4000";
+  }
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  return url;
+}
+
 function getBackendUrl(): string {
-  return (
+  // Prefer API_URL on the server (runtime on Vercel). Fall back to NEXT_PUBLIC_API_URL.
+  const raw =
     process.env.API_URL ??
     process.env.NEXT_PUBLIC_API_URL ??
-    "http://localhost:4000"
-  ).replace(/\/$/, "");
+    "http://localhost:4000";
+  return normalizeBackendUrl(raw);
 }
 
 const HOP_BY_HOP = new Set([
   "connection",
+  "content-encoding",
   "content-length",
   "host",
   "keep-alive",
@@ -19,10 +35,11 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
+const FORWARD_REQUEST_HEADERS = ["authorization", "content-type", "accept"];
+
 function resolveUpstreamPath(pathSegments: string[]): string {
   const path = pathSegments.join("/");
 
-  // Backend health check lives at /health, not /api/health.
   if (path === "health") {
     return "/health";
   }
@@ -32,12 +49,23 @@ function resolveUpstreamPath(pathSegments: string[]): string {
 
 function wouldProxyLoop(req: NextRequest, backendUrl: string): boolean {
   try {
-    const requestHost = req.nextUrl.hostname.toLowerCase();
-    const backendHost = new URL(backendUrl).hostname.toLowerCase();
-    return requestHost === backendHost;
+    const backend = new URL(backendUrl);
+    // Compare host:port so localhost:3000 and localhost:4000 are not treated as a loop.
+    return backend.host === req.nextUrl.host;
   } catch {
     return false;
   }
+}
+
+function buildProxyRequestHeaders(req: NextRequest): Headers {
+  const headers = new Headers();
+  for (const name of FORWARD_REQUEST_HEADERS) {
+    const value = req.headers.get(name);
+    if (value) {
+      headers.set(name, value);
+    }
+  }
+  return headers;
 }
 
 async function proxyRequest(
@@ -48,7 +76,7 @@ async function proxyRequest(
 
   if (wouldProxyLoop(req, backendUrl)) {
     console.error(
-      `[API proxy] Refusing loop: API_URL host matches request host (${req.nextUrl.hostname})`,
+      `[API proxy] Refusing loop: backend host ${backendUrl} matches request host ${req.nextUrl.host}`,
     );
     return NextResponse.json(
       { error: "API_URL must point to the Railway backend, not the Vercel frontend." },
@@ -59,13 +87,6 @@ async function proxyRequest(
   const upstreamPath = resolveUpstreamPath(pathSegments);
   const target = `${backendUrl}${upstreamPath}${req.nextUrl.search}`;
 
-  const headers = new Headers();
-  req.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) {
-      headers.set(key, value);
-    }
-  });
-
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
 
@@ -73,7 +94,7 @@ async function proxyRequest(
   try {
     upstream = await fetch(target, {
       method: req.method,
-      headers,
+      headers: buildProxyRequestHeaders(req),
       body: hasBody ? body : undefined,
       cache: "no-store",
     });
@@ -91,6 +112,9 @@ async function proxyRequest(
     );
   }
 
+  const responseBody = await upstream.arrayBuffer();
+  const contentType = upstream.headers.get("content-type") ?? "application/json";
+
   if (!upstream.ok) {
     console.error(
       `[API proxy] ${req.method} ${upstreamPath} -> ${target} returned ${upstream.status}`,
@@ -101,25 +125,28 @@ async function proxyRequest(
     );
   }
 
-  const responseHeaders = new Headers();
-  upstream.headers.forEach((value, key) => {
-    if (!HOP_BY_HOP.has(key.toLowerCase())) {
-      responseHeaders.set(key, value);
-    }
-  });
-
-  return new NextResponse(upstream.body, {
+  return new NextResponse(responseBody, {
     status: upstream.status,
-    statusText: upstream.statusText,
-    headers: responseHeaders,
+    headers: { "content-type": contentType },
   });
 }
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
-async function handle(req: NextRequest, ctx: RouteContext) {
-  const { path } = await ctx.params;
-  return proxyRequest(req, path);
+async function handle(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
+  try {
+    const { path } = await ctx.params;
+
+    if (!Array.isArray(path) || path.length === 0) {
+      return NextResponse.json({ error: "Missing API path" }, { status: 400 });
+    }
+
+    return await proxyRequest(req, path);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown proxy error";
+    console.error("[API proxy] Unhandled error:", message);
+    return NextResponse.json({ error: "API proxy internal error" }, { status: 500 });
+  }
 }
 
 export const GET = handle;
