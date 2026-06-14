@@ -1,0 +1,40 @@
+# Render blueprint — deploy backend + PostgreSQL
+# Docs: https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: insta-autodm-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: insta-autodm-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_STARTER
+        sync: false
+      - key: STRIPE_PRICE_CREATOR
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+
+databases:
+  - name: insta-autodm-db
+    plan: free
+    databaseName: insta_autodm
+    user: insta_autodm

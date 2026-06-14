@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                         String                      @id @default(cuid())
+  email                      String                      @unique
+  name                       String?
+  passwordHash               String
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  keywordRules               KeywordRule[]
+  dmEvents                   DmEvent[]
+  leads                      Lead[]
+  instagramConnectionRequest InstagramConnectionRequest?
+  subscription               Subscription?
+  billingEvents              BillingEvent[]
+
+  @@map("users")
+}
+
+model KeywordRule {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword   String
+  dmMessage String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  dmEvents  DmEvent[]
+
+  @@unique([userId, keyword])
+  @@map("keyword_rules")
+}
+
+model DmEvent {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId    String?
+  rule      KeywordRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  createdAt DateTime     @default(now())
+
+  @@map("dm_events")
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("leads")
+}
+
+model InstagramConnectionRequest {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instagramUsername String
+  status            String   @default("waitlist")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("instagram_connection_requests")
+}
+
+model Subscription {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  plan                 String    @default("starter")
+  status               String    @default("inactive")
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+model BillingEvent {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeInvoiceId String?  @unique
+  amount          Int
+  currency        String   @default("usd")
+  status          String
+  description     String?
+  invoiceUrl      String?
+  createdAt       DateTime @default(now())
+
+  @@map("billing_events")
+}

@@ -1,0 +1,51 @@
+---
+description: Insta AutoDM project context, run commands, and known fixes
+alwaysApply: true
+---
+
+# Insta AutoDM — Locked Project
+
+Monorepo at `C:\Users\brije\Desktop\insta dm`. MVP SaaS: auto-send Instagram DMs on keyword comments.
+
+## Stack
+
+- Frontend: Next.js 15, TypeScript, Tailwind (`frontend/`)
+- Backend: Express 5, Prisma, PostgreSQL (`backend/`)
+- Local dev uses **portable Node + portable PostgreSQL** (no Docker/admin on this machine)
+
+## Start / restart
+
+```powershell
+# Full stack
+powershell -ExecutionPolicy Bypass -File ".\scripts\dev.ps1"
+
+# Fix blank/500 login page (corrupted .next or hung port 3000)
+powershell -ExecutionPolicy Bypass -File ".\scripts\restart-frontend.ps1"
+```
+
+Node PATH prefix: `$env:LOCALAPPDATA\node-portable\node-v22.16.0-win-x64`
+
+## URLs & demo login
+
+- Frontend: http://localhost:3000
+- Login: http://localhost:3000/login
+- Backend: http://localhost:4000
+- Demo: `demo@instaautodm.com` / `demo1234` (one-click button on login page)
+
+## Architecture notes
+
+- Dashboard metrics use mock data in `frontend/src/lib/demo-data.ts` (presentation only)
+- Keyword rules CRUD hits real backend API
+- CORS allows both `localhost:3000` and `127.0.0.1:3000`
+- Do not change backend unless explicitly requested
+
+## Common failures
+
+| Symptom | Fix |
+|---------|-----|
+| Login page 500 / timeout | `restart-frontend.ps1` |
+| "Failed to fetch" on login | Backend down or CORS origin mismatch |
+| Edit/delete rules silent fail | Backend down; check http://localhost:4000/health |
+
+See `QUICKSTART.md` for full Windows instructions.
+See `DEPLOYMENT.md` for Vercel + Railway/Render production deploy.
