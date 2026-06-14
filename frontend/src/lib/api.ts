@@ -4,10 +4,6 @@ export function getApiBaseUrl(): string {
 }
 
 function getRequestUrl(path: string): string {
-  // Browser: same-origin /api/* handled by src/app/api/[...path]/route.ts (runtime proxy).
-  if (typeof window !== "undefined") {
-    return path;
-  }
   return `${getApiBaseUrl()}${path}`;
 }
 
@@ -50,7 +46,7 @@ async function request<T>(
     console.error(`[API] Network error for ${method} ${url}:`, error);
     throw new ApiError(
       0,
-      `Cannot reach the API server (${url}). Set NEXT_PUBLIC_API_URL or API_URL to your Railway backend URL and redeploy.`,
+      `Cannot reach the API server (${url}). Set NEXT_PUBLIC_API_URL to your Railway backend URL and redeploy.`,
     );
   }
 
@@ -136,6 +132,8 @@ export interface BillingHistoryItem {
 }
 
 export const api = {
+  health: () => request<{ status: string; service?: string }>("/health"),
+
   register: (email: string, password: string, name?: string) =>
     request<AuthResponse>("/api/auth/register", {
       method: "POST",
