@@ -19,12 +19,45 @@ const HOP_BY_HOP = new Set([
   "upgrade",
 ]);
 
+function resolveUpstreamPath(pathSegments: string[]): string {
+  const path = pathSegments.join("/");
+
+  // Backend health check lives at /health, not /api/health.
+  if (path === "health") {
+    return "/health";
+  }
+
+  return `/api/${path}`;
+}
+
+function wouldProxyLoop(req: NextRequest, backendUrl: string): boolean {
+  try {
+    const requestHost = req.nextUrl.hostname.toLowerCase();
+    const backendHost = new URL(backendUrl).hostname.toLowerCase();
+    return requestHost === backendHost;
+  } catch {
+    return false;
+  }
+}
+
 async function proxyRequest(
   req: NextRequest,
   pathSegments: string[],
 ): Promise<NextResponse> {
-  const path = pathSegments.join("/");
-  const target = `${getBackendUrl()}/api/${path}${req.nextUrl.search}`;
+  const backendUrl = getBackendUrl();
+
+  if (wouldProxyLoop(req, backendUrl)) {
+    console.error(
+      `[API proxy] Refusing loop: API_URL host matches request host (${req.nextUrl.hostname})`,
+    );
+    return NextResponse.json(
+      { error: "API_URL must point to the Railway backend, not the Vercel frontend." },
+      { status: 500 },
+    );
+  }
+
+  const upstreamPath = resolveUpstreamPath(pathSegments);
+  const target = `${backendUrl}${upstreamPath}${req.nextUrl.search}`;
 
   const headers = new Headers();
   req.headers.forEach((value, key) => {
@@ -42,14 +75,29 @@ async function proxyRequest(
       method: req.method,
       headers,
       body: hasBody ? body : undefined,
+      cache: "no-store",
     });
   } catch (error) {
-    console.error(`[API proxy] ${req.method} ${target} failed:`, error);
+    const message = error instanceof Error ? error.message : "Unknown network error";
+    console.error(
+      `[API proxy] ${req.method} ${upstreamPath} -> ${target} failed:`,
+      message,
+    );
     return NextResponse.json(
       {
-        error: `Cannot reach backend (${getBackendUrl()}). Check API_URL on Vercel.`,
+        error: `Cannot reach backend (${backendUrl}). Check API_URL on Vercel.`,
       },
       { status: 502 },
+    );
+  }
+
+  if (!upstream.ok) {
+    console.error(
+      `[API proxy] ${req.method} ${upstreamPath} -> ${target} returned ${upstream.status}`,
+    );
+  } else {
+    console.log(
+      `[API proxy] ${req.method} ${upstreamPath} -> ${target} ${upstream.status}`,
     );
   }
 
