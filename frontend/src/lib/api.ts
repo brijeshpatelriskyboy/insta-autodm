@@ -135,6 +135,34 @@ export interface InstagramConnectResponse {
   message: string;
 }
 
+export interface InstagramSetupChecklist {
+  professionalAccount: boolean;
+  facebookPageLinked: boolean;
+  metaDeveloperApp: boolean;
+  webhookConfigured: boolean;
+}
+
+export interface InstagramIntegrationStatus {
+  connected: boolean;
+  connectionStatus: string;
+  username: string | null;
+  instagramUserId: string | null;
+  accountType: string | null;
+  profilePictureUrl: string | null;
+  pageId: string | null;
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+  setupChecklist: InstagramSetupChecklist;
+}
+
+export interface ActivityEventRecord {
+  id: string;
+  type: string;
+  title: string;
+  description: string;
+  timestamp: string;
+}
+
 export interface SubscriptionInfo {
   plan: string | null;
   planName: string | null;
@@ -208,6 +236,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ instagramUsername }),
     }, token),
+
+  getInstagramIntegrationStatus: (token: string) =>
+    request<InstagramIntegrationStatus>(
+      "/api/integrations/instagram/status",
+      {},
+      token,
+    ),
+
+  connectInstagramMock: (token: string) =>
+    request<InstagramIntegrationStatus>(
+      "/api/integrations/instagram/connect/mock",
+      { method: "POST" },
+      token,
+    ),
+
+  disconnectInstagram: (token: string) =>
+    request<{ disconnected: boolean }>(
+      "/api/integrations/instagram/disconnect",
+      { method: "DELETE" },
+      token,
+    ),
+
+  getActivityEvents: (token: string) =>
+    request<ActivityEventRecord[]>("/api/activity/events", {}, token),
 
   getSubscription: (token: string) =>
     request<SubscriptionInfo>("/api/billing/subscription", {}, token),

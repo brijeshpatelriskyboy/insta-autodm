@@ -7,6 +7,8 @@ import keywordRuleRoutes from "./routes/keywordRule.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import webhookRoutes from "./routes/webhook.routes";
 import instagramRoutes from "./routes/instagram.routes";
+import integrationsRoutes from "./routes/integrations.routes";
+import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import { billingController } from "./controllers/billing.controller";
 
@@ -33,6 +35,8 @@ export function createApp() {
   app.use("/api/analytics", analyticsRoutes);
   app.use("/api/webhooks", webhookRoutes);
   app.use("/api/instagram", instagramRoutes);
+  app.use("/api/integrations", integrationsRoutes);
+  app.use("/api/activity", activityRoutes);
   app.use("/api/billing", billingRoutes);
 
   app.use(errorHandler);

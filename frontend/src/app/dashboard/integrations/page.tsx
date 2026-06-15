@@ -1,97 +1,151 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useState } from "react";
 import {
   Camera,
   Webhook,
   Server,
-  ExternalLink,
   RefreshCw,
   Shield,
+  CheckCircle2,
+  Circle,
+  Loader2,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill } from "@/components/ui/StatusPill";
-import { api, getApiBaseUrl } from "@/lib/api";
+import { useToast } from "@/components/providers/ToastProvider";
+import { api, ApiError, getApiBaseUrl, type InstagramIntegrationStatus } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
+const SETUP_ITEMS = [
+  { key: "professionalAccount" as const, label: "Instagram Professional account" },
+  { key: "facebookPageLinked" as const, label: "Facebook Page linked" },
+  { key: "metaDeveloperApp" as const, label: "Meta Developer app" },
+  { key: "webhookConfigured" as const, label: "Webhook configured" },
+];
+
 export default function IntegrationsPage() {
-  const [instagramStatus, setInstagramStatus] = useState<{
-    joinedWaitlist: boolean;
-    instagramUsername: string | null;
-    status: string;
-  } | null>(null);
+  const toast = useToast();
+  const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const loadStatus = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const data = await api.getInstagramIntegrationStatus(token);
+      setStatus(data);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to load Instagram status",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
+    loadStatus();
+  }, [loadStatus]);
+
+  async function handleConnect() {
     const token = getToken();
     if (!token) return;
-    api.getInstagramStatus(token).then(setInstagramStatus).catch(() => {});
-  }, []);
 
-  const instagramConnected = instagramStatus?.joinedWaitlist ?? false;
+    setActionLoading(true);
+    try {
+      const data = await api.connectInstagramMock(token);
+      setStatus(data);
+      toast.success("Instagram connected (mock)");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to connect Instagram",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleDisconnect() {
+    const token = getToken();
+    if (!token) return;
+
+    setActionLoading(true);
+    try {
+      await api.disconnectInstagram(token);
+      await loadStatus();
+      toast.success("Instagram disconnected");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to disconnect Instagram",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  const connected = status?.connected ?? false;
 
   const integrations = [
     {
       id: "instagram",
       name: "Instagram Business",
       description:
-        "Connect your Instagram Business account to enable live comment monitoring and DM delivery.",
-      status: instagramConnected ? ("active" as const) : ("disconnected" as const),
+        "Connect your Instagram Business or Creator account to enable comment monitoring and DM automation.",
+      status: connected ? ("active" as const) : ("disconnected" as const),
       icon: Camera,
       iconGradient: "from-purple-500 via-pink-500 to-orange-400",
       details: [
         {
           label: "Account",
-          value: instagramConnected
-            ? `@${instagramStatus?.instagramUsername}`
-            : "Not connected",
+          value: connected && status?.username ? `@${status.username}` : "Not connected",
         },
         {
-          label: "Status",
-          value: instagramConnected ? "Waitlist joined" : "Available to connect",
+          label: "Account type",
+          value: status?.accountType ?? "—",
         },
-        { label: "Last sync", value: instagramConnected ? "Pending launch" : "—" },
+        {
+          label: "Last sync",
+          value: status?.lastSyncAt
+            ? new Date(status.lastSyncAt).toLocaleString()
+            : "—",
+        },
       ],
-      action: instagramConnected ? "Manage connection" : "Connect Instagram",
-      href: instagramConnected
-        ? "/connect-instagram/success"
-        : "/connect-instagram",
     },
     {
       id: "meta",
       name: "Meta Graph API",
       description:
         "Required for Instagram messaging, comment webhooks, and account verification.",
-      status: "pending" as const,
+      status: connected ? ("pending" as const) : ("disconnected" as const),
       icon: Server,
       iconGradient: "from-blue-500 to-blue-600",
       details: [
         { label: "API version", value: "v21.0 (planned)" },
-        { label: "App status", value: "Development mode" },
-        { label: "Token", value: "Not issued" },
+        { label: "IG User ID", value: status?.instagramUserId ?? "—" },
+        { label: "Page ID", value: status?.pageId ?? "—" },
       ],
-      action: "Configure App",
-      href: null,
-      disabled: true,
     },
     {
       id: "webhook",
       name: "Instagram Webhooks",
       description:
         "Receives real-time comment events from Meta when followers interact with your posts.",
-      status: "active" as const,
+      status: status?.setupChecklist.webhookConfigured ? ("active" as const) : ("pending" as const),
       icon: Webhook,
       iconGradient: "from-brand-500 to-brand-600",
       details: [
         { label: "Endpoint", value: `${getApiBaseUrl()}/api/webhooks/instagram` },
         { label: "Verify token", value: "Configured" },
-        { label: "Events", value: "Placeholder listener" },
+        { label: "Events", value: connected ? "Awaiting Meta subscription" : "Not subscribed" },
       ],
-      action: "Test Webhook",
-      href: null,
-      disabled: false,
     },
   ];
 
@@ -102,61 +156,108 @@ export default function IntegrationsPage() {
         description="Connect Instagram and Meta services to power your DM automations."
       />
 
+      <Card title="Instagram Connection" padding="lg">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-sm">
+              <Camera className="h-6 w-6" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-3">
+                <h3 className="text-lg font-semibold text-slate-900">Instagram</h3>
+                <StatusPill status={connected ? "active" : "disconnected"} />
+              </div>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
+                {connected && status?.username
+                  ? `Connected as @${status.username} (mock Meta data — Phase 2a).`
+                  : "Connect your Instagram Professional account to prepare for real Meta OAuth."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 gap-3 self-start">
+            {connected ? (
+              <Button
+                variant="secondary"
+                onClick={handleDisconnect}
+                disabled={actionLoading || loading}
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleConnect}
+                disabled={actionLoading || loading}
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                Connect Instagram
+              </Button>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Setup checklist
+          </p>
+          <ul className="mt-3 space-y-2">
+            {SETUP_ITEMS.map((item) => {
+              const done = status?.setupChecklist[item.key] ?? false;
+              return (
+                <li key={item.key} className="flex items-center gap-2 text-sm text-slate-700">
+                  {done ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-slate-300" />
+                  )}
+                  {item.label}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </Card>
+
       <div className="grid gap-6">
         {integrations.map((integration) => {
           const Icon = integration.icon;
           return (
             <Card key={integration.id} padding="lg">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-                <div className="flex gap-4">
-                  <div
-                    className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${integration.iconGradient} text-white shadow-sm`}
-                  >
-                    <Icon className="h-6 w-6" />
+              <div className="flex gap-4">
+                <div
+                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${integration.iconGradient} text-white shadow-sm`}
+                >
+                  <Icon className="h-6 w-6" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {integration.name}
+                    </h3>
+                    <StatusPill status={integration.status} />
                   </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-lg font-semibold text-slate-900">
-                        {integration.name}
-                      </h3>
-                      <StatusPill status={integration.status} />
-                    </div>
-                    <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-                      {integration.description}
-                    </p>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
+                    {integration.description}
+                  </p>
+                  <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-3">
+                    {integration.details.map((detail) => (
+                      <div key={detail.label}>
+                        <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
+                          {detail.label}
+                        </p>
+                        <p className="mt-1 truncate text-sm font-medium text-slate-700">
+                          {detail.value}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-
-                {integration.href ? (
-                  <Link href={integration.href} className="shrink-0 self-start">
-                    <Button variant="primary">
-                      {integration.action}
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </Link>
-                ) : (
-                  <Button
-                    variant={integration.disabled ? "secondary" : "primary"}
-                    disabled={integration.disabled}
-                    className="shrink-0 self-start"
-                  >
-                    {integration.action}
-                    {!integration.disabled && <ExternalLink className="h-4 w-4" />}
-                  </Button>
-                )}
-              </div>
-
-              <div className="mt-6 grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-3">
-                {integration.details.map((detail) => (
-                  <div key={detail.label}>
-                    <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                      {detail.label}
-                    </p>
-                    <p className="mt-1 truncate text-sm font-medium text-slate-700">
-                      {detail.value}
-                    </p>
-                  </div>
-                ))}
               </div>
             </Card>
           );
@@ -172,10 +273,18 @@ export default function IntegrationsPage() {
             {
               icon: Shield,
               label: "OAuth",
-              status: instagramConnected ? "Waitlist joined" : "Ready to connect",
+              status: connected ? "Mock connected" : "Ready to connect",
             },
-            { icon: RefreshCw, label: "Webhook listener", status: "Endpoint ready" },
-            { icon: Server, label: "API connectivity", status: "Backend online" },
+            {
+              icon: RefreshCw,
+              label: "Webhook listener",
+              status: "Endpoint ready",
+            },
+            {
+              icon: Server,
+              label: "API connectivity",
+              status: "Backend online",
+            },
           ].map((item) => {
             const Icon = item.icon;
             return (

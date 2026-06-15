@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Send,
   MessageSquare,
@@ -9,11 +9,15 @@ import {
   Pencil,
   Calendar,
   Filter,
+  Camera,
+  Unlink,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { api } from "@/lib/api";
+import { getToken } from "@/lib/auth";
 import {
   mockActivityEvents,
   filterEventsByDate,
@@ -29,6 +33,8 @@ const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }
   lead_captured: UserPlus,
   rule_created: PlusCircle,
   rule_updated: Pencil,
+  account_connected: Camera,
+  account_disconnected: Unlink,
 };
 
 const typeColors: Record<ActivityType, string> = {
@@ -37,6 +43,8 @@ const typeColors: Record<ActivityType, string> = {
   lead_captured: "bg-emerald-50 text-emerald-600",
   rule_created: "bg-blue-50 text-blue-600",
   rule_updated: "bg-amber-50 text-amber-600",
+  account_connected: "bg-purple-50 text-purple-600",
+  account_disconnected: "bg-slate-100 text-slate-600",
 };
 
 function ActivityItem({ event }: { event: ActivityEvent }) {
@@ -76,10 +84,38 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
 
 export default function ActivityPage() {
   const [dateFilter, setDateFilter] = useState("");
+  const [apiEvents, setApiEvents] = useState<ActivityEvent[]>([]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    api
+      .getActivityEvents(token)
+      .then((events) => {
+        setApiEvents(
+          events.map((event) => ({
+            id: event.id,
+            type: event.type as ActivityType,
+            title: event.title,
+            description: event.description,
+            timestamp: event.timestamp,
+          })),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  const allEvents = useMemo(() => {
+    const merged = [...apiEvents, ...mockActivityEvents];
+    return merged.sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, [apiEvents]);
 
   const filteredEvents = useMemo(
-    () => filterEventsByDate(mockActivityEvents, dateFilter),
-    [dateFilter],
+    () => filterEventsByDate(allEvents, dateFilter),
+    [allEvents, dateFilter],
   );
 
   return (
@@ -139,7 +175,7 @@ export default function ActivityPage() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Activity data is illustrative until live Meta webhook integration is enabled.
+        Live account events appear above demo activity. Meta webhook events arrive in a later phase.
       </p>
     </div>
   );

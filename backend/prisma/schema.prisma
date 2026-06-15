@@ -18,6 +18,8 @@ model User {
   dmEvents                   DmEvent[]
   leads                      Lead[]
   instagramConnectionRequest InstagramConnectionRequest?
+  instagramAccount           InstagramAccount?
+  activityEvents             ActivityEvent[]
   subscription               Subscription?
   billingEvents              BillingEvent[]
 
@@ -69,6 +71,39 @@ model InstagramConnectionRequest {
   updatedAt         DateTime @updatedAt
 
   @@map("instagram_connection_requests")
+}
+
+model InstagramAccount {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instagramUserId      String    @unique
+  username             String
+  accountType          String
+  profilePictureUrl    String?
+  accessTokenEncrypted String    @default("mock_encrypted_token_placeholder")
+  pageId               String?
+  connectionStatus     String    @default("disconnected")
+  connectedAt          DateTime?
+  lastSyncAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("instagram_accounts")
+}
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String
+  title       String
+  description String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("activity_events")
 }
 
 model Subscription {

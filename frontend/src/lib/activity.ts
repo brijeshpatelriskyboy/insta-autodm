@@ -1,4 +1,11 @@
-export type ActivityType = "dm_sent" | "keyword_matched" | "lead_captured" | "rule_created" | "rule_updated";
+export type ActivityType =
+  | "dm_sent"
+  | "keyword_matched"
+  | "lead_captured"
+  | "rule_created"
+  | "rule_updated"
+  | "account_connected"
+  | "account_disconnected";
 
 export interface ActivityEvent {
   id: string;
@@ -15,6 +22,8 @@ const typeLabels: Record<ActivityType, string> = {
   lead_captured: "Lead Captured",
   rule_created: "Rule Created",
   rule_updated: "Rule Updated",
+  account_connected: "Account Connected",
+  account_disconnected: "Account Disconnected",
 };
 
 export function getActivityTypeLabel(type: ActivityType): string {
