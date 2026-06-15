@@ -96,13 +96,16 @@ export default function RulesPage() {
     try {
       await api.deleteKeywordRule(token, ruleToDelete.id);
 
-      if (editingRule?.id === ruleToDelete.id) {
+      const deletedId = ruleToDelete.id;
+
+      setRules((prev) => prev.filter((rule) => rule.id !== deletedId));
+
+      if (editingRule?.id === deletedId) {
         setEditingRule(null);
       }
 
-      toast.success(`Deleted rule "${ruleToDelete.keyword}"`);
+      toast.success("Rule deleted");
       setRuleToDelete(null);
-      await loadRules();
     } catch (error) {
       toast.error(
         error instanceof ApiError ? error.message : "Failed to delete rule",

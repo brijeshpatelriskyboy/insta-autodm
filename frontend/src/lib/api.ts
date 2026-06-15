@@ -78,12 +78,18 @@ async function request<T>(
     throw new ApiError(response.status, message);
   }
 
-  if (response.status === 204) {
+  if (response.status === 204 || response.status === 205) {
     console.log(`[API] ${method} ${url} succeeded (no content)`);
     return undefined as T;
   }
 
-  const data = await response.json();
+  const text = await response.text();
+  if (!text.trim()) {
+    console.log(`[API] ${method} ${url} succeeded (empty body)`);
+    return undefined as T;
+  }
+
+  const data = JSON.parse(text) as T;
   console.log(`[API] ${method} ${url} succeeded`);
   return data;
 }

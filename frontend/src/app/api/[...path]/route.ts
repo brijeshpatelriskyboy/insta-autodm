@@ -91,9 +91,6 @@ async function proxyRequest(
     );
   }
 
-  const responseBody = await upstream.arrayBuffer();
-  const contentType = upstream.headers.get("content-type") ?? "application/json";
-
   if (!upstream.ok) {
     console.error(
       `[API proxy] ${req.method} ${upstreamPath} -> ${target} returned ${upstream.status}`,
@@ -103,6 +100,19 @@ async function proxyRequest(
       `[API proxy] ${req.method} ${upstreamPath} -> ${target} ${upstream.status}`,
     );
   }
+
+  // 204/205 must not include a body — returning one can throw in Next.js on Vercel.
+  if (upstream.status === 204 || upstream.status === 205) {
+    return new NextResponse(null, { status: upstream.status });
+  }
+
+  const responseBody = await upstream.arrayBuffer();
+
+  if (responseBody.byteLength === 0) {
+    return new NextResponse(null, { status: upstream.status });
+  }
+
+  const contentType = upstream.headers.get("content-type") ?? "application/json";
 
   return new NextResponse(responseBody, {
     status: upstream.status,
