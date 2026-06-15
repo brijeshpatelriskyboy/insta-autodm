@@ -163,6 +163,25 @@ export interface ActivityEventRecord {
   timestamp: string;
 }
 
+export interface MetaOAuthConfig {
+  configured: boolean;
+  appId: string | null;
+  redirectUri: string;
+  graphApiVersion: string;
+  webhookUrl: string | null;
+  oauthEnabled: boolean;
+  scopes?: string[];
+}
+
+export interface MetaOAuthUrlPreview {
+  url: string | null;
+  previewUrl: string | null;
+  oauthEnabled: boolean;
+  configured: boolean;
+  redirectUri: string;
+  message: string;
+}
+
 export interface SubscriptionInfo {
   plan: string | null;
   planName: string | null;
@@ -257,6 +276,12 @@ export const api = {
       { method: "DELETE" },
       token,
     ),
+
+  getMetaOAuthConfig: () =>
+    request<MetaOAuthConfig>("/api/integrations/instagram/meta-config"),
+
+  getInstagramOAuthUrl: (token: string) =>
+    request<MetaOAuthUrlPreview>("/api/integrations/instagram/oauth-url", {}, token),
 
   getActivityEvents: (token: string) =>
     request<ActivityEventRecord[]>("/api/activity/events", {}, token),

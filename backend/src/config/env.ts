@@ -15,6 +15,10 @@ const envSchema = z.object({
   STRIPE_PRICE_STARTER: z.string().optional(),
   STRIPE_PRICE_CREATOR: z.string().optional(),
   STRIPE_PRICE_PRO: z.string().optional(),
+  META_APP_ID: z.string().optional(),
+  META_APP_SECRET: z.string().optional(),
+  META_REDIRECT_URI: z.string().optional(),
+  META_VERIFY_TOKEN: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

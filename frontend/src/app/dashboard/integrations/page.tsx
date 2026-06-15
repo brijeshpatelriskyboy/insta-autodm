@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Camera,
   Webhook,
@@ -10,13 +11,19 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
+  BookOpen,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useToast } from "@/components/providers/ToastProvider";
-import { api, ApiError, getApiBaseUrl, type InstagramIntegrationStatus } from "@/lib/api";
+import {
+  api,
+  ApiError,
+  getApiBaseUrl,
+  type InstagramIntegrationStatus,
+} from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
 const SETUP_ITEMS = [
@@ -54,24 +61,6 @@ export default function IntegrationsPage() {
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
-
-  async function handleConnect() {
-    const token = getToken();
-    if (!token) return;
-
-    setActionLoading(true);
-    try {
-      const data = await api.connectInstagramMock(token);
-      setStatus(data);
-      toast.success("Instagram connected (mock)");
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Failed to connect Instagram",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
 
   async function handleDisconnect() {
     const token = getToken();
@@ -169,14 +158,20 @@ export default function IntegrationsPage() {
               </div>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
                 {connected && status?.username
-                  ? `Connected as @${status.username} (mock Meta data — Phase 2a).`
-                  : "Connect your Instagram Professional account to prepare for real Meta OAuth."}
+                  ? `Previously connected as @${status.username}. Real Meta OAuth is coming soon.`
+                  : "Complete the Meta setup guide, then connect your Instagram Professional account when OAuth launches."}
               </p>
             </div>
           </div>
 
-          <div className="flex shrink-0 gap-3 self-start">
-            {connected ? (
+          <div className="flex shrink-0 flex-wrap gap-3 self-start">
+            <Link href="/dashboard/integrations/instagram-setup">
+              <Button variant="primary">
+                <BookOpen className="h-4 w-4" />
+                Connect Instagram (Coming Soon)
+              </Button>
+            </Link>
+            {connected && (
               <Button
                 variant="secondary"
                 onClick={handleDisconnect}
@@ -186,17 +181,6 @@ export default function IntegrationsPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
                 Disconnect
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={handleConnect}
-                disabled={actionLoading || loading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
-                Connect Instagram
               </Button>
             )}
           </div>
@@ -221,6 +205,12 @@ export default function IntegrationsPage() {
               );
             })}
           </ul>
+          <Link
+            href="/dashboard/integrations/instagram-setup"
+            className="mt-4 inline-flex text-sm font-medium text-brand-600 hover:text-brand-700"
+          >
+            Open Instagram Setup guide →
+          </Link>
         </div>
       </Card>
 
@@ -273,7 +263,7 @@ export default function IntegrationsPage() {
             {
               icon: Shield,
               label: "OAuth",
-              status: connected ? "Mock connected" : "Ready to connect",
+              status: "Setup guide ready — OAuth coming soon",
             },
             {
               icon: RefreshCw,
