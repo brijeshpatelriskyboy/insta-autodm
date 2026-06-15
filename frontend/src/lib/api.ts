@@ -1,10 +1,27 @@
+import {
+  isPlaceholderBackendUrl,
+  normalizeBackendUrl,
+  resolveBackendUrl,
+} from "./backend-url";
+
 export function getApiBaseUrl(): string {
-  const url = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-  return url.replace(/\/$/, "");
+  return resolveBackendUrl();
 }
 
 function getRequestUrl(path: string): string {
-  return `${getApiBaseUrl()}${path}`;
+  // Browser: same-origin requests proxied by src/app/api/[...path]/route.ts.
+  if (typeof window !== "undefined") {
+    if (path === "/health") {
+      return "/api/health";
+    }
+    return path;
+  }
+
+  const base = getApiBaseUrl();
+  if (path === "/health" || path === "/api/health") {
+    return `${base}/health`;
+  }
+  return `${base}${path}`;
 }
 
 export class ApiError extends Error {
@@ -44,10 +61,11 @@ async function request<T>(
     });
   } catch (error) {
     console.error(`[API] Network error for ${method} ${url}:`, error);
-    throw new ApiError(
-      0,
-      `Cannot reach the API server (${url}). Set NEXT_PUBLIC_API_URL to your Railway backend URL and redeploy.`,
-    );
+    const backend = getApiBaseUrl();
+    const hint = isPlaceholderBackendUrl(backend)
+      ? "API_URL on Vercel is still a placeholder (e.g. YOUR-RAILWAY-DOMAIN). Set your real Railway URL and redeploy."
+      : `Set API_URL on Vercel to your Railway backend (${backend}) and redeploy.`;
+    throw new ApiError(0, `Cannot reach the API server (${url}). ${hint}`);
   }
 
   if (!response.ok) {
@@ -132,7 +150,7 @@ export interface BillingHistoryItem {
 }
 
 export const api = {
-  health: () => request<{ status: string; service?: string }>("/health"),
+  health: () => request<{ status: string; service?: string }>("/api/health"),
 
   register: (email: string, password: string, name?: string) =>
     request<AuthResponse>("/api/auth/register", {
