@@ -22,6 +22,7 @@ model User {
   activityEvents             ActivityEvent[]
   subscription               Subscription?
   billingEvents              BillingEvent[]
+  quickStartProgress         QuickStartProgress?
 
   @@map("users")
 }
@@ -135,4 +136,20 @@ model BillingEvent {
   createdAt       DateTime @default(now())
 
   @@map("billing_events")
+}
+
+model QuickStartProgress {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountCompletedAt    DateTime?
+  firstRuleCompletedAt  DateTime?
+  instagramCompletedAt  DateTime?
+  planChosenCompletedAt DateTime?
+  goLiveCompletedAt     DateTime?
+  celebratedAt          DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("quick_start_progress")
 }
