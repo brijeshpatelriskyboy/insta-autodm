@@ -4,6 +4,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { AppError } from "../utils/errors";
+import {
+  dbShapeService,
+  type LoginUserRecord,
+} from "./dbShape.service";
 
 interface AuthResult {
   token: string;
@@ -13,13 +17,6 @@ interface AuthResult {
     name: string | null;
   };
 }
-
-type LoginUserRecord = {
-  id: string;
-  email: string;
-  passwordHash: string;
-  name: string | null;
-};
 
 function logPrismaError(context: string, error: unknown): void {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -69,18 +66,21 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
     logPrismaError("user lookup failed (prisma)", error);
 
     try {
-      const rows = await prisma.$queryRaw<LoginUserRecord[]>(
-        Prisma.sql`
-          SELECT id, email, "passwordHash", name
-          FROM users
-          WHERE email = ${email}
-          LIMIT 1
-        `,
-      );
-      console.log("[auth] user lookup raw fallback:", rows[0] ? "yes" : "no");
-      return rows[0] ?? null;
-    } catch (rawError) {
-      logPrismaError("user lookup raw fallback failed", rawError);
+      const user = await dbShapeService.findUserByEmailQuoted(email);
+      console.log("[auth] user lookup quoted raw fallback:", user ? "yes" : "no");
+      if (user) {
+        return user;
+      }
+    } catch (quotedError) {
+      logPrismaError("user lookup quoted raw fallback failed", quotedError);
+    }
+
+    try {
+      const user = await dbShapeService.findUserByEmailIntrospected(email);
+      console.log("[auth] user lookup introspected raw fallback:", user ? "yes" : "no");
+      return user;
+    } catch (introspectedError) {
+      logPrismaError("user lookup introspected raw fallback failed", introspectedError);
       throw error;
     }
   }
