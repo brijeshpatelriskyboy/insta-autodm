@@ -235,6 +235,7 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 | Problem | Fix |
 |---------|-----|
 | Login "Failed to fetch" | `NEXT_PUBLIC_API_URL` wrong, or backend down, or CORS mismatch |
+| Login 500/503, `/health` OK | `/health` does not use the DB. Check `GET /health/db` on Railway. If `Can't reach database server at postgres.railway.internal`, Postgres is not linked or is stopped — set `DATABASE_URL=${{Postgres.DATABASE_URL}}` on the **backend** service and redeploy |
 | CORS error in browser | Set `CORS_ORIGIN` to exact Vercel URL (include `https://`, no trailing slash) |
 | Stripe checkout 503 | Add all `STRIPE_*` env vars on backend |
 | Webhook not firing | Verify endpoint URL, signing secret, and that events are selected |

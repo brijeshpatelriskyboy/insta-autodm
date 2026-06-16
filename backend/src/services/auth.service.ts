@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { AppError } from "../utils/errors";
+import { logPrismaError } from "../utils/dbDiagnostics";
 import {
   dbShapeService,
   type LoginUserRecord,
@@ -16,39 +17,6 @@ interface AuthResult {
     email: string;
     name: string | null;
   };
-}
-
-function logPrismaError(context: string, error: unknown): void {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    console.error(`[auth] ${context}:`, {
-      name: error.name,
-      code: error.code,
-      message: error.message,
-      meta: error.meta,
-    });
-    return;
-  }
-
-  if (error instanceof Prisma.PrismaClientInitializationError) {
-    console.error(`[auth] ${context}:`, {
-      name: error.name,
-      message: error.message,
-    });
-    return;
-  }
-
-  if (error instanceof Prisma.PrismaClientRustPanicError) {
-    console.error(`[auth] ${context}:`, {
-      name: error.name,
-      message: error.message,
-    });
-    return;
-  }
-
-  console.error(`[auth] ${context}:`, {
-    name: error instanceof Error ? error.name : "UnknownError",
-    message: error instanceof Error ? error.message : String(error),
-  });
 }
 
 function isDatabaseUnavailable(error: unknown): boolean {
@@ -65,12 +33,14 @@ function isDatabaseUnavailable(error: unknown): boolean {
     message.includes("connect") ||
     message.includes("database") ||
     message.includes("openssl") ||
-    message.includes("tls")
+    message.includes("tls") ||
+    message.includes("can't reach database server")
   );
 }
 
 async function findUserForLogin(email: string): Promise<LoginUserRecord | null> {
   const normalizedEmail = email.trim().toLowerCase();
+  const prismaPath = "prisma.user.findUnique";
 
   try {
     return await prisma.user.findUnique({
@@ -83,7 +53,7 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
       },
     });
   } catch (error) {
-    logPrismaError("user lookup failed (prisma)", error);
+    logPrismaError("user lookup failed", error, prismaPath);
 
     try {
       const user = await dbShapeService.findUserByEmailQuoted(normalizedEmail);
@@ -92,7 +62,7 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
         return user;
       }
     } catch (quotedError) {
-      logPrismaError("user lookup quoted raw fallback failed", quotedError);
+      logPrismaError("user lookup failed", quotedError, "raw.users.quoted");
     }
 
     try {
@@ -100,7 +70,7 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
       console.log("[auth] user lookup introspected raw fallback:", user ? "yes" : "no");
       return user;
     } catch (introspectedError) {
-      logPrismaError("user lookup introspected raw fallback failed", introspectedError);
+      logPrismaError("user lookup failed", introspectedError, "raw.users.introspected");
       if (isDatabaseUnavailable(error) || isDatabaseUnavailable(introspectedError)) {
         throw new AppError(503, "Database temporarily unavailable");
       }
@@ -135,7 +105,7 @@ export class AuthService {
       if (error instanceof AppError) {
         throw error;
       }
-      logPrismaError("login user lookup failed", error);
+      logPrismaError("login user lookup failed", error, "auth.login.findUserForLogin");
       throw new AppError(503, "Database temporarily unavailable");
     }
 
