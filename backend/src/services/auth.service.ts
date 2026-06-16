@@ -32,23 +32,53 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
-    const user = await prisma.user.findUnique({ where: { email } });
+    let user;
+    try {
+      user = await prisma.user.findUnique({ where: { email } });
+    } catch (error) {
+      console.error(
+        "[auth] user lookup failed:",
+        error instanceof Error ? error.message : error,
+      );
+      throw error;
+    }
+
+    console.log("[auth] user found:", user ? "yes" : "no");
 
     if (!user) {
       throw new AppError(401, "Invalid email or password");
     }
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
+    console.log("[auth] password compare attempted: yes");
+
+    let valid = false;
+    try {
+      valid = await bcrypt.compare(password, user.passwordHash);
+    } catch (error) {
+      console.error(
+        "[auth] password compare failed:",
+        error instanceof Error ? error.message : error,
+      );
+      throw new AppError(401, "Invalid email or password");
+    }
 
     if (!valid) {
       throw new AppError(401, "Invalid email or password");
     }
 
-    return this.buildAuthResult({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-    });
+    try {
+      return this.buildAuthResult({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      });
+    } catch (error) {
+      console.error(
+        "[auth] token sign failed:",
+        error instanceof Error ? error.message : error,
+      );
+      throw error;
+    }
   }
 
   async getProfile(userId: string) {

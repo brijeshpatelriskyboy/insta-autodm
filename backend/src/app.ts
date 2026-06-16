@@ -29,7 +29,7 @@ export function createApp() {
     (req, res, next) => billingController.webhook(req, res, next),
   );
 
-  app.use(express.json());
+  app.use(express.json({ limit: "1mb" }));
 
   app.use("/api/auth", authRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
