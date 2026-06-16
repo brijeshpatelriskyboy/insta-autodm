@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
 import { AppError } from "../utils/errors";
@@ -11,6 +12,78 @@ interface AuthResult {
     email: string;
     name: string | null;
   };
+}
+
+type LoginUserRecord = {
+  id: string;
+  email: string;
+  passwordHash: string;
+  name: string | null;
+};
+
+function logPrismaError(context: string, error: unknown): void {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    console.error(`[auth] ${context}:`, {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      meta: error.meta,
+    });
+    return;
+  }
+
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    console.error(`[auth] ${context}:`, {
+      name: error.name,
+      message: error.message,
+    });
+    return;
+  }
+
+  if (error instanceof Prisma.PrismaClientRustPanicError) {
+    console.error(`[auth] ${context}:`, {
+      name: error.name,
+      message: error.message,
+    });
+    return;
+  }
+
+  console.error(`[auth] ${context}:`, {
+    name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : String(error),
+  });
+}
+
+async function findUserForLogin(email: string): Promise<LoginUserRecord | null> {
+  try {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        name: true,
+      },
+    });
+  } catch (error) {
+    logPrismaError("user lookup failed (prisma)", error);
+
+    try {
+      const rows = await prisma.$queryRaw<LoginUserRecord[]>(
+        Prisma.sql`
+          SELECT id, email, "passwordHash", name
+          FROM users
+          WHERE email = ${email}
+          LIMIT 1
+        `,
+      );
+      console.log("[auth] user lookup raw fallback:", rows[0] ? "yes" : "no");
+      return rows[0] ?? null;
+    } catch (rawError) {
+      logPrismaError("user lookup raw fallback failed", rawError);
+      throw error;
+    }
+  }
 }
 
 export class AuthService {
@@ -32,16 +105,7 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
-    let user;
-    try {
-      user = await prisma.user.findUnique({ where: { email } });
-    } catch (error) {
-      console.error(
-        "[auth] user lookup failed:",
-        error instanceof Error ? error.message : error,
-      );
-      throw error;
-    }
+    const user = await findUserForLogin(email);
 
     console.log("[auth] user found:", user ? "yes" : "no");
 
