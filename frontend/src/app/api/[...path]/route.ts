@@ -13,6 +13,10 @@ function resolveUpstreamPath(pathSegments: string[]): string {
     return "/health";
   }
 
+  if (path === "health/db") {
+    return "/health/db";
+  }
+
   return `/api/${path}`;
 }
 
@@ -25,7 +29,7 @@ function wouldProxyLoop(req: NextRequest, backendUrl: string): boolean {
   }
 }
 
-function buildProxyRequestHeaders(req: NextRequest): Headers {
+function buildProxyRequestHeaders(req: NextRequest, hasBody: boolean): Headers {
   const headers = new Headers();
   for (const name of FORWARD_REQUEST_HEADERS) {
     const value = req.headers.get(name);
@@ -33,6 +37,11 @@ function buildProxyRequestHeaders(req: NextRequest): Headers {
       headers.set(name, value);
     }
   }
+
+  if (hasBody && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
+
   return headers;
 }
 
@@ -69,11 +78,19 @@ async function proxyRequest(
   const hasBody = !["GET", "HEAD"].includes(req.method);
   const body = hasBody ? await req.arrayBuffer() : undefined;
 
+  if (upstreamPath === "/api/auth/login") {
+    console.log("[API proxy] login forward", {
+      hasBody,
+      bodyBytes: body?.byteLength ?? 0,
+      contentType: req.headers.get("content-type") ?? "(missing)",
+    });
+  }
+
   let upstream: Response;
   try {
     upstream = await fetch(target, {
       method: req.method,
-      headers: buildProxyRequestHeaders(req),
+      headers: buildProxyRequestHeaders(req, hasBody),
       body: hasBody ? body : undefined,
       cache: "no-store",
     });
@@ -92,8 +109,16 @@ async function proxyRequest(
   }
 
   if (!upstream.ok) {
+    const errorPreview =
+      upstreamPath === "/api/auth/login"
+        ? await upstream
+            .clone()
+            .text()
+            .then((text) => text.slice(0, 200))
+            .catch(() => "")
+        : "";
     console.error(
-      `[API proxy] ${req.method} ${upstreamPath} -> ${target} returned ${upstream.status}`,
+      `[API proxy] ${req.method} ${upstreamPath} -> ${target} returned ${upstream.status}${errorPreview ? `: ${errorPreview}` : ""}`,
     );
   } else {
     console.log(

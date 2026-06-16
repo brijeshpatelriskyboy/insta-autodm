@@ -7,7 +7,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  JWT_SECRET: z.string().min(16),
+  JWT_SECRET: z.string().trim().min(16),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   FRONTEND_URL: z.string().default("http://localhost:3000"),
   STRIPE_SECRET_KEY: z.string().optional(),
@@ -19,9 +19,14 @@ const envSchema = z.object({
   META_APP_SECRET: z.string().optional(),
   META_REDIRECT_URI: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
+  DEBUG_DB_SHAPE: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
+
+export function isDebugDbShapeEnabled(): boolean {
+  return env.NODE_ENV === "production" && env.DEBUG_DB_SHAPE === "true";
+}
 
 export function isStripeConfigured(): boolean {
   return Boolean(

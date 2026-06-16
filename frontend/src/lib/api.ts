@@ -202,6 +202,23 @@ export interface BillingHistoryItem {
   createdAt: string;
 }
 
+export interface QuickStartStep {
+  id: string;
+  label: string;
+  href: string;
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface QuickStartProgress {
+  progress: number;
+  completedCount: number;
+  totalSteps: number;
+  steps: QuickStartStep[];
+  showCelebration: boolean;
+  celebrated: boolean;
+}
+
 export const api = {
   health: () => request<{ status: string; service?: string }>("/api/health"),
 
@@ -302,4 +319,14 @@ export const api = {
     request<{ message: string }>("/api/billing/cancel", {
       method: "POST",
     }, token),
+
+  getQuickStartProgress: (token: string) =>
+    request<QuickStartProgress>("/api/activation/quick-start", {}, token),
+
+  celebrateQuickStart: (token: string) =>
+    request<{ celebrated: boolean; showCelebration: boolean }>(
+      "/api/activation/quick-start/celebrate",
+      { method: "POST" },
+      token,
+    ),
 };
