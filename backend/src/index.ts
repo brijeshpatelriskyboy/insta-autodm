@@ -1,4 +1,5 @@
 import { createApp } from "./app";
+import { prisma } from "./lib/prisma";
 
 const port = Number(process.env.PORT) || 4000;
 const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID);
@@ -17,4 +18,12 @@ console.log(`[startup] bind=${host}:${port}`);
 
 app.listen(port, host, () => {
   console.log(`[startup] Ready — GET /health on http://${host}:${port}/health`);
+
+  prisma
+    .$queryRaw`SELECT 1`
+    .then(() => console.log("[startup] Database connection ok"))
+    .catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("[startup] Database connection failed:", message);
+    });
 });

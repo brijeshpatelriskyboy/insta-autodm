@@ -51,10 +51,30 @@ function logPrismaError(context: string, error: unknown): void {
   });
 }
 
+function isDatabaseUnavailable(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return ["P1000", "P1001", "P1002", "P1003", "P1017", "P2021"].includes(error.code);
+  }
+
+  if (error instanceof Prisma.PrismaClientInitializationError) {
+    return true;
+  }
+
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+  return (
+    message.includes("connect") ||
+    message.includes("database") ||
+    message.includes("openssl") ||
+    message.includes("tls")
+  );
+}
+
 async function findUserForLogin(email: string): Promise<LoginUserRecord | null> {
+  const normalizedEmail = email.trim().toLowerCase();
+
   try {
     return await prisma.user.findUnique({
-      where: { email },
+      where: { email: normalizedEmail },
       select: {
         id: true,
         email: true,
@@ -66,7 +86,7 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
     logPrismaError("user lookup failed (prisma)", error);
 
     try {
-      const user = await dbShapeService.findUserByEmailQuoted(email);
+      const user = await dbShapeService.findUserByEmailQuoted(normalizedEmail);
       console.log("[auth] user lookup quoted raw fallback:", user ? "yes" : "no");
       if (user) {
         return user;
@@ -76,11 +96,14 @@ async function findUserForLogin(email: string): Promise<LoginUserRecord | null> 
     }
 
     try {
-      const user = await dbShapeService.findUserByEmailIntrospected(email);
+      const user = await dbShapeService.findUserByEmailIntrospected(normalizedEmail);
       console.log("[auth] user lookup introspected raw fallback:", user ? "yes" : "no");
       return user;
     } catch (introspectedError) {
       logPrismaError("user lookup introspected raw fallback failed", introspectedError);
+      if (isDatabaseUnavailable(error) || isDatabaseUnavailable(introspectedError)) {
+        throw new AppError(503, "Database temporarily unavailable");
+      }
       throw error;
     }
   }
@@ -105,7 +128,16 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<AuthResult> {
-    const user = await findUserForLogin(email);
+    let user: LoginUserRecord | null;
+    try {
+      user = await findUserForLogin(email);
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      logPrismaError("login user lookup failed", error);
+      throw new AppError(503, "Database temporarily unavailable");
+    }
 
     console.log("[auth] user found:", user ? "yes" : "no");
 

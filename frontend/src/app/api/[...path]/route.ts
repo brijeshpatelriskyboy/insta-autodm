@@ -13,6 +13,10 @@ function resolveUpstreamPath(pathSegments: string[]): string {
     return "/health";
   }
 
+  if (path === "health/db") {
+    return "/health/db";
+  }
+
   return `/api/${path}`;
 }
 

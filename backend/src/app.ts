@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { corsOptions } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
+import { prisma } from "./lib/prisma";
 import authRoutes from "./routes/auth.routes";
 import keywordRuleRoutes from "./routes/keywordRule.routes";
 import analyticsRoutes from "./routes/analytics.routes";
@@ -20,6 +21,17 @@ export function createApp() {
   // Registered first so health checks succeed before any other middleware runs.
   app.get("/health", (_req, res) => {
     res.status(200).json({ status: "ok", service: "insta-autodm-api" });
+  });
+
+  app.get("/health/db", async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.status(200).json({ status: "ok", database: "connected" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Database unavailable";
+      console.error("[health/db] database check failed:", message);
+      res.status(503).json({ status: "error", database: "unavailable", message });
+    }
   });
 
   app.use(cors(corsOptions));
