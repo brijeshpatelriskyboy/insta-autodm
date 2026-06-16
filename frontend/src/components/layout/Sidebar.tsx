@@ -17,6 +17,7 @@ import {
 import { clearAuth, getStoredUser } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/brand/Logo";
+import { BetaBadge } from "@/components/trust/BetaBadge";
 
 const mainNav = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -82,7 +83,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const content = (
     <>
       <div className="flex items-center justify-between border-b border-slate-800 px-5 py-5">
-        <Logo size="md" variant="light" />
+        <div className="flex items-center gap-2">
+          <Logo size="md" variant="light" />
+          <BetaBadge />
+        </div>
         {onMobileClose && (
           <button
             type="button"

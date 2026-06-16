@@ -22,6 +22,14 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
           />
         )}
 
+        <p
+          className={`text-center text-sm font-medium text-amber-800 ${
+            showHeading ? "mt-6" : "mx-auto max-w-2xl px-4 sm:px-6 lg:px-8"
+          }`}
+        >
+          Early Access Pricing — Instagram automation launching soon.
+        </p>
+
         <div
           className={
             showHeading

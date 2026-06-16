@@ -135,6 +135,10 @@ export default function RulesPage() {
         }
       />
 
+      <div className="rounded-xl border border-brand-200/80 bg-brand-50/50 px-4 py-3 text-sm text-brand-900">
+        Rules are ready and will become active once Instagram is connected.
+      </div>
+
       {(showForm || editingRule) && (
         <Card title={editingRule ? "Edit Rule" : "New Rule"}>
           <KeywordRuleForm

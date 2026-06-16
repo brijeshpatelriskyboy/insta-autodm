@@ -4,6 +4,7 @@ import { Camera, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { demoInstagramAccount } from "@/lib/demo-data";
 
 export function InstagramConnectionCard() {
@@ -12,8 +13,11 @@ export function InstagramConnectionCard() {
   return (
     <Card
       title="Instagram Connection"
-      description="Your connected Business account and sync status."
+      description="Preview of how your connected account will appear."
     >
+      <div className="mb-4">
+        <SampleDataLabel />
+      </div>
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 via-white to-brand-50/30">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
@@ -63,7 +67,7 @@ export function InstagramConnectionCard() {
         </div>
       </div>
       <p className="mt-3 text-xs text-slate-400">
-        Demo account data — live sync available after Meta OAuth integration.
+        Sample account preview — connect Instagram in Integrations when available.
       </p>
     </Card>
   );

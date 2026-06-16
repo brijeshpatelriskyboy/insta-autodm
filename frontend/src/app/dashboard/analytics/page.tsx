@@ -21,6 +21,7 @@ import {
   getDemoLeadsChart30Day,
   getDemoConversionChart30Day,
 } from "@/lib/demo-data";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { MessageSquare, Users, Percent, Zap, BarChart3 } from "lucide-react";
 
 export default function AnalyticsPage() {
@@ -39,8 +40,13 @@ export default function AnalyticsPage() {
     <div className="space-y-8">
       <PageHeader
         title="Analytics"
-        description="30-day performance across DMs, leads, and conversion trends."
+        description="Preview charts and KPIs with sample data until Instagram is connected."
       />
+
+      <div className="flex items-center gap-2">
+        <SampleDataLabel />
+        <p className="text-sm text-slate-500">All metrics on this page are for demonstration.</p>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading ? (

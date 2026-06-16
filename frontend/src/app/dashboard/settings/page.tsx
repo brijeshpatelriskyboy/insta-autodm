@@ -38,7 +38,7 @@ export default function SettingsPage() {
 
   function handleProfileSave(e: React.FormEvent) {
     e.preventDefault();
-    toast.success("Profile preferences saved");
+    toast.info("Coming Soon");
   }
 
   function handlePasswordSave(e: React.FormEvent) {
@@ -54,7 +54,7 @@ export default function SettingsPage() {
       return;
     }
 
-    toast.info("Password change will be available after Meta OAuth integration");
+    toast.info("Coming Soon");
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
@@ -62,7 +62,7 @@ export default function SettingsPage() {
 
   function handleNotificationsSave(e: React.FormEvent) {
     e.preventDefault();
-    toast.success("Notification preferences updated");
+    toast.info("Coming Soon");
   }
 
   return (

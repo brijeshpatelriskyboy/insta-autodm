@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Check, Circle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { demoOnboardingChecklist } from "@/lib/demo-data";
 
 const linkMap: Record<string, string> = {
@@ -18,7 +19,10 @@ export function QuickStartChecklist() {
   const progress = Math.round((completed / demoOnboardingChecklist.length) * 100);
 
   return (
-    <Card title="Quick Start" description="Complete setup to go live with automations.">
+    <Card title="Quick Start" description="Example setup progress for preview.">
+      <div className="mb-4">
+        <SampleDataLabel />
+      </div>
       <div className="mb-5">
         <div className="mb-2 flex items-center justify-between text-sm">
           <span className="font-medium text-slate-700">Progress</span>

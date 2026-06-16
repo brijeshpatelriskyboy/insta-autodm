@@ -16,6 +16,7 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import {
@@ -71,6 +72,7 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
           <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
             {getActivityTypeLabel(event.type)}
           </span>
+          {event.isSample && <SampleDataLabel />}
           {event.keyword && (
             <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
               {event.keyword}
@@ -122,7 +124,7 @@ export default function ActivityPage() {
     <div className="space-y-6">
       <PageHeader
         title="Activity Log"
-        description="A timeline of automation events across your keyword rules and DMs."
+        description="Your account events plus sample preview events until Instagram is connected."
       />
 
       <Card padding="sm">
@@ -175,7 +177,8 @@ export default function ActivityPage() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Live account events appear above demo activity. Meta webhook events arrive in a later phase.
+        Events marked Sample Data are preview examples. Real automation events appear after
+        Instagram is connected.
       </p>
     </div>
   );

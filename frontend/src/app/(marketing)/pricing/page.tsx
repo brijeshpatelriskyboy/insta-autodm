@@ -30,6 +30,9 @@ export default function PricingPage() {
             title="Choose the plan that fits your growth"
             description="All plans include a 14-day free trial. Upgrade, downgrade, or cancel anytime."
           />
+          <p className="mx-auto mt-6 max-w-2xl text-center text-sm font-medium text-amber-800">
+            Early Access Pricing — Instagram automation launching soon.
+          </p>
         </div>
       </section>
 

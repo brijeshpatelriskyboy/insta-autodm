@@ -2,6 +2,7 @@
 
 import { Trophy } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { demoTopKeywords } from "@/lib/demo-data";
 import { EmptyState } from "@/components/ui/EmptyState";
 import Link from "next/link";
@@ -27,8 +28,11 @@ export function KeywordLeaderboard() {
   return (
     <Card
       title="Top Performing Keywords"
-      description="Leaderboard by total trigger volume."
+      description="Example keyword performance for preview."
     >
+      <div className="mb-4">
+        <SampleDataLabel />
+      </div>
       <div className="space-y-4">
         {keywords.map((item, index) => (
           <div

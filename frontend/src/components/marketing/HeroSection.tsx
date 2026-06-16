@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { audiences, siteConfig } from "@/lib/marketing-data";
+import { BetaBadge } from "@/components/trust/BetaBadge";
 
 export function HeroSection() {
   return (
@@ -14,9 +15,12 @@ export function HeroSection() {
 
       <div className="mx-auto max-w-7xl px-4 pb-20 pt-16 sm:px-6 sm:pb-28 sm:pt-24 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <div className="animate-fade-in inline-flex items-center gap-2 rounded-full border border-brand-200/80 bg-white/80 px-4 py-1.5 text-xs font-medium text-brand-700 shadow-sm backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5" />
-            Instagram DM Automation for Creators
+          <div className="animate-fade-in inline-flex flex-wrap items-center justify-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-brand-200/80 bg-white/80 px-4 py-1.5 text-xs font-medium text-brand-700 shadow-sm backdrop-blur-sm">
+              <Sparkles className="h-3.5 w-3.5" />
+              Instagram DM Automation for Creators
+            </div>
+            <BetaBadge />
           </div>
 
           <h1 className="animate-slide-up mt-8 text-4xl font-semibold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">

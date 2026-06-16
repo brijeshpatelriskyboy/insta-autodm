@@ -6,6 +6,8 @@ import { Menu } from "lucide-react";
 import { getToken } from "@/lib/auth";
 import { Sidebar } from "./Sidebar";
 import { Button } from "@/components/ui/Button";
+import { BetaBadge } from "@/components/trust/BetaBadge";
+import { BetaBanner } from "@/components/trust/BetaBanner";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -31,8 +33,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <p className="text-sm font-semibold text-slate-900">Insta AutoDM</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">Insta AutoDM</p>
+            <BetaBadge />
+          </div>
         </header>
+
+        <BetaBanner />
 
         <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">{children}</div>

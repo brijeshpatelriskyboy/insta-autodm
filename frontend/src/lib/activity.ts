@@ -14,6 +14,7 @@ export interface ActivityEvent {
   description: string;
   timestamp: string;
   keyword?: string;
+  isSample?: boolean;
 }
 
 const typeLabels: Record<ActivityType, string> = {
@@ -32,7 +33,8 @@ export function getActivityTypeLabel(type: ActivityType): string {
 
 export const mockActivityEvents: ActivityEvent[] = [
   {
-    id: "1",
+    id: "mock-1",
+    isSample: true,
     type: "keyword_matched",
     title: "Keyword matched: GUIDE",
     description: "User @creator_fan commented on your latest reel.",
@@ -40,7 +42,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "GUIDE",
   },
   {
-    id: "2",
+    id: "mock-2",
+    isSample: true,
     type: "dm_sent",
     title: "DM sent successfully",
     description: "Automated guide link delivered to @creator_fan.",
@@ -48,7 +51,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "GUIDE",
   },
   {
-    id: "3",
+    id: "mock-3",
+    isSample: true,
     type: "lead_captured",
     title: "New lead captured",
     description: "Lead added from GUIDE keyword conversation.",
@@ -56,7 +60,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "GUIDE",
   },
   {
-    id: "4",
+    id: "mock-4",
+    isSample: true,
     type: "keyword_matched",
     title: "Keyword matched: START",
     description: "User @new_follower commented on your carousel post.",
@@ -64,7 +69,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "START",
   },
   {
-    id: "5",
+    id: "mock-5",
+    isSample: true,
     type: "dm_sent",
     title: "DM sent successfully",
     description: "Welcome sequence triggered for @new_follower.",
@@ -72,7 +78,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "START",
   },
   {
-    id: "6",
+    id: "mock-6",
+    isSample: true,
     type: "rule_updated",
     title: "Rule updated: PDF",
     description: "PDF keyword rule set to inactive.",
@@ -80,7 +87,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "PDF",
   },
   {
-    id: "7",
+    id: "mock-7",
+    isSample: true,
     type: "rule_created",
     title: "Rule created: GUIDE",
     description: "New automation rule added to your account.",
@@ -88,7 +96,8 @@ export const mockActivityEvents: ActivityEvent[] = [
     keyword: "GUIDE",
   },
   {
-    id: "8",
+    id: "mock-8",
+    isSample: true,
     type: "keyword_matched",
     title: "Keyword matched: PDF",
     description: "User @design_lover requested a PDF download.",

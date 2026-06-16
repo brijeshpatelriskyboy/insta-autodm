@@ -2,6 +2,7 @@
 
 import { Send, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { demoActivityFeed, formatRelativeTime } from "@/lib/demo-data";
 import Link from "next/link";
 
@@ -14,8 +15,11 @@ export function ActivityFeed() {
   return (
     <Card
       title="Recent Activity"
-      description="Live feed of automation events across your account."
+      description="Example automation events for preview — not from your live account."
     >
+      <div className="mb-4">
+        <SampleDataLabel />
+      </div>
       <div className="space-y-1">
         {demoActivityFeed.map((item, index) => (
           <div

@@ -9,6 +9,8 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { InstagramConnectionCard } from "@/components/dashboard/InstagramConnectionCard";
 import { KeywordLeaderboard } from "@/components/dashboard/KeywordLeaderboard";
 import { QuickStartChecklist } from "@/components/dashboard/QuickStartChecklist";
+import { BetaBadge } from "@/components/trust/BetaBadge";
+import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import {
   demoMetrics,
   demoTrends,
@@ -28,11 +30,27 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={`Welcome back${user?.name ? `, ${user.name}` : ""}`}
-        description="Your automations are performing well — here's what's happening today."
+        title={
+          <span className="inline-flex flex-wrap items-center gap-2">
+            Welcome back{user?.name ? `, ${user.name}` : ""}
+            <BetaBadge />
+          </span>
+        }
+        description="You're in early access — preview sample metrics below while Instagram connection is in development."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
+        <span className="font-semibold">Beta disclaimer:</span> Overview metrics, activity,
+        and connection status use sample data for preview only. Live Instagram automation and
+        real analytics will appear after you connect your account.
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-slate-700">Performance overview</h2>
+          <SampleDataLabel />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading ? (
           <>
             <KpiCardSkeleton />
@@ -76,6 +94,7 @@ export default function DashboardPage() {
             />
           </>
         )}
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
