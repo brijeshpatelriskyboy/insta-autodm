@@ -36,7 +36,7 @@ export class InstagramIntegrationController {
   async oauthUrl(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) throw new AppError(401, "Authentication required");
-      const result = metaOAuthService.getOAuthUrlPlaceholder(req.user.id);
+      const result = metaOAuthService.getOAuthUrl(req.user.id);
       res.json(result);
     } catch (error) {
       next(error);

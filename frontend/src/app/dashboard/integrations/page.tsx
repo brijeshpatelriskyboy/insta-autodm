@@ -23,6 +23,7 @@ import {
   ApiError,
   getApiBaseUrl,
   type InstagramIntegrationStatus,
+  type MetaOAuthConfig,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
@@ -36,8 +37,10 @@ const SETUP_ITEMS = [
 export default function IntegrationsPage() {
   const toast = useToast();
   const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
+  const [metaConfig, setMetaConfig] = useState<MetaOAuthConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [connectLoading, setConnectLoading] = useState(false);
 
   const loadStatus = useCallback(async () => {
     const token = getToken();
@@ -47,8 +50,12 @@ export default function IntegrationsPage() {
     }
 
     try {
-      const data = await api.getInstagramIntegrationStatus(token);
+      const [data, config] = await Promise.all([
+        api.getInstagramIntegrationStatus(token),
+        api.getMetaOAuthConfig(),
+      ]);
       setStatus(data);
+      setMetaConfig(config);
     } catch (error) {
       toast.error(
         error instanceof ApiError ? error.message : "Failed to load Instagram status",
@@ -80,7 +87,62 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function handleMockConnect() {
+    const token = getToken();
+    if (!token) return;
+
+    setActionLoading(true);
+    try {
+      await api.connectInstagramMock(token);
+      await loadStatus();
+      toast.success("Instagram connected (demo mode)");
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to connect Instagram demo",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleConnectInstagram() {
+    const token = getToken();
+    if (!token) return;
+
+    if (!metaConfig?.oauthEnabled) {
+      toast.error("Meta setup required. Complete the setup guide and enable OAuth on the server.");
+      return;
+    }
+
+    setConnectLoading(true);
+    try {
+      const oauth = await api.getInstagramOAuthUrl(token);
+
+      if (oauth.setupError) {
+        toast.error(oauth.setupError.message);
+        return;
+      }
+
+      if (!oauth.url) {
+        toast.error(oauth.message || "Meta setup required");
+        return;
+      }
+
+      window.location.href = oauth.url;
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to start Meta OAuth",
+      );
+    } finally {
+      setConnectLoading(false);
+    }
+  }
+
   const connected = status?.connected ?? false;
+  const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
+  const connectLabel = oauthReady
+    ? "Connect Instagram"
+    : "Meta setup required";
 
   const integrations = [
     {
@@ -158,17 +220,43 @@ export default function IntegrationsPage() {
               </div>
               <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
                 {connected && status?.username
-                  ? `Previously connected as @${status.username}. Real Meta OAuth is coming soon.`
-                  : "Complete the Meta setup guide, then connect your Instagram Professional account when OAuth launches."}
+                  ? `Connected as @${status.username}${metaConfig?.oauthEnabled ? "" : " (demo mode)"}.`
+                  : metaConfig?.oauthEnabled
+                    ? "Connect your Instagram Professional account with Meta OAuth when credentials are configured."
+                    : "Complete the Meta setup guide, then enable OAuth on the server when verification is complete."}
               </p>
             </div>
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-3 self-start">
+            {!connected && (
+              <>
+                <Button
+                  variant="primary"
+                  onClick={handleConnectInstagram}
+                  disabled={connectLoading || loading || !oauthReady}
+                >
+                  {connectLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  {connectLabel}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleMockConnect}
+                  disabled={actionLoading || loading}
+                >
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Connect (Demo)
+                </Button>
+              </>
+            )}
             <Link href="/dashboard/integrations/instagram-setup">
-              <Button variant="primary">
+              <Button variant="secondary">
                 <BookOpen className="h-4 w-4" />
-                Connect Instagram (Coming Soon)
+                Setup Guide
               </Button>
             </Link>
             {connected && (
@@ -263,7 +351,11 @@ export default function IntegrationsPage() {
             {
               icon: Shield,
               label: "OAuth",
-              status: "Setup guide ready — OAuth coming soon",
+              status: oauthReady
+                ? "Ready — real Meta OAuth enabled"
+                : metaConfig?.oauthEnabled
+                  ? "Enabled — add Meta App ID, Secret, Redirect URI"
+                  : "Meta setup required — OAuth disabled",
             },
             {
               icon: RefreshCw,

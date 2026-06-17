@@ -180,6 +180,10 @@ export interface MetaOAuthUrlPreview {
   configured: boolean;
   redirectUri: string;
   message: string;
+  setupError?: {
+    missing: string[];
+    message: string;
+  } | null;
 }
 
 export interface SubscriptionInfo {

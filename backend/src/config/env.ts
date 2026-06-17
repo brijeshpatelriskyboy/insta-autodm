@@ -19,9 +19,14 @@ const envSchema = z.object({
   META_APP_SECRET: z.string().optional(),
   META_REDIRECT_URI: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
+  META_OAUTH_ENABLED: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
+
+export function isMetaOAuthEnabled(): boolean {
+  return env.META_OAUTH_ENABLED === "true";
+}
 
 export function isStripeConfigured(): boolean {
   return Boolean(

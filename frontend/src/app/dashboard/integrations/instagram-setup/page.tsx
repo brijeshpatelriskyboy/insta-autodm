@@ -72,6 +72,39 @@ export default function InstagramSetupPage() {
     }
   }
 
+  async function handleConnectInstagram() {
+    const token = getToken();
+    if (!token) return;
+
+    if (!metaConfig?.oauthEnabled) {
+      toast.error("Meta setup required. Set META_OAUTH_ENABLED=true after Meta verification.");
+      return;
+    }
+
+    try {
+      const oauth = await api.getInstagramOAuthUrl(token);
+
+      if (oauth.setupError) {
+        toast.error(oauth.setupError.message);
+        return;
+      }
+
+      if (!oauth.url) {
+        toast.error(oauth.message || "Meta setup required");
+        return;
+      }
+
+      window.location.href = oauth.url;
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : "Failed to start Meta OAuth",
+      );
+    }
+  }
+
+  const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
+  const connectLabel = oauthReady ? "Connect Instagram" : "Meta setup required";
+
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-3">
@@ -119,6 +152,7 @@ export default function InstagramSetupPage() {
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
+                { label: "META_OAUTH_ENABLED", ready: metaConfig?.oauthEnabled ?? false },
                 { label: "META_APP_ID", ready: Boolean(metaConfig?.appId) },
                 { label: "META_APP_SECRET", ready: metaConfig?.configured ?? false },
                 { label: "META_REDIRECT_URI", ready: Boolean(metaConfig?.redirectUri) },
@@ -169,9 +203,11 @@ export default function InstagramSetupPage() {
             )}
 
             <p className="text-sm text-slate-600">
-              {metaConfig?.configured
-                ? "Meta credentials are stored securely on the server. Secrets are never sent to the browser."
-                : "Add Meta credentials to Railway environment variables, then redeploy the backend."}
+              {metaConfig?.oauthEnabled
+                ? metaConfig.configured
+                  ? "Meta OAuth is enabled and credentials are configured. Connect Instagram to authorize access."
+                  : "Meta OAuth is enabled. Add the missing Meta credentials on Railway, then redeploy."
+                : "OAuth is disabled by default. Set META_OAUTH_ENABLED=true after Meta app verification."}
             </p>
           </div>
         )}
@@ -214,13 +250,14 @@ export default function InstagramSetupPage() {
         ))}
       </div>
 
-      <Card title="OAuth preview (coming soon)" padding="lg">
+      <Card title="OAuth connection" padding="lg">
         <div className="flex items-start gap-3">
           <BookOpen className="mt-0.5 h-5 w-5 text-slate-400" />
           <div className="min-w-0 flex-1">
             <p className="text-sm text-slate-600">
-              {oauthPreview?.message ??
-                "The OAuth URL scaffold is being prepared. Real token exchange is not enabled yet."}
+              {oauthPreview?.setupError?.message ??
+                oauthPreview?.message ??
+                "Fetch the OAuth URL from the server when Meta credentials are ready."}
             </p>
             {oauthPreview?.previewUrl && (
               <code className="mt-3 block break-all rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-700">
@@ -228,7 +265,8 @@ export default function InstagramSetupPage() {
               </code>
             )}
             <p className="mt-3 text-xs text-slate-500">
-              Graph API {metaConfig?.graphApiVersion ?? "v21.0"} · OAuth disabled until Phase 2c
+              Graph API {metaConfig?.graphApiVersion ?? "v21.0"} · OAuth{" "}
+              {metaConfig?.oauthEnabled ? "enabled" : "disabled"} · No DMs sent yet
             </p>
           </div>
         </div>
@@ -238,8 +276,8 @@ export default function InstagramSetupPage() {
         <Link href="/dashboard/integrations">
           <Button variant="secondary">Return to Integrations</Button>
         </Link>
-        <Button variant="primary" disabled>
-          Connect Instagram (Coming Soon)
+        <Button variant="primary" disabled={!oauthReady} onClick={handleConnectInstagram}>
+          {connectLabel}
         </Button>
       </div>
     </div>

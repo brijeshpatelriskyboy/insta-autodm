@@ -1,13 +1,18 @@
-import { env } from "../config/env";
+import { env, isMetaOAuthEnabled } from "../config/env";
 import {
-  buildOAuthPreviewUrl,
+  buildOAuthUrl,
   getMetaRedirectUri,
+  getMissingMetaCredentials,
   getPublicMetaConfig,
   isMetaOAuthConfigured,
   META_GRAPH_API_VERSION,
   META_OAUTH_SCOPES,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
+
+function buildOAuthState(userId: string): string {
+  return `${userId}:${Date.now()}`;
+}
 
 export const metaOAuthService = {
   getPublicConfig(apiBaseUrl: string) {
@@ -20,19 +25,51 @@ export const metaOAuthService = {
     };
   },
 
-  getOAuthUrlPlaceholder(userId: string) {
+  getOAuthUrl(userId: string) {
+    const oauthEnabled = isMetaOAuthEnabled();
     const configured = isMetaOAuthConfigured();
-    const state = `placeholder_${userId}_${Date.now()}`;
+    const redirectUri = getMetaRedirectUri();
+    const missing = getMissingMetaCredentials();
+    const state = buildOAuthState(userId);
+
+    if (!oauthEnabled) {
+      return {
+        url: null,
+        previewUrl: configured ? buildOAuthUrl(state) : null,
+        oauthEnabled: false,
+        configured,
+        redirectUri,
+        setupError: null,
+        message:
+          "Meta OAuth is disabled. Set META_OAUTH_ENABLED=true after Meta app verification.",
+      };
+    }
+
+    if (!configured) {
+      return {
+        url: null,
+        previewUrl: null,
+        oauthEnabled: true,
+        configured: false,
+        redirectUri,
+        setupError: {
+          missing,
+          message: `Meta setup required. Missing: ${missing.join(", ")}`,
+        },
+        message: `Meta setup required. Missing: ${missing.join(", ")}`,
+      };
+    }
+
+    const url = buildOAuthUrl(state);
 
     return {
-      url: null,
-      previewUrl: buildOAuthPreviewUrl(state),
-      oauthEnabled: false,
-      configured,
-      redirectUri: getMetaRedirectUri(),
-      message: configured
-        ? "OAuth URL preview is ready. Token exchange will be enabled in the next release."
-        : "Set META_APP_ID, META_APP_SECRET, and META_REDIRECT_URI on the server first.",
+      url,
+      previewUrl: url,
+      oauthEnabled: true,
+      configured: true,
+      redirectUri,
+      setupError: null,
+      message: "Redirect to Meta to authorize Instagram access.",
     };
   },
 
@@ -53,11 +90,24 @@ export const metaOAuthService = {
       throw new AppError(400, "Missing authorization code from Meta");
     }
 
+    if (!isMetaOAuthEnabled()) {
+      return {
+        status: "placeholder",
+        oauthEnabled: false,
+        message:
+          "Authorization code received. Enable META_OAUTH_ENABLED=true to continue token exchange in a future release.",
+        received: {
+          hasCode: Boolean(query.code),
+          state: query.state ?? null,
+        },
+      };
+    }
+
     return {
-      status: "placeholder",
-      oauthEnabled: false,
+      status: "authorized",
+      oauthEnabled: true,
       message:
-        "Authorization code received. Token exchange is not enabled yet — this callback is scaffolding only.",
+        "Authorization code received. Token exchange will be enabled in the next release — no DMs are sent yet.",
       received: {
         hasCode: Boolean(query.code),
         state: query.state ?? null,
@@ -81,8 +131,13 @@ export const metaOAuthService = {
     }
 
     if (query.code) {
-      params.set("oauth", "placeholder");
-      params.set("message", "Meta returned an authorization code. Token exchange ships in the next release.");
+      params.set("oauth", isMetaOAuthEnabled() ? "authorized" : "placeholder");
+      params.set(
+        "message",
+        isMetaOAuthEnabled()
+          ? "Meta authorization received. Token exchange ships in the next release."
+          : "Meta returned an authorization code. Enable META_OAUTH_ENABLED=true to continue.",
+      );
       return `${base}?${params.toString()}`;
     }
 
