@@ -2,11 +2,16 @@ import { env, isMetaOAuthEnabled } from "./env";
 
 export const META_GRAPH_API_VERSION = "v21.0";
 
+// Minimum safe Facebook Login scopes — used to confirm the OAuth redirect works
+// end-to-end before requesting Instagram/Page permissions.
 export const META_OAUTH_SCOPES = [
-  "instagram_basic",
-  "instagram_manage_comments",
-  "pages_show_list",
-  "pages_read_engagement",
+  "email",
+  "public_profile",
+  // TODO: Re-enable once the Meta app is approved for Instagram messaging:
+  // "instagram_basic",
+  // "instagram_manage_comments",
+  // "pages_show_list",
+  // "pages_read_engagement",
 ].join(",");
 
 export function getMetaRedirectUri(): string {
