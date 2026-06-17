@@ -1,6 +1,24 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { activityService } from "./activity.service";
+
+function logIntegrationError(context: string, error: unknown): void {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    console.error(`[integrations] ${context}:`, {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      meta: JSON.stringify(error.meta),
+    });
+    return;
+  }
+
+  console.error(`[integrations] ${context}:`, {
+    name: error instanceof Error ? error.name : "UnknownError",
+    message: error instanceof Error ? error.message : String(error),
+  });
+}
 
 const MOCK_PROFILE_PICTURE =
   "https://scontent.cdninstagram.com/v/mock-profile-picture.jpg";
@@ -61,11 +79,18 @@ function formatAccountResponse(
 
 export const instagramIntegrationService = {
   async getStatus(userId: string) {
-    const account = await prisma.instagramAccount.findUnique({
-      where: { userId },
-    });
+    try {
+      const account = await prisma.instagramAccount.findUnique({
+        where: { userId },
+      });
 
-    return formatAccountResponse(account);
+      return formatAccountResponse(account);
+    } catch (error) {
+      // A missing instagram_accounts table or transient DB error must not 500 the
+      // whole Integrations page (which also drives Meta OAuth detection).
+      logIntegrationError("getStatus failed — returning disconnected default", error);
+      return formatAccountResponse(null);
+    }
   },
 
   async connectMock(userId: string) {

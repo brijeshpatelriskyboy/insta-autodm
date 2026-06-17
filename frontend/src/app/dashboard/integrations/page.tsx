@@ -49,20 +49,31 @@ export default function IntegrationsPage() {
       return;
     }
 
-    try {
-      const [data, config] = await Promise.all([
-        api.getInstagramIntegrationStatus(token),
-        api.getMetaOAuthConfig(),
-      ]);
-      setStatus(data);
-      setMetaConfig(config);
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Failed to load Instagram status",
-      );
-    } finally {
-      setLoading(false);
+    // Load Meta OAuth config and connection status independently so a failing
+    // status call cannot hide OAuth detection (and vice versa).
+    const [statusResult, configResult] = await Promise.allSettled([
+      api.getInstagramIntegrationStatus(token),
+      api.getMetaOAuthConfig(),
+    ]);
+
+    if (statusResult.status === "fulfilled") {
+      setStatus(statusResult.value);
+    } else {
+      console.error("Failed to load Instagram status", statusResult.reason);
     }
+
+    if (configResult.status === "fulfilled") {
+      setMetaConfig(configResult.value);
+    } else {
+      console.error("Failed to load Meta OAuth config", configResult.reason);
+      toast.error(
+        configResult.reason instanceof ApiError
+          ? configResult.reason.message
+          : "Failed to load Meta OAuth configuration",
+      );
+    }
+
+    setLoading(false);
   }, [toast]);
 
   useEffect(() => {
@@ -140,9 +151,6 @@ export default function IntegrationsPage() {
 
   const connected = status?.connected ?? false;
   const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
-  const connectLabel = oauthReady
-    ? "Connect Instagram"
-    : "Meta setup required";
 
   const integrations = [
     {
@@ -229,18 +237,19 @@ export default function IntegrationsPage() {
           </div>
 
           <div className="flex shrink-0 flex-wrap gap-3 self-start">
-            {!connected && (
-              <>
+            {!connected &&
+              (oauthReady ? (
                 <Button
                   variant="primary"
                   onClick={handleConnectInstagram}
-                  disabled={connectLoading || loading || !oauthReady}
+                  disabled={connectLoading || loading}
                 >
                   {connectLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : null}
-                  {connectLabel}
+                  Connect Instagram
                 </Button>
+              ) : (
                 <Button
                   variant="secondary"
                   onClick={handleMockConnect}
@@ -251,8 +260,7 @@ export default function IntegrationsPage() {
                   ) : null}
                   Connect (Demo)
                 </Button>
-              </>
-            )}
+              ))}
             <Link href="/dashboard/integrations/instagram-setup">
               <Button variant="secondary">
                 <BookOpen className="h-4 w-4" />

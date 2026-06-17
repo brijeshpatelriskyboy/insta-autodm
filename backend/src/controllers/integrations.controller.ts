@@ -39,7 +39,26 @@ export class InstagramIntegrationController {
       const result = metaOAuthService.getOAuthUrl(req.user.id);
       res.json(result);
     } catch (error) {
-      next(error);
+      // Return a structured OAuth error instead of a generic 500 so the UI can
+      // explain exactly what is missing.
+      console.error("[integrations] oauth-url failed:", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        url: null,
+        previewUrl: null,
+        oauthEnabled: null,
+        configured: null,
+        setupError: {
+          missing: [],
+          message:
+            error instanceof Error
+              ? `Failed to build Meta OAuth URL: ${error.message}`
+              : "Failed to build Meta OAuth URL",
+        },
+        message: "Failed to build Meta OAuth URL",
+      });
     }
   }
 

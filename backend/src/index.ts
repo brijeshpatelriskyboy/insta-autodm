@@ -1,4 +1,9 @@
 import { createApp } from "./app";
+import {
+  getMetaRedirectUri,
+  isMetaOAuthConfigured,
+} from "./config/meta";
+import { env, isMetaOAuthEnabled } from "./config/env";
 
 const port = Number(process.env.PORT) || 4000;
 const isRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_SERVICE_ID);
@@ -14,6 +19,14 @@ console.log(
 );
 console.log(`[startup] NODE_ENV=${process.env.NODE_ENV ?? "unset"}`);
 console.log(`[startup] bind=${host}:${port}`);
+
+// Meta OAuth diagnostics (safe — no secrets logged)
+console.log(`[startup][meta] Meta OAuth enabled: ${isMetaOAuthEnabled()}`);
+console.log(`[startup][meta] App ID loaded: ${env.META_APP_ID?.trim() ? "yes" : "no"}`);
+console.log(`[startup][meta] App Secret loaded: ${env.META_APP_SECRET?.trim() ? "yes" : "no"}`);
+console.log(`[startup][meta] Redirect URI loaded: ${env.META_REDIRECT_URI?.trim() ? "yes" : "no"}`);
+console.log(`[startup][meta] Redirect URI: ${getMetaRedirectUri()}`);
+console.log(`[startup][meta] Credentials complete: ${isMetaOAuthConfigured()}`);
 
 app.listen(port, host, () => {
   console.log(`[startup] Ready — GET /health on http://${host}:${port}/health`);
