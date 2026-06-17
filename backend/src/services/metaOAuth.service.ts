@@ -6,7 +6,7 @@ import {
   getPublicMetaConfig,
   isMetaOAuthConfigured,
   META_GRAPH_API_VERSION,
-  META_OAUTH_SCOPES,
+  META_OAUTH_SCOPES_PLANNED,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 
@@ -20,7 +20,8 @@ export const metaOAuthService = {
     return {
       ...config,
       webhookUrl: `${apiBaseUrl.replace(/\/$/, "")}/api/webhooks/instagram`,
-      scopes: META_OAUTH_SCOPES.split(","),
+      scopes: [], // none requested until redirect with ?code= is confirmed
+      scopesPlanned: [...META_OAUTH_SCOPES_PLANNED],
       graphApiVersion: META_GRAPH_API_VERSION,
     };
   },
