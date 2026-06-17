@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Camera,
   Webhook,
@@ -36,6 +37,7 @@ const SETUP_ITEMS = [
 
 export default function IntegrationsPage() {
   const toast = useToast();
+  const searchParams = useSearchParams();
   const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
   const [metaConfig, setMetaConfig] = useState<MetaOAuthConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,6 +81,21 @@ export default function IntegrationsPage() {
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
+
+  useEffect(() => {
+    const oauthStatus = searchParams.get("oauth");
+    const oauthMessage = searchParams.get("message");
+    if (!oauthStatus || !oauthMessage) {
+      return;
+    }
+
+    if (oauthStatus === "success") {
+      toast.success(oauthMessage);
+      loadStatus();
+    } else if (oauthStatus === "error") {
+      toast.error(oauthMessage);
+    }
+  }, [searchParams, toast, loadStatus]);
 
   async function handleDisconnect() {
     const token = getToken();

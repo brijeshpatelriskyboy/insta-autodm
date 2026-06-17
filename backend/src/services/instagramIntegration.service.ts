@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
+import { encryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
+import { metaGraphService } from "./metaGraph.service";
 
 function logIntegrationError(context: string, error: unknown): void {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -40,11 +42,11 @@ function deriveMockUsername(userId: string, name: string | null, email: string):
   return email.split("@")[0].toLowerCase().replace(/[^a-z0-9._]/g, "");
 }
 
-function buildSetupChecklist(connected: boolean) {
+function buildSetupChecklist(connected: boolean, source?: "mock" | "meta_oauth") {
   return {
-    professionalAccount: connected,
-    facebookPageLinked: connected,
-    metaDeveloperApp: false,
+    professionalAccount: connected && source === "mock",
+    facebookPageLinked: connected && source === "mock",
+    metaDeveloperApp: connected && source === "meta_oauth",
     webhookConfigured: false,
   };
 }
@@ -59,9 +61,16 @@ function formatAccountResponse(
     connectionStatus: string;
     connectedAt: Date | null;
     lastSyncAt: Date | null;
+    accessTokenEncrypted?: string;
   } | null,
 ) {
   const connected = account?.connectionStatus === "connected";
+  const source =
+    account?.accessTokenEncrypted === "mock_encrypted_token_placeholder"
+      ? "mock"
+      : connected
+        ? "meta_oauth"
+        : undefined;
 
   return {
     connected,
@@ -73,8 +82,15 @@ function formatAccountResponse(
     pageId: account?.pageId ?? null,
     connectedAt: account?.connectedAt?.toISOString() ?? null,
     lastSyncAt: account?.lastSyncAt?.toISOString() ?? null,
-    setupChecklist: buildSetupChecklist(connected),
+    setupChecklist: buildSetupChecklist(connected, source),
   };
+}
+
+function deriveFacebookUsername(profile: { id: string; name?: string }): string {
+  if (profile.name?.trim()) {
+    return profile.name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9._]/g, "");
+  }
+  return `fb_user_${profile.id}`;
 }
 
 export const instagramIntegrationService = {
@@ -145,6 +161,78 @@ export const instagramIntegrationService = {
         pageId: account.pageId,
         accountType: account.accountType,
       },
+    });
+
+    return formatAccountResponse(account);
+  },
+
+  async connectViaOAuth(userId: string, code: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new AppError(404, "User not found for OAuth state");
+    }
+
+    const tokenResponse = await metaGraphService.exchangeCodeForToken(code);
+    const profile = await metaGraphService.fetchFacebookProfile(tokenResponse.access_token);
+
+    const now = new Date();
+    const username = deriveFacebookUsername(profile);
+    const instagramUserId = `fb_${profile.id}`;
+    const profilePictureUrl = profile.picture?.data?.url ?? null;
+    const accessTokenEncrypted = encryptToken(tokenResponse.access_token);
+
+    let account;
+    try {
+      account = await prisma.instagramAccount.upsert({
+        where: { userId },
+        create: {
+          userId,
+          instagramUserId,
+          username,
+          accountType: "FACEBOOK_USER",
+          profilePictureUrl,
+          accessTokenEncrypted,
+          connectionStatus: "connected",
+          connectedAt: now,
+          lastSyncAt: now,
+        },
+        update: {
+          instagramUserId,
+          username,
+          accountType: "FACEBOOK_USER",
+          profilePictureUrl,
+          accessTokenEncrypted,
+          connectionStatus: "connected",
+          connectedAt: now,
+          lastSyncAt: now,
+        },
+      });
+    } catch (error) {
+      logIntegrationError("connectViaOAuth failed", error);
+      throw new AppError(503, "Could not save Meta connection. Database may need migration.");
+    }
+
+    await activityService.log(userId, {
+      type: "account_connected",
+      title: "Meta account connected",
+      description: `${profile.name ?? username} connected via Meta OAuth (Facebook login — no Instagram permissions yet).`,
+      metadata: {
+        source: "meta_oauth",
+        facebookUserId: profile.id,
+        accountType: "FACEBOOK_USER",
+        expiresIn: tokenResponse.expires_in ?? null,
+      },
+    });
+
+    console.log("[meta-oauth] account saved:", {
+      userId,
+      facebookUserId: profile.id,
+      username: account.username,
+      connectionStatus: account.connectionStatus,
     });
 
     return formatAccountResponse(account);

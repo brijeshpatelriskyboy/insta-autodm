@@ -9,9 +9,29 @@ import {
   META_OAUTH_SCOPES_PLANNED,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
+import { instagramIntegrationService } from "./instagramIntegration.service";
 
 function buildOAuthState(userId: string): string {
   return `${userId}:${Date.now()}`;
+}
+
+function parseOAuthState(state?: string): string | null {
+  if (!state?.trim()) {
+    return null;
+  }
+
+  const userId = state.split(":")[0]?.trim();
+  if (!userId) {
+    return null;
+  }
+
+  return userId;
+}
+
+function integrationsRedirect(params: Record<string, string>): string {
+  const base = `${env.FRONTEND_URL.replace(/\/$/, "")}/dashboard/integrations`;
+  const search = new URLSearchParams(params);
+  return `${base}?${search.toString()}`;
 }
 
 export const metaOAuthService = {
@@ -20,7 +40,7 @@ export const metaOAuthService = {
     return {
       ...config,
       webhookUrl: `${apiBaseUrl.replace(/\/$/, "")}/api/webhooks/instagram`,
-      scopes: [], // none requested until redirect with ?code= is confirmed
+      scopes: [],
       scopesPlanned: [...META_OAUTH_SCOPES_PLANNED],
       graphApiVersion: META_GRAPH_API_VERSION,
     };
@@ -70,11 +90,11 @@ export const metaOAuthService = {
       configured: true,
       redirectUri,
       setupError: null,
-      message: "Redirect to Meta to authorize Instagram access.",
+      message: "Redirect to Meta to authorize access.",
     };
   },
 
-  handleCallbackPlaceholder(query: {
+  async handleCallback(query: {
     code?: string;
     state?: string;
     error?: string;
@@ -96,54 +116,86 @@ export const metaOAuthService = {
         status: "placeholder",
         oauthEnabled: false,
         message:
-          "Authorization code received. Enable META_OAUTH_ENABLED=true to continue token exchange in a future release.",
+          "Authorization code received. Enable META_OAUTH_ENABLED=true to exchange tokens.",
         received: {
-          hasCode: Boolean(query.code),
+          hasCode: true,
           state: query.state ?? null,
         },
       };
     }
 
+    const userId = parseOAuthState(query.state);
+    if (!userId) {
+      throw new AppError(400, "Invalid OAuth state");
+    }
+
+    console.log("[meta-oauth] callback received:", {
+      userId,
+      hasCode: true,
+    });
+
+    const account = await instagramIntegrationService.connectViaOAuth(userId, query.code);
+
     return {
-      status: "authorized",
+      status: "connected",
       oauthEnabled: true,
-      message:
-        "Authorization code received. Token exchange will be enabled in the next release — no DMs are sent yet.",
-      received: {
-        hasCode: Boolean(query.code),
-        state: query.state ?? null,
-      },
+      message: `Connected as ${account.username ?? "Meta user"}.`,
+      username: account.username,
+      accountType: account.accountType,
     };
   },
 
-  buildCallbackRedirect(query: {
+  async handleCallbackRedirect(query: {
     code?: string;
     state?: string;
     error?: string;
     error_description?: string;
-  }): string {
-    const base = `${env.FRONTEND_URL.replace(/\/$/, "")}/dashboard/integrations/instagram-setup`;
-    const params = new URLSearchParams();
-
+  }): Promise<string> {
     if (query.error) {
-      params.set("oauth", "error");
-      params.set("message", query.error_description ?? query.error);
-      return `${base}?${params.toString()}`;
+      return integrationsRedirect({
+        oauth: "error",
+        message: query.error_description ?? query.error ?? "Meta OAuth authorization was denied",
+      });
     }
 
-    if (query.code) {
-      params.set("oauth", isMetaOAuthEnabled() ? "authorized" : "placeholder");
-      params.set(
-        "message",
-        isMetaOAuthEnabled()
-          ? "Meta authorization received. Token exchange ships in the next release."
-          : "Meta returned an authorization code. Enable META_OAUTH_ENABLED=true to continue.",
-      );
-      return `${base}?${params.toString()}`;
+    if (!query.code) {
+      return integrationsRedirect({
+        oauth: "error",
+        message: "No authorization code received from Meta",
+      });
     }
 
-    params.set("oauth", "error");
-    params.set("message", "No authorization code received from Meta");
-    return `${base}?${params.toString()}`;
+    if (!isMetaOAuthEnabled()) {
+      return integrationsRedirect({
+        oauth: "placeholder",
+        message:
+          "Meta returned an authorization code. Enable META_OAUTH_ENABLED=true to exchange tokens.",
+      });
+    }
+
+    try {
+      const result = await this.handleCallback(query);
+      return integrationsRedirect({
+        oauth: "success",
+        message: result.message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof AppError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Meta OAuth callback failed";
+
+      console.error("[meta-oauth] callback redirect failed:", {
+        name: error instanceof Error ? error.name : "UnknownError",
+        message,
+      });
+
+      return integrationsRedirect({
+        oauth: "error",
+        message,
+      });
+    }
   },
 };

@@ -72,12 +72,12 @@ export class InstagramIntegrationController {
       };
 
       if (req.headers.accept?.includes("application/json")) {
-        const result = metaOAuthService.handleCallbackPlaceholder(query);
+        const result = await metaOAuthService.handleCallback(query);
         res.json(result);
         return;
       }
 
-      const redirectUrl = metaOAuthService.buildCallbackRedirect(query);
+      const redirectUrl = await metaOAuthService.handleCallbackRedirect(query);
       res.redirect(redirectUrl);
     } catch (error) {
       next(error);
