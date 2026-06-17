@@ -6,7 +6,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
-    "start:prod": "node dist/index.js",
+    "start:prod": "prisma migrate deploy && node dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev --name init",
@@ -22,7 +22,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "stripe": "^17.7.0",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "prisma": "^6.9.0"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -33,7 +34,6 @@
     "@types/express": "^5.0.3",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.32",
-    "prisma": "^6.9.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   }

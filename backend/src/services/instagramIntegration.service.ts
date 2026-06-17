@@ -5,6 +5,26 @@ import { encryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
 
+function mapInstagramSaveError(error: unknown): AppError {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === "P2021") {
+      return new AppError(
+        503,
+        "instagram_accounts table is missing. Redeploy the backend so prisma migrate deploy can create it.",
+      );
+    }
+
+    if (error.code === "P2002") {
+      return new AppError(409, "This Meta account is already connected to another user.");
+    }
+  }
+
+  return new AppError(
+    503,
+    "Could not save Meta connection. Check Railway deploy logs for prisma migrate deploy errors.",
+  );
+}
+
 function logIntegrationError(context: string, error: unknown): void {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     console.error(`[integrations] ${context}:`, {
@@ -213,20 +233,24 @@ export const instagramIntegrationService = {
       });
     } catch (error) {
       logIntegrationError("connectViaOAuth failed", error);
-      throw new AppError(503, "Could not save Meta connection. Database may need migration.");
+      throw mapInstagramSaveError(error);
     }
 
-    await activityService.log(userId, {
-      type: "account_connected",
-      title: "Meta account connected",
-      description: `${profile.name ?? username} connected via Meta OAuth (Facebook login — no Instagram permissions yet).`,
-      metadata: {
-        source: "meta_oauth",
-        facebookUserId: profile.id,
-        accountType: "FACEBOOK_USER",
-        expiresIn: tokenResponse.expires_in ?? null,
-      },
-    });
+    try {
+      await activityService.log(userId, {
+        type: "account_connected",
+        title: "Meta account connected",
+        description: `${profile.name ?? username} connected via Meta OAuth (Facebook login — no Instagram permissions yet).`,
+        metadata: {
+          source: "meta_oauth",
+          facebookUserId: profile.id,
+          accountType: "FACEBOOK_USER",
+          expiresIn: tokenResponse.expires_in ?? null,
+        },
+      });
+    } catch (error) {
+      logIntegrationError("connectViaOAuth activity log failed (connection saved)", error);
+    }
 
     console.log("[meta-oauth] account saved:", {
       userId,

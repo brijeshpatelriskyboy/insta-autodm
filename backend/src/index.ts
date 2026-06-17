@@ -1,4 +1,5 @@
 import { createApp } from "./app";
+import { logInstagramTableStatus } from "./lib/dbStartup";
 import {
   getMetaRedirectUri,
   isMetaOAuthConfigured,
@@ -30,4 +31,5 @@ console.log(`[startup][meta] Credentials complete: ${isMetaOAuthConfigured()}`);
 
 app.listen(port, host, () => {
   console.log(`[startup] Ready — GET /health on http://${host}:${port}/health`);
+  void logInstagramTableStatus();
 });
