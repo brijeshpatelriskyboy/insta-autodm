@@ -1,5 +1,5 @@
 import { createApp } from "./app";
-import { ensureInstagramTables } from "./lib/dbStartup";
+import { logInstagramTableStatus } from "./lib/dbStartup";
 import {
   getMetaRedirectUri,
   isMetaOAuthConfigured,
@@ -29,7 +29,7 @@ async function bootstrap(): Promise<void> {
   console.log(`[startup][meta] Redirect URI: ${getMetaRedirectUri()}`);
   console.log(`[startup][meta] Credentials complete: ${isMetaOAuthConfigured()}`);
 
-  await ensureInstagramTables();
+  await logInstagramTableStatus();
 
   app.listen(port, host, () => {
     console.log(`[startup] Ready — GET /health on http://${host}:${port}/health`);
