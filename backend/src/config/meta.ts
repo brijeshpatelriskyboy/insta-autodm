@@ -37,6 +37,10 @@ export function isMetaOAuthConfigured(): boolean {
   return getMissingMetaCredentials().length === 0;
 }
 
+export function getMetaVerifyToken(): string {
+  return env.META_VERIFY_TOKEN?.trim() || "insta-autodm-verify-token";
+}
+
 export function getPublicMetaConfig() {
   return {
     configured: isMetaOAuthConfigured(),
@@ -44,6 +48,7 @@ export function getPublicMetaConfig() {
     redirectUri: getMetaRedirectUri(),
     graphApiVersion: META_GRAPH_API_VERSION,
     webhookUrl: null as string | null,
+    verifyToken: getMetaVerifyToken(),
     oauthEnabled: isMetaOAuthEnabled(),
   };
 }

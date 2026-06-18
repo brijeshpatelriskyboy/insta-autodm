@@ -192,13 +192,53 @@ export default function InstagramSetupPage() {
             )}
 
             {metaConfig?.webhookUrl && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Webhook URL (for a later step)
-                </p>
-                <p className="mt-2 break-all font-mono text-sm text-slate-700">
-                  {metaConfig.webhookUrl}
-                </p>
+              <div className="rounded-xl border border-brand-100 bg-brand-50/50 p-4 space-y-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">
+                    Webhook callback URL (Meta App Dashboard → Webhooks)
+                  </p>
+                  <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <code className="flex-1 break-all rounded-lg bg-white px-3 py-2 text-sm text-slate-800">
+                      {metaConfig.webhookUrl}
+                    </code>
+                    <Button
+                      variant="secondary"
+                      onClick={() => copyText("Webhook URL", metaConfig.webhookUrl!)}
+                    >
+                      <Copy className="h-4 w-4" />
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+
+                {metaConfig.verifyToken && (
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-brand-700">
+                      Verify token (must match META_VERIFY_TOKEN on Railway)
+                    </p>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <code className="flex-1 break-all rounded-lg bg-white px-3 py-2 text-sm text-slate-800">
+                        {metaConfig.verifyToken}
+                      </code>
+                      <Button
+                        variant="secondary"
+                        onClick={() => copyText("Verify token", metaConfig.verifyToken!)}
+                      >
+                        <Copy className="h-4 w-4" />
+                        Copy
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                  <li>Subscribe to the Instagram object.</li>
+                  <li>Enable the <span className="font-medium">comments</span> field.</li>
+                  <li>
+                    After verification, comment with a keyword from your rules — Activity Log will
+                    show comment received, keyword matched, and DM pending (no real DM yet).
+                  </li>
+                </ul>
               </div>
             )}
 

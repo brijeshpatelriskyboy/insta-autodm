@@ -11,6 +11,8 @@ import {
   Filter,
   Camera,
   Unlink,
+  MessageCircle,
+  Clock,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -30,7 +32,9 @@ import {
 
 const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }>> = {
   dm_sent: Send,
+  comment_received: MessageCircle,
   keyword_matched: MessageSquare,
+  dm_pending: Clock,
   lead_captured: UserPlus,
   rule_created: PlusCircle,
   rule_updated: Pencil,
@@ -40,7 +44,9 @@ const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }
 
 const typeColors: Record<ActivityType, string> = {
   dm_sent: "bg-brand-50 text-brand-600",
+  comment_received: "bg-sky-50 text-sky-600",
   keyword_matched: "bg-pink-50 text-pink-600",
+  dm_pending: "bg-amber-50 text-amber-600",
   lead_captured: "bg-emerald-50 text-emerald-600",
   rule_created: "bg-blue-50 text-blue-600",
   rule_updated: "bg-amber-50 text-amber-600",
@@ -102,6 +108,7 @@ export default function ActivityPage() {
             title: event.title,
             description: event.description,
             timestamp: event.timestamp,
+            keyword: event.keyword,
           })),
         );
       })
@@ -109,10 +116,13 @@ export default function ActivityPage() {
   }, []);
 
   const allEvents = useMemo(() => {
-    const merged = [...apiEvents, ...mockActivityEvents];
-    return merged.sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-    );
+    if (apiEvents.length > 0) {
+      return [...apiEvents].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
+    }
+
+    return mockActivityEvents;
   }, [apiEvents]);
 
   const filteredEvents = useMemo(
@@ -124,7 +134,11 @@ export default function ActivityPage() {
     <div className="space-y-6">
       <PageHeader
         title="Activity Log"
-        description="Your account events plus sample preview events until Instagram is connected."
+        description={
+          apiEvents.length > 0
+            ? "Live automation events from your connected Instagram account."
+            : "Sample preview events until Instagram webhooks start firing."
+        }
       />
 
       <Card padding="sm">
@@ -177,8 +191,9 @@ export default function ActivityPage() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Events marked Sample Data are preview examples. Real automation events appear after
-        Instagram is connected.
+        {apiEvents.length > 0
+          ? "Webhook matches appear here as comment received, keyword matched, and DM pending."
+          : "Events marked Sample Data are preview examples. Real events appear after webhooks are configured."}
       </p>
     </div>
   );

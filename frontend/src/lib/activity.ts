@@ -1,6 +1,8 @@
 export type ActivityType =
   | "dm_sent"
+  | "comment_received"
   | "keyword_matched"
+  | "dm_pending"
   | "lead_captured"
   | "rule_created"
   | "rule_updated"
@@ -19,7 +21,9 @@ export interface ActivityEvent {
 
 const typeLabels: Record<ActivityType, string> = {
   dm_sent: "DM Sent",
+  comment_received: "Comment Received",
   keyword_matched: "Keyword Matched",
+  dm_pending: "DM Pending",
   lead_captured: "Lead Captured",
   rule_created: "Rule Created",
   rule_updated: "Rule Updated",

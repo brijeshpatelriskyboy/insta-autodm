@@ -161,6 +161,7 @@ export interface ActivityEventRecord {
   title: string;
   description: string;
   timestamp: string;
+  keyword?: string;
 }
 
 export interface MetaOAuthConfig {
@@ -169,6 +170,7 @@ export interface MetaOAuthConfig {
   redirectUri: string;
   graphApiVersion: string;
   webhookUrl: string | null;
+  verifyToken?: string;
   oauthEnabled: boolean;
   scopes?: string[];
 }

@@ -2,6 +2,7 @@ import { createApp } from "./app";
 import { logInstagramTableStatus } from "./lib/dbStartup";
 import {
   getMetaRedirectUri,
+  getMetaVerifyToken,
   isMetaOAuthConfigured,
 } from "./config/meta";
 import { env, isMetaOAuthEnabled } from "./config/env";
@@ -28,6 +29,7 @@ async function bootstrap(): Promise<void> {
   console.log(`[startup][meta] Redirect URI loaded: ${env.META_REDIRECT_URI?.trim() ? "yes" : "no"}`);
   console.log(`[startup][meta] Redirect URI: ${getMetaRedirectUri()}`);
   console.log(`[startup][meta] Credentials complete: ${isMetaOAuthConfigured()}`);
+  console.log(`[startup][meta] Webhook verify token configured: ${Boolean(getMetaVerifyToken())}`);
 
   await logInstagramTableStatus();
 

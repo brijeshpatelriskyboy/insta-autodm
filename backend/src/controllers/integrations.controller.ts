@@ -111,13 +111,21 @@ export class ActivityController {
       if (!req.user) throw new AppError(401, "Authentication required");
       const events = await activityService.listForUser(req.user.id);
       res.json(
-        events.map((event) => ({
-          id: event.id,
-          type: event.type,
-          title: event.title,
-          description: event.description ?? "",
-          timestamp: event.createdAt.toISOString(),
-        })),
+        events.map((event) => {
+          const metadata =
+            event.metadata && typeof event.metadata === "object" && !Array.isArray(event.metadata)
+              ? (event.metadata as Record<string, unknown>)
+              : null;
+
+          return {
+            id: event.id,
+            type: event.type,
+            title: event.title,
+            description: event.description ?? "",
+            timestamp: event.createdAt.toISOString(),
+            keyword: typeof metadata?.keyword === "string" ? metadata.keyword : undefined,
+          };
+        }),
       );
     } catch (error) {
       next(error);

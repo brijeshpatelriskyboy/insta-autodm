@@ -94,4 +94,22 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
       },
     ],
   },
+  {
+    step: 7,
+    title: "Configure Instagram Webhooks",
+    summary: "Point Meta comment webhooks at Insta AutoDM to detect keyword triggers.",
+    instructions: [
+      "In Meta App Dashboard → Webhooks, add a callback URL (shown on this page).",
+      "Paste the Verify Token shown on this page — it must match META_VERIFY_TOKEN on Railway.",
+      "Subscribe to the Instagram object and enable the comments field.",
+      "Send a test comment containing one of your keyword rules to verify Activity Log entries.",
+      "Real DMs are not sent yet — matched comments log as DM pending.",
+    ],
+    links: [
+      {
+        label: "Meta Webhooks docs",
+        href: "https://developers.facebook.com/docs/graph-api/webhooks/getting-started/",
+      },
+    ],
+  },
 ];
