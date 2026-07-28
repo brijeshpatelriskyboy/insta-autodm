@@ -15,13 +15,13 @@ const envSchema = z.object({
   STRIPE_PRICE_STARTER: z.string().optional(),
   STRIPE_PRICE_CREATOR: z.string().optional(),
   STRIPE_PRICE_PRO: z.string().optional(),
-  /** Instagram App ID (Business Login for Instagram). */
+  /** Instagram App ID (Business Login for Instagram) — required for OAuth. */
   INSTAGRAM_APP_ID: z.string().optional(),
-  /** Instagram App Secret (server only). */
+  /** Instagram App Secret (server only) — required for OAuth. Never fall back to META_APP_SECRET. */
   INSTAGRAM_APP_SECRET: z.string().optional(),
-  /** @deprecated Prefer INSTAGRAM_APP_ID — kept for older Railway configs. */
+  /** Legacy Meta App ID — ignored for Instagram Business Login OAuth. */
   META_APP_ID: z.string().optional(),
-  /** @deprecated Prefer INSTAGRAM_APP_SECRET — kept for older Railway configs. */
+  /** Legacy Meta App Secret — ignored for Instagram Business Login OAuth. */
   META_APP_SECRET: z.string().optional(),
   META_REDIRECT_URI: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
@@ -30,12 +30,15 @@ const envSchema = z.object({
 
 const parsed = envSchema.parse(process.env);
 
-/** Prefer Instagram credentials; fall back to legacy META_* names if unset. */
+/**
+ * Instagram OAuth credentials must come from INSTAGRAM_APP_* only.
+ * Do not merge META_APP_ID / META_APP_SECRET into Instagram credentials —
+ * those can belong to a different Meta app and break token exchange.
+ */
 export const env = {
   ...parsed,
-  INSTAGRAM_APP_ID: parsed.INSTAGRAM_APP_ID?.trim() || parsed.META_APP_ID?.trim() || undefined,
-  INSTAGRAM_APP_SECRET:
-    parsed.INSTAGRAM_APP_SECRET?.trim() || parsed.META_APP_SECRET?.trim() || undefined,
+  INSTAGRAM_APP_ID: parsed.INSTAGRAM_APP_ID?.trim() || undefined,
+  INSTAGRAM_APP_SECRET: parsed.INSTAGRAM_APP_SECRET?.trim() || undefined,
 };
 
 export function isMetaOAuthEnabled(): boolean {

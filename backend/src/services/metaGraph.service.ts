@@ -1,8 +1,10 @@
 import {
+  getCredentialDiagnostics,
   getInstagramAppId,
   getInstagramAppSecret,
   getMetaRedirectUri,
-  logRedirectUriDiagnostics,
+  last4,
+  logOAuthClientDiagnostics,
   META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
@@ -85,15 +87,19 @@ function normalizeTokenPayload(body: unknown): TokenExchangeResponse {
   throw new AppError(502, "Instagram token exchange returned an unexpected payload");
 }
 
-/** Instagram sometimes appends `#_` to the redirect; strip it from the code. */
-export function sanitizeAuthorizationCode(code: string): string {
-  return code.replace(/#_+$/, "").trim();
+/**
+ * Pass the authorization code through unchanged.
+ * Express already decoded req.query once — do not trim, strip, re-decode, or truncate.
+ */
+export function readAuthorizationCode(code: string): string {
+  return code;
 }
 
 export const metaGraphService = {
   /**
    * Exchange an Instagram authorization code for a short-lived user access token.
-   * POST https://api.instagram.com/oauth/access_token
+   * Exactly one application/x-www-form-urlencoded POST to
+   * https://api.instagram.com/oauth/access_token
    */
   async exchangeCodeForToken(code: string): Promise<TokenExchangeResponse> {
     const clientId = getInstagramAppId();
@@ -103,32 +109,44 @@ export const metaGraphService = {
       throw new AppError(500, "INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET are required");
     }
 
-    // Same source as authorize URL — process.env.META_REDIRECT_URI via getMetaRedirectUri().
-    // Plain URI only; URLSearchParams encodes exactly once. Do not pre-encode.
     const redirectUri = getMetaRedirectUri();
-    const sanitizedCode = sanitizeAuthorizationCode(code);
+    // Code is used once, unmodified (Express already decoded the query param).
+    const authorizationCode = readAuthorizationCode(code);
+
+    const TOKEN_URL = "https://api.instagram.com/oauth/access_token";
 
     const body = new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
       grant_type: "authorization_code",
       redirect_uri: redirectUri,
-      code: sanitizedCode,
+      code: authorizationCode,
     });
 
+    const tokenExchangeClientId = body.get("client_id") ?? "";
     const tokenExchangeRedirectUri = body.get("redirect_uri") ?? "";
 
-    logRedirectUriDiagnostics("token-exchange", redirectUri, {
+    logOAuthClientDiagnostics("token-exchange", clientId, redirectUri, {
+      tokenExchangeClientId,
+      tokenExchangeClientIdLast4: last4(tokenExchangeClientId),
+      tokenExchangeClientIdMatchesGetter: tokenExchangeClientId === clientId,
       tokenExchangeRedirectUri: JSON.stringify(tokenExchangeRedirectUri),
       tokenExchangeRedirectUriLength: tokenExchangeRedirectUri.length,
       tokenExchangeMatchesGetter: tokenExchangeRedirectUri === redirectUri,
-      codeLength: sanitizedCode.length,
+      grantType: body.get("grant_type"),
+      tokenEndpoint: TOKEN_URL,
+      tokenEndpointHostname: new URL(TOKEN_URL).hostname,
+      contentType: "application/x-www-form-urlencoded",
+      formKeys: ["client_id", "client_secret", "grant_type", "redirect_uri", "code"],
+      codeLength: authorizationCode.length,
+      codeWasModified: authorizationCode !== code,
+      credentials: getCredentialDiagnostics(),
       // Never log client_secret, access tokens, or the full authorization code.
     });
 
-    console.log("[instagram-oauth] token exchange posting to https://api.instagram.com/oauth/access_token");
+    console.log("[instagram-oauth] token exchange posting to", TOKEN_URL);
 
-    const response = await fetch("https://api.instagram.com/oauth/access_token", {
+    const response = await fetch(TOKEN_URL, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: body.toString(),

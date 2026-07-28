@@ -10,8 +10,17 @@ export const META_OAUTH_SCOPES_PLANNED = INSTAGRAM_OAUTH_SCOPES;
 
 export const META_GRAPH_API_VERSION = "v21.0";
 
+/** Expected production Instagram App ID (Business Login). */
+export const EXPECTED_INSTAGRAM_APP_ID = "1002912682559021";
+
+/** Known legacy Meta App ID that must NOT be used for Instagram Business Login. */
+export const LEGACY_META_APP_ID = "2478735929261424";
+
 const EXPECTED_PRODUCTION_CALLBACK =
   "https://insta-autodm-production.up.railway.app/api/meta/callback";
+
+const TOKEN_ENDPOINT = "https://api.instagram.com/oauth/access_token";
+const AUTHORIZE_ENDPOINT = "https://www.instagram.com/oauth/authorize";
 
 /**
  * Inspect raw META_REDIRECT_URI from Railway / process.env for whitespace, quotes, newlines.
@@ -58,8 +67,7 @@ export function inspectRawMetaRedirectUri(): {
 
 /**
  * Single source of truth for OAuth redirect_uri.
- * Reads process.env.META_REDIRECT_URI and normalises with trim() only —
- * no trailing-slash stripping, no quote removal, no reconstruction.
+ * Reads process.env.META_REDIRECT_URI and normalises with trim() only.
  */
 export function getMetaRedirectUri(): string {
   const raw = process.env.META_REDIRECT_URI;
@@ -67,7 +75,6 @@ export function getMetaRedirectUri(): string {
     return raw.trim();
   }
 
-  // Local-only fallback when env is unset (production must set META_REDIRECT_URI).
   const port = process.env.PORT || "4000";
   if (process.env.NODE_ENV === "production") {
     return EXPECTED_PRODUCTION_CALLBACK;
@@ -75,16 +82,57 @@ export function getMetaRedirectUri(): string {
   return `http://localhost:${port}/api/meta/callback`;
 }
 
+/**
+ * Instagram App ID only — never falls back to META_APP_ID.
+ */
 export function getInstagramAppId(): string | null {
-  const value =
-    process.env.INSTAGRAM_APP_ID?.trim() || process.env.META_APP_ID?.trim() || "";
+  const value = process.env.INSTAGRAM_APP_ID?.trim() || "";
   return value || null;
 }
 
+/**
+ * Instagram App Secret only — never falls back to META_APP_SECRET.
+ */
 export function getInstagramAppSecret(): string | null {
-  const value =
-    process.env.INSTAGRAM_APP_SECRET?.trim() || process.env.META_APP_SECRET?.trim() || "";
+  const value = process.env.INSTAGRAM_APP_SECRET?.trim() || "";
   return value || null;
+}
+
+/** Safe last-4 helper for client_id diagnostics (never for secrets). */
+export function last4(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return value.length <= 4 ? value : value.slice(-4);
+}
+
+/**
+ * Safe credential inventory for startup / OAuth diagnostics.
+ * Never includes secret values.
+ */
+export function getCredentialDiagnostics() {
+  const instagramAppId = getInstagramAppId();
+  const instagramAppSecret = getInstagramAppSecret();
+  const metaAppId = process.env.META_APP_ID?.trim() || null;
+  const metaAppSecretPresent = Boolean(process.env.META_APP_SECRET?.trim());
+
+  return {
+    instagramAppId,
+    instagramAppIdLast4: last4(instagramAppId),
+    equalsExpectedInstagramAppId: instagramAppId === EXPECTED_INSTAGRAM_APP_ID,
+    expectedInstagramAppId: EXPECTED_INSTAGRAM_APP_ID,
+    instagramAppSecretPresent: Boolean(instagramAppSecret),
+    instagramAppSecretLength: instagramAppSecret?.length ?? 0,
+    metaAppId,
+    metaAppIdPresent: Boolean(metaAppId),
+    metaAppIdDifferentFromInstagram: Boolean(metaAppId && metaAppId !== instagramAppId),
+    metaAppIdIsLegacy: metaAppId === LEGACY_META_APP_ID,
+    metaAppSecretPresent,
+    usingMetaAppIdFallback: false,
+    usingMetaAppSecretFallback: false,
+    credentialSource: {
+      clientId: "INSTAGRAM_APP_ID",
+      clientSecret: "INSTAGRAM_APP_SECRET",
+    },
+  };
 }
 
 export function getMissingMetaCredentials(): string[] {
@@ -108,6 +156,7 @@ export function isMetaOAuthEnabled(): boolean {
 }
 
 export function getPublicMetaConfig() {
+  const credentials = getCredentialDiagnostics();
   return {
     configured: isMetaOAuthConfigured(),
     appId: getInstagramAppId(),
@@ -116,34 +165,49 @@ export function getPublicMetaConfig() {
     webhookUrl: null as string | null,
     verifyToken: getMetaVerifyToken(),
     oauthEnabled: isMetaOAuthEnabled(),
-    authorizationEndpoint: "https://www.instagram.com/oauth/authorize",
-    tokenEndpoint: "https://api.instagram.com/oauth/access_token",
+    authorizationEndpoint: AUTHORIZE_ENDPOINT,
+    tokenEndpoint: TOKEN_ENDPOINT,
     scopes: [...INSTAGRAM_OAUTH_SCOPES],
+    // Safe credential status only — no secrets.
+    credentials: {
+      instagramAppId: credentials.instagramAppId,
+      equalsExpectedInstagramAppId: credentials.equalsExpectedInstagramAppId,
+      instagramAppSecretPresent: credentials.instagramAppSecretPresent,
+      instagramAppSecretLength: credentials.instagramAppSecretLength,
+      metaAppIdPresent: credentials.metaAppIdPresent,
+      metaAppIdDifferentFromInstagram: credentials.metaAppIdDifferentFromInstagram,
+      metaAppIdIsLegacy: credentials.metaAppIdIsLegacy,
+      usingMetaAppIdFallback: false,
+      usingMetaAppSecretFallback: false,
+    },
   };
 }
 
-/** Temporary diagnostics for redirect_uri mismatch debugging. */
-export function logRedirectUriDiagnostics(
+/** Temporary diagnostics for OAuth authorize / token-exchange debugging. */
+export function logOAuthClientDiagnostics(
   phase: "authorize" | "token-exchange",
+  clientId: string,
   redirectUri: string,
   extras?: Record<string, unknown>,
 ): void {
-  const rawInspect = inspectRawMetaRedirectUri();
-  console.log(`[instagram-oauth] redirect_uri diagnostics (${phase}):`, {
+  console.log(`[instagram-oauth] client diagnostics (${phase}):`, {
+    clientId,
+    clientIdLast4: last4(clientId),
+    equalsExpectedInstagramAppId: clientId === EXPECTED_INSTAGRAM_APP_ID,
+    isLegacyMetaAppId: clientId === LEGACY_META_APP_ID,
     redirectUri: JSON.stringify(redirectUri),
     redirectUriLength: redirectUri.length,
     endsWithSlash: redirectUri.endsWith("/"),
-    equalsExpectedProduction: redirectUri === EXPECTED_PRODUCTION_CALLBACK,
-    expectedProduction: EXPECTED_PRODUCTION_CALLBACK,
-    expectedProductionLength: EXPECTED_PRODUCTION_CALLBACK.length,
-    rawEnv: rawInspect,
+    tokenEndpointHostname: "api.instagram.com",
+    tokenEndpoint: TOKEN_ENDPOINT,
+    credentialSource: "INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET only",
     ...extras,
   });
 }
 
 /**
  * Build Instagram Business Login authorization URL.
- * Uses the same getMetaRedirectUri() value as the token exchange.
+ * client_id comes only from INSTAGRAM_APP_ID.
  */
 export function buildOAuthUrl(state: string): string {
   const clientId = getInstagramAppId();
@@ -151,7 +215,6 @@ export function buildOAuthUrl(state: string): string {
     throw new Error("INSTAGRAM_APP_ID is required to build OAuth URL");
   }
 
-  // Same source as token exchange — process.env.META_REDIRECT_URI via getMetaRedirectUri().
   const redirectUri = getMetaRedirectUri();
 
   const params = new URLSearchParams({
@@ -162,15 +225,18 @@ export function buildOAuthUrl(state: string): string {
     state,
   });
 
-  const url = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
-
-  // URLSearchParams.get() returns the decoded redirect_uri embedded in the auth URL.
+  const url = `${AUTHORIZE_ENDPOINT}?${params.toString()}`;
   const decodedFromAuthUrl = new URL(url).searchParams.get("redirect_uri") ?? "";
+  const authClientId = new URL(url).searchParams.get("client_id") ?? "";
 
-  logRedirectUriDiagnostics("authorize", redirectUri, {
+  logOAuthClientDiagnostics("authorize", clientId, redirectUri, {
+    authorizationClientId: authClientId,
+    authorizationClientIdLast4: last4(authClientId),
+    authorizationClientIdMatchesGetter: authClientId === clientId,
     authorizationUrlDecodedRedirectUri: JSON.stringify(decodedFromAuthUrl),
     authorizationUrlDecodedRedirectUriLength: decodedFromAuthUrl.length,
     authorizeMatchesGetter: decodedFromAuthUrl === redirectUri,
+    credentials: getCredentialDiagnostics(),
   });
 
   return url;

@@ -1,32 +1,37 @@
 import { env } from "../config/env";
 import {
   buildOAuthUrl,
+  getInstagramAppId,
   getMetaRedirectUri,
   getMissingMetaCredentials,
   getPublicMetaConfig,
   INSTAGRAM_OAUTH_SCOPES,
   isMetaOAuthConfigured,
   isMetaOAuthEnabled,
+  last4,
   META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 import { instagramIntegrationService } from "./instagramIntegration.service";
 
-function buildOAuthState(userId: string): string {
-  return `${userId}:${Date.now()}`;
+/** state = userId:timestamp:authorizeClientId */
+function buildOAuthState(userId: string, authorizeClientId: string): string {
+  return `${userId}:${Date.now()}:${authorizeClientId}`;
 }
 
-function parseOAuthState(state?: string): string | null {
+function parseOAuthState(state?: string): { userId: string; authorizeClientId: string | null } | null {
   if (!state?.trim()) {
     return null;
   }
 
-  const userId = state.split(":")[0]?.trim();
+  const parts = state.split(":");
+  const userId = parts[0]?.trim();
   if (!userId) {
     return null;
   }
 
-  return userId;
+  const authorizeClientId = parts[2]?.trim() || null;
+  return { userId, authorizeClientId };
 }
 
 function integrationsRedirect(params: Record<string, string>): string {
@@ -52,7 +57,8 @@ export const metaOAuthService = {
     const configured = isMetaOAuthConfigured();
     const redirectUri = getMetaRedirectUri();
     const missing = getMissingMetaCredentials();
-    const state = buildOAuthState(userId);
+    const authorizeClientId = getInstagramAppId() ?? "";
+    const state = buildOAuthState(userId, authorizeClientId);
 
     if (!oauthEnabled) {
       return {
@@ -125,15 +131,24 @@ export const metaOAuthService = {
       };
     }
 
-    const userId = parseOAuthState(query.state);
-    if (!userId) {
+    const parsedState = parseOAuthState(query.state);
+    if (!parsedState?.userId) {
       throw new AppError(400, "Invalid OAuth state");
     }
+
+    const { userId, authorizeClientId } = parsedState;
+    const tokenExchangeClientId = getInstagramAppId();
 
     console.log("[instagram-oauth] callback received:", {
       userId,
       hasCode: true,
       hasState: Boolean(query.state),
+      authorizeClientId,
+      authorizeClientIdLast4: last4(authorizeClientId),
+      tokenExchangeClientId,
+      tokenExchangeClientIdLast4: last4(tokenExchangeClientId),
+      clientIdsStrictlyEqual: authorizeClientId === tokenExchangeClientId,
+      codeLength: query.code.length,
     });
 
     const account = await instagramIntegrationService.connectViaOAuth(userId, query.code);

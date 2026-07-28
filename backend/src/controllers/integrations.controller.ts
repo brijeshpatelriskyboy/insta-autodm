@@ -13,6 +13,20 @@ function getApiBaseUrl(req: Request): string {
   return `${protocol}://${host}`;
 }
 
+/**
+ * Read a query param exactly once as a plain string.
+ * Does not trim, decode further, or otherwise modify the value.
+ */
+function readQueryParamOnce(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
+  }
+  return undefined;
+}
+
 export class InstagramIntegrationController {
   async status(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
@@ -64,12 +78,20 @@ export class InstagramIntegrationController {
 
   async callback(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const query = {
-        code: req.query.code as string | undefined,
-        state: req.query.state as string | undefined,
-        error: req.query.error as string | undefined,
-        error_description: req.query.error_description as string | undefined,
-      };
+      // Read OAuth params once from the query string. Do not decode/trim/mutate the code.
+      const code = readQueryParamOnce(req.query.code);
+      const state = readQueryParamOnce(req.query.state);
+      const error = readQueryParamOnce(req.query.error);
+      const error_description = readQueryParamOnce(req.query.error_description);
+
+      const query = { code, state, error, error_description };
+
+      console.log("[instagram-oauth] callback query received:", {
+        hasCode: Boolean(code),
+        codeLength: code?.length ?? 0,
+        hasState: Boolean(state),
+        hasError: Boolean(error),
+      });
 
       if (req.headers.accept?.includes("application/json")) {
         const result = await metaOAuthService.handleCallback(query);
