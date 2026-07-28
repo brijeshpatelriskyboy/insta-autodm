@@ -2,6 +2,7 @@ import { env } from "../config/env";
 import {
   buildOAuthUrl,
   getInstagramAppId,
+  getMetaGraphApiVersion,
   getMetaRedirectUri,
   getMissingMetaCredentials,
   getPublicMetaConfig,
@@ -9,7 +10,6 @@ import {
   isMetaOAuthConfigured,
   isMetaOAuthEnabled,
   last4,
-  META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 import { instagramIntegrationService } from "./instagramIntegration.service";
@@ -48,7 +48,7 @@ export const metaOAuthService = {
       webhookUrl: `${apiBaseUrl.replace(/\/$/, "")}/api/webhooks/instagram`,
       scopes: [...INSTAGRAM_OAUTH_SCOPES],
       scopesPlanned: [...INSTAGRAM_OAUTH_SCOPES],
-      graphApiVersion: META_GRAPH_API_VERSION,
+      graphApiVersion: getMetaGraphApiVersion(),
     };
   },
 

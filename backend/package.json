@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "start": "node dist/index.js",
     "start:prod": "npx prisma db push && node dist/index.js",
     "db:generate": "prisma generate",
@@ -35,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.15.32",
     "tsx": "^4.20.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }

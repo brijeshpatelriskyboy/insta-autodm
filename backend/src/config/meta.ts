@@ -8,7 +8,20 @@ export const INSTAGRAM_OAUTH_SCOPES = [
 /** @deprecated Prefer INSTAGRAM_OAUTH_SCOPES — kept for public config compatibility. */
 export const META_OAUTH_SCOPES_PLANNED = INSTAGRAM_OAUTH_SCOPES;
 
-export const META_GRAPH_API_VERSION = "v21.0";
+/**
+ * Meta / Instagram Graph API version.
+ * Override with META_GRAPH_API_VERSION (e.g. "v21.0") — do not scatter hard-coded versions.
+ */
+export function getMetaGraphApiVersion(): string {
+  const fromEnv = process.env.META_GRAPH_API_VERSION?.trim();
+  if (fromEnv) {
+    return fromEnv.startsWith("v") ? fromEnv : `v${fromEnv}`;
+  }
+  return "v21.0";
+}
+
+/** @deprecated Prefer getMetaGraphApiVersion() for runtime reads. */
+export const META_GRAPH_API_VERSION = getMetaGraphApiVersion();
 
 /** Expected production Instagram App ID (Business Login). */
 export const EXPECTED_INSTAGRAM_APP_ID = "1002912682559021";
@@ -161,7 +174,7 @@ export function getPublicMetaConfig() {
     configured: isMetaOAuthConfigured(),
     appId: getInstagramAppId(),
     redirectUri: getMetaRedirectUri(),
-    graphApiVersion: META_GRAPH_API_VERSION,
+    graphApiVersion: getMetaGraphApiVersion(),
     webhookUrl: null as string | null,
     verifyToken: getMetaVerifyToken(),
     oauthEnabled: isMetaOAuthEnabled(),

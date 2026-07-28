@@ -2,10 +2,10 @@ import {
   getCredentialDiagnostics,
   getInstagramAppId,
   getInstagramAppSecret,
+  getMetaGraphApiVersion,
   getMetaRedirectUri,
   last4,
   logOAuthClientDiagnostics,
-  META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 
@@ -206,7 +206,7 @@ export const metaGraphService = {
    * GET https://graph.instagram.com/{version}/me
    */
   async fetchInstagramProfile(accessToken: string): Promise<InstagramProfile> {
-    const url = new URL(`https://graph.instagram.com/${META_GRAPH_API_VERSION}/me`);
+    const url = new URL(`https://graph.instagram.com/${getMetaGraphApiVersion()}/me`);
     url.searchParams.set(
       "fields",
       "user_id,username,name,account_type,profile_picture_url",
@@ -224,6 +224,92 @@ export const metaGraphService = {
     });
 
     return profile;
+  },
+
+  /**
+   * Send one private reply to an Instagram commenter via Messaging API.
+   *
+   * Limitations (Meta platform rules — still apply):
+   * - This is a private reply to a specific comment, not unrestricted outbound DM.
+   * - Typically one private reply per commenter/comment context.
+   * - Must be sent within Meta's eligibility window (commonly 7 days for post/reel
+   *   comments; live comments only during the broadcast).
+   * - Follow-up free-form DMs require the recipient to reply first (24h window).
+   *
+   * POST https://graph.instagram.com/{VERSION}/{IG_USER_ID}/messages
+   */
+  async sendPrivateReplyToComment(params: {
+    igUserId: string;
+    accessToken: string;
+    commentId: string;
+    messageText: string;
+    timeoutMs?: number;
+  }): Promise<{ recipientId: string | null; messageId: string }> {
+    const version = getMetaGraphApiVersion();
+    const url = `https://graph.instagram.com/${version}/${encodeURIComponent(params.igUserId)}/messages`;
+    const timeoutMs = params.timeoutMs ?? 10_000;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${params.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          recipient: { comment_id: params.commentId },
+          message: { text: params.messageText },
+        }),
+        signal: controller.signal,
+      });
+
+      const raw = (await response.json()) as {
+        recipient_id?: string;
+        message_id?: string;
+        error?: { message?: string; type?: string; code?: number };
+      };
+
+      if (!response.ok || raw.error || !raw.message_id) {
+        const message =
+          raw.error?.message ?? `Instagram private reply failed (HTTP ${response.status})`;
+        console.error("[instagram-dm] private reply failed:", {
+          status: response.status,
+          type: raw.error?.type ?? null,
+          code: raw.error?.code ?? null,
+          message,
+          commentId: params.commentId,
+          igUserId: params.igUserId,
+        });
+        throw new AppError(502, message);
+      }
+
+      console.log("[instagram-dm] private reply sent:", {
+        commentId: params.commentId,
+        igUserId: params.igUserId,
+        messageIdPresent: Boolean(raw.message_id),
+        recipientIdPresent: Boolean(raw.recipient_id),
+      });
+
+      return {
+        recipientId: raw.recipient_id ?? null,
+        messageId: raw.message_id,
+      };
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new AppError(504, `Instagram private reply timed out after ${timeoutMs}ms`);
+      }
+      throw new AppError(
+        502,
+        error instanceof Error ? error.message : "Instagram private reply request failed",
+      );
+    } finally {
+      clearTimeout(timer);
+    }
   },
 
   /** @deprecated Use fetchInstagramProfile — kept for any residual Facebook Login callers. */

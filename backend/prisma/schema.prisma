@@ -7,6 +7,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum DmEventStatus {
+  sending
+  sent
+  failed
+}
+
 model User {
   id                         String                      @id @default(cuid())
   email                      String                      @unique
@@ -42,13 +48,24 @@ model KeywordRule {
 }
 
 model DmEvent {
-  id        String       @id @default(cuid())
-  userId    String
-  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ruleId    String?
-  rule      KeywordRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
-  createdAt DateTime     @default(now())
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleId             String?
+  rule               KeywordRule?     @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  instagramAccountId String
+  instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
+  commentId          String
+  status             DmEventStatus    @default(sending)
+  mediaId            String?
+  messageId          String?
+  errorSummary       String?
+  attemptCount       Int              @default(1)
+  lastAttemptAt      DateTime?
+  createdAt          DateTime         @default(now())
 
+  @@unique([instagramAccountId, commentId])
+  @@index([userId, createdAt])
   @@map("dm_events")
 }
 
@@ -88,6 +105,7 @@ model InstagramAccount {
   lastSyncAt           DateTime?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  dmEvents             DmEvent[]
 
   @@map("instagram_accounts")
 }
