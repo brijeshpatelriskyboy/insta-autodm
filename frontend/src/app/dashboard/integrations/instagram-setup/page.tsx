@@ -153,8 +153,8 @@ export default function InstagramSetupPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {[
                 { label: "META_OAUTH_ENABLED", ready: metaConfig?.oauthEnabled ?? false },
-                { label: "META_APP_ID", ready: Boolean(metaConfig?.appId) },
-                { label: "META_APP_SECRET", ready: metaConfig?.configured ?? false },
+                { label: "INSTAGRAM_APP_ID", ready: Boolean(metaConfig?.appId) },
+                { label: "INSTAGRAM_APP_SECRET", ready: metaConfig?.configured ?? false },
                 { label: "META_REDIRECT_URI", ready: Boolean(metaConfig?.redirectUri) },
               ].map((item) => (
                 <div

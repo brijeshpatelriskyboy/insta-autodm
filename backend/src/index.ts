@@ -23,12 +23,17 @@ async function bootstrap(): Promise<void> {
   console.log(`[startup] NODE_ENV=${process.env.NODE_ENV ?? "unset"}`);
   console.log(`[startup] bind=${host}:${port}`);
 
-  console.log(`[startup][meta] Meta OAuth enabled: ${isMetaOAuthEnabled()}`);
-  console.log(`[startup][meta] App ID loaded: ${env.META_APP_ID?.trim() ? "yes" : "no"}`);
-  console.log(`[startup][meta] App Secret loaded: ${env.META_APP_SECRET?.trim() ? "yes" : "no"}`);
+  console.log(`[startup][meta] Instagram OAuth enabled: ${isMetaOAuthEnabled()}`);
+  console.log(`[startup][meta] INSTAGRAM_APP_ID loaded: ${env.INSTAGRAM_APP_ID?.trim() ? "yes" : "no"}`);
+  console.log(
+    `[startup][meta] INSTAGRAM_APP_SECRET loaded: ${env.INSTAGRAM_APP_SECRET?.trim() ? "yes" : "no"}`,
+  );
   console.log(`[startup][meta] Redirect URI loaded: ${env.META_REDIRECT_URI?.trim() ? "yes" : "no"}`);
   console.log(`[startup][meta] Redirect URI: ${getMetaRedirectUri()}`);
   console.log(`[startup][meta] Credentials complete: ${isMetaOAuthConfigured()}`);
+  console.log(`[startup][meta] Authorization: https://www.instagram.com/oauth/authorize`);
+  console.log(`[startup][meta] Token exchange: https://api.instagram.com/oauth/access_token`);
+  console.log(`[startup][meta] Callback route: GET /api/meta/callback`);
   console.log(`[startup][meta] Webhook verify token configured: ${Boolean(getMetaVerifyToken())}`);
 
   await logInstagramTableStatus();

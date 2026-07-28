@@ -8,8 +8,8 @@ export interface MetaSetupStep {
 
 export const META_SETUP_REQUIREMENTS = [
   "Instagram Professional account (Business or Creator)",
-  "Facebook Page linked to that Instagram account",
-  "Meta Developer account with a configured app",
+  "Meta Developer account with Instagram API (Instagram Login)",
+  "Valid OAuth Redirect URI matching META_REDIRECT_URI exactly",
 ];
 
 export const META_SETUP_STEPS: MetaSetupStep[] = [
@@ -31,50 +31,50 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
     instructions: [
       "Click Create App → choose Business as the app type.",
       "Name the app (e.g. Insta AutoDM) and connect a Business portfolio if prompted.",
-      "Note your App ID — you will add it as META_APP_ID on Railway.",
+      "Note your Instagram App ID — you will add it as INSTAGRAM_APP_ID on Railway.",
     ],
     links: [{ label: "Create a Meta App", href: "https://developers.facebook.com/apps/" }],
   },
   {
     step: 3,
-    title: "Add Instagram Graph API",
-    summary: "Enable Instagram API products for comment and profile access.",
+    title: "Add Instagram API with Instagram Login",
+    summary: "Enable Instagram Business Login for comment and messaging access.",
     instructions: [
       "In your app dashboard, click Add Product.",
-      "Add Instagram → set up Instagram API / Instagram Graph API.",
-      "Add Instagram test users while the app remains in Development mode.",
+      "Add Instagram → set up Instagram API with Instagram Login (Business Login).",
+      "Add Instagram tester accounts while the app remains in Development mode.",
     ],
     links: [
       {
-        label: "Instagram API docs",
-        href: "https://developers.facebook.com/docs/instagram-api/",
+        label: "Business Login for Instagram",
+        href: "https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/business-login/",
       },
     ],
   },
   {
     step: 4,
-    title: "Add Facebook Login",
-    summary: "Facebook Login is required to authorize Instagram Business accounts.",
+    title: "Configure Instagram OAuth Redirect",
+    summary: "Register the production callback URL in your Instagram app settings.",
     instructions: [
-      "Add the Facebook Login product to your Meta app.",
-      "Under Facebook Login → Settings, enable Client OAuth Login and Web OAuth Login.",
-      "Add your site URL under App Domains and Valid OAuth Redirect URIs (next step).",
+      "Under Instagram → API setup with Instagram login, add a Valid OAuth Redirect URI.",
+      "Use exactly: https://insta-autodm-production.up.railway.app/api/meta/callback",
+      "Do not add a trailing slash — it must match META_REDIRECT_URI character-for-character.",
     ],
     links: [
       {
-        label: "Facebook Login docs",
-        href: "https://developers.facebook.com/docs/facebook-login/",
+        label: "Instagram OAuth authorize reference",
+        href: "https://developers.facebook.com/docs/instagram-platform/reference/oauth-authorize",
       },
     ],
   },
   {
     step: 5,
-    title: "Configure Redirect URL",
-    summary: "Paste the Insta AutoDM callback URL into your Meta app settings.",
+    title: "Set Railway Environment Variables",
+    summary: "Paste Instagram credentials and the callback URL into Railway.",
     instructions: [
-      "Copy the Redirect URI shown on this page into Meta → Facebook Login → Valid OAuth Redirect URIs.",
-      "Set META_REDIRECT_URI on Railway to the exact same URL (no trailing slash).",
-      "Set META_APP_ID and META_APP_SECRET from the Meta app dashboard on Railway.",
+      "Set META_REDIRECT_URI=https://insta-autodm-production.up.railway.app/api/meta/callback",
+      "Set INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET from the Meta app dashboard.",
+      "Set META_OAUTH_ENABLED=true after redirect URI and credentials are saved.",
       "Redeploy the backend after saving environment variables.",
     ],
   },
@@ -84,13 +84,13 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
     summary: "Prepare your Instagram account before OAuth goes live.",
     instructions: [
       "Convert Instagram to a Professional (Business or Creator) account.",
-      "In Instagram → Professional dashboard → Linked accounts, connect a Facebook Page.",
-      "Confirm the Page appears in Meta Business Suite before enabling OAuth in Insta AutoDM.",
+      "Confirm the account can grant Instagram Business Login permissions.",
+      "Use Connect Instagram in Insta AutoDM to start the OAuth flow.",
     ],
     links: [
       {
-        label: "Connect IG to a Facebook Page",
-        href: "https://www.facebook.com/business/help/898752960195806",
+        label: "Instagram professional accounts",
+        href: "https://help.instagram.com/502981923235522",
       },
     ],
   },

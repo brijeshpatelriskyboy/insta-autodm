@@ -196,14 +196,18 @@ export const instagramIntegrationService = {
       throw new AppError(404, "User not found for OAuth state");
     }
 
-    const tokenResponse = await metaGraphService.exchangeCodeForToken(code);
-    const profile = await metaGraphService.fetchFacebookProfile(tokenResponse.access_token);
+    const shortLived = await metaGraphService.exchangeCodeForToken(code);
+    const longLived = await metaGraphService.exchangeForLongLivedToken(shortLived.access_token);
+    const profile = await metaGraphService.fetchInstagramProfile(longLived.access_token);
 
     const now = new Date();
-    const username = deriveFacebookUsername(profile);
-    const instagramUserId = `fb_${profile.id}`;
-    const profilePictureUrl = profile.picture?.data?.url ?? null;
-    const accessTokenEncrypted = encryptToken(tokenResponse.access_token);
+    const instagramUserId = String(profile.user_id ?? profile.id ?? shortLived.user_id);
+    const username =
+      profile.username?.trim() ||
+      deriveFacebookUsername({ id: instagramUserId, name: profile.name });
+    const accountType = (profile.account_type?.trim() || "BUSINESS").toUpperCase();
+    const profilePictureUrl = profile.profile_picture_url ?? null;
+    const accessTokenEncrypted = encryptToken(longLived.access_token);
 
     let account;
     try {
@@ -213,7 +217,7 @@ export const instagramIntegrationService = {
           userId,
           instagramUserId,
           username,
-          accountType: "FACEBOOK_USER",
+          accountType,
           profilePictureUrl,
           accessTokenEncrypted,
           connectionStatus: "connected",
@@ -223,7 +227,7 @@ export const instagramIntegrationService = {
         update: {
           instagramUserId,
           username,
-          accountType: "FACEBOOK_USER",
+          accountType,
           profilePictureUrl,
           accessTokenEncrypted,
           connectionStatus: "connected",
@@ -239,22 +243,23 @@ export const instagramIntegrationService = {
     try {
       await activityService.log(userId, {
         type: "account_connected",
-        title: "Meta account connected",
-        description: `${profile.name ?? username} connected via Meta OAuth (Facebook login — no Instagram permissions yet).`,
+        title: "Instagram account connected",
+        description: `@${username} connected via Instagram Business Login.`,
         metadata: {
-          source: "meta_oauth",
-          facebookUserId: profile.id,
-          accountType: "FACEBOOK_USER",
-          expiresIn: tokenResponse.expires_in ?? null,
+          source: "instagram_oauth",
+          instagramUserId,
+          accountType,
+          expiresIn: longLived.expires_in ?? shortLived.expires_in ?? null,
+          permissions: shortLived.permissions ?? null,
         },
       });
     } catch (error) {
       logIntegrationError("connectViaOAuth activity log failed (connection saved)", error);
     }
 
-    console.log("[meta-oauth] account saved:", {
+    console.log("[instagram-oauth] account saved:", {
       userId,
-      facebookUserId: profile.id,
+      instagramUserId,
       username: account.username,
       connectionStatus: account.connectionStatus,
     });

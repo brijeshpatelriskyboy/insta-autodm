@@ -4,9 +4,9 @@ import {
   getMetaRedirectUri,
   getMissingMetaCredentials,
   getPublicMetaConfig,
+  INSTAGRAM_OAUTH_SCOPES,
   isMetaOAuthConfigured,
   META_GRAPH_API_VERSION,
-  META_OAUTH_SCOPES_PLANNED,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 import { instagramIntegrationService } from "./instagramIntegration.service";
@@ -40,8 +40,8 @@ export const metaOAuthService = {
     return {
       ...config,
       webhookUrl: `${apiBaseUrl.replace(/\/$/, "")}/api/webhooks/instagram`,
-      scopes: [],
-      scopesPlanned: [...META_OAUTH_SCOPES_PLANNED],
+      scopes: [...INSTAGRAM_OAUTH_SCOPES],
+      scopesPlanned: [...INSTAGRAM_OAUTH_SCOPES],
       graphApiVersion: META_GRAPH_API_VERSION,
     };
   },
@@ -62,7 +62,7 @@ export const metaOAuthService = {
         redirectUri,
         setupError: null,
         message:
-          "Meta OAuth is disabled. Set META_OAUTH_ENABLED=true after Meta app verification.",
+          "Instagram OAuth is disabled. Set META_OAUTH_ENABLED=true after app verification.",
       };
     }
 
@@ -75,9 +75,9 @@ export const metaOAuthService = {
         redirectUri,
         setupError: {
           missing,
-          message: `Meta setup required. Missing: ${missing.join(", ")}`,
+          message: `Instagram setup required. Missing: ${missing.join(", ")}`,
         },
-        message: `Meta setup required. Missing: ${missing.join(", ")}`,
+        message: `Instagram setup required. Missing: ${missing.join(", ")}`,
       };
     }
 
@@ -90,7 +90,7 @@ export const metaOAuthService = {
       configured: true,
       redirectUri,
       setupError: null,
-      message: "Redirect to Meta to authorize access.",
+      message: "Redirect to Instagram to authorize access.",
     };
   },
 
@@ -103,12 +103,12 @@ export const metaOAuthService = {
     if (query.error) {
       throw new AppError(
         400,
-        query.error_description ?? query.error ?? "Meta OAuth authorization was denied",
+        query.error_description ?? query.error ?? "Instagram OAuth authorization was denied",
       );
     }
 
     if (!query.code) {
-      throw new AppError(400, "Missing authorization code from Meta");
+      throw new AppError(400, "Missing authorization code from Instagram");
     }
 
     if (!isMetaOAuthEnabled()) {
@@ -129,9 +129,10 @@ export const metaOAuthService = {
       throw new AppError(400, "Invalid OAuth state");
     }
 
-    console.log("[meta-oauth] callback received:", {
+    console.log("[instagram-oauth] callback received:", {
       userId,
       hasCode: true,
+      hasState: Boolean(query.state),
     });
 
     const account = await instagramIntegrationService.connectViaOAuth(userId, query.code);
@@ -139,7 +140,7 @@ export const metaOAuthService = {
     return {
       status: "connected",
       oauthEnabled: true,
-      message: `Connected as ${account.username ?? "Meta user"}.`,
+      message: `Connected as @${account.username ?? "instagram"}.`,
       username: account.username,
       accountType: account.accountType,
     };
@@ -154,14 +155,15 @@ export const metaOAuthService = {
     if (query.error) {
       return integrationsRedirect({
         oauth: "error",
-        message: query.error_description ?? query.error ?? "Meta OAuth authorization was denied",
+        message:
+          query.error_description ?? query.error ?? "Instagram OAuth authorization was denied",
       });
     }
 
     if (!query.code) {
       return integrationsRedirect({
         oauth: "error",
-        message: "No authorization code received from Meta",
+        message: "No authorization code received from Instagram",
       });
     }
 
@@ -169,7 +171,7 @@ export const metaOAuthService = {
       return integrationsRedirect({
         oauth: "placeholder",
         message:
-          "Meta returned an authorization code. Enable META_OAUTH_ENABLED=true to exchange tokens.",
+          "Instagram returned an authorization code. Enable META_OAUTH_ENABLED=true to exchange tokens.",
       });
     }
 
@@ -185,9 +187,9 @@ export const metaOAuthService = {
           ? error.message
           : error instanceof Error
             ? error.message
-            : "Meta OAuth callback failed";
+            : "Instagram OAuth callback failed";
 
-      console.error("[meta-oauth] callback redirect failed:", {
+      console.error("[instagram-oauth] callback redirect failed:", {
         name: error instanceof Error ? error.name : "UnknownError",
         message,
       });
