@@ -1,4 +1,4 @@
-import { env, isMetaOAuthEnabled } from "../config/env";
+import { env } from "../config/env";
 import {
   buildOAuthUrl,
   getMetaRedirectUri,
@@ -6,6 +6,7 @@ import {
   getPublicMetaConfig,
   INSTAGRAM_OAUTH_SCOPES,
   isMetaOAuthConfigured,
+  isMetaOAuthEnabled,
   META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";

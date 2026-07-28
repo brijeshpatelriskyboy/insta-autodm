@@ -2,6 +2,7 @@ import {
   getInstagramAppId,
   getInstagramAppSecret,
   getMetaRedirectUri,
+  logRedirectUriDiagnostics,
   META_GRAPH_API_VERSION,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
@@ -102,20 +103,35 @@ export const metaGraphService = {
       throw new AppError(500, "INSTAGRAM_APP_ID and INSTAGRAM_APP_SECRET are required");
     }
 
-    const form = new URLSearchParams({
+    // Same source as authorize URL — process.env.META_REDIRECT_URI via getMetaRedirectUri().
+    // Plain URI only; URLSearchParams encodes exactly once. Do not pre-encode.
+    const redirectUri = getMetaRedirectUri();
+    const sanitizedCode = sanitizeAuthorizationCode(code);
+
+    const body = new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
       grant_type: "authorization_code",
-      redirect_uri: getMetaRedirectUri(),
-      code: sanitizeAuthorizationCode(code),
+      redirect_uri: redirectUri,
+      code: sanitizedCode,
     });
 
-    console.log("[instagram-oauth] token exchange started");
+    const tokenExchangeRedirectUri = body.get("redirect_uri") ?? "";
+
+    logRedirectUriDiagnostics("token-exchange", redirectUri, {
+      tokenExchangeRedirectUri: JSON.stringify(tokenExchangeRedirectUri),
+      tokenExchangeRedirectUriLength: tokenExchangeRedirectUri.length,
+      tokenExchangeMatchesGetter: tokenExchangeRedirectUri === redirectUri,
+      codeLength: sanitizedCode.length,
+      // Never log client_secret, access tokens, or the full authorization code.
+    });
+
+    console.log("[instagram-oauth] token exchange posting to https://api.instagram.com/oauth/access_token");
 
     const response = await fetch("https://api.instagram.com/oauth/access_token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: form.toString(),
+      body: body.toString(),
     });
 
     const raw = await parseJsonResponse<unknown>(response, "token exchange");
