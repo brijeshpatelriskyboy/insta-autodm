@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { corsOptions } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
+import { metaWebhookSignatureMiddleware } from "./middleware/metaWebhookSignature";
 import authRoutes from "./routes/auth.routes";
 import keywordRuleRoutes from "./routes/keywordRule.routes";
 import analyticsRoutes from "./routes/analytics.routes";
@@ -12,6 +13,7 @@ import metaRoutes from "./routes/meta.routes";
 import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import { billingController } from "./controllers/billing.controller";
+import { webhookController } from "./controllers/webhook.controller";
 
 export function createApp() {
   const app = express();
@@ -29,6 +31,15 @@ export function createApp() {
     (req, res, next) => billingController.webhook(req, res, next),
   );
 
+  // Instagram webhook POST needs the exact raw body for X-Hub-Signature-256.
+  // Registered before express.json() so parsing cannot alter the bytes used for HMAC.
+  app.post(
+    "/api/webhooks/instagram",
+    express.raw({ type: "application/json" }),
+    metaWebhookSignatureMiddleware,
+    (req, res, next) => void webhookController.handleEvent(req, res, next),
+  );
+
   app.use(express.json());
 
   // Public Instagram OAuth callback — no auth; must stay registered in all envs.
@@ -38,6 +49,7 @@ export function createApp() {
   app.use("/api/auth", authRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
   app.use("/api/analytics", analyticsRoutes);
+  // GET /api/webhooks/instagram verification challenge only (POST handled above).
   app.use("/api/webhooks", webhookRoutes);
   app.use("/api/instagram", instagramRoutes);
   app.use("/api/integrations", integrationsRoutes);
