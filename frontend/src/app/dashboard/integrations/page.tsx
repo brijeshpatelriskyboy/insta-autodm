@@ -431,7 +431,11 @@ export default function IntegrationsPage() {
             {
               icon: RefreshCw,
               label: "Webhook listener",
-              status: "Endpoint ready",
+              status: !connected
+                ? "Endpoint ready — connect Instagram"
+                : webhookConfigured
+                  ? "Endpoint ready — account subscribed"
+                  : "Endpoint ready — run Enable comment webhooks",
             },
             {
               icon: Server,
