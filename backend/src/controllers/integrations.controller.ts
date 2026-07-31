@@ -125,6 +125,16 @@ export class InstagramIntegrationController {
       next(error);
     }
   }
+
+  async subscribeWebhooks(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const result = await instagramIntegrationService.subscribeWebhooks(req.user.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export class ActivityController {

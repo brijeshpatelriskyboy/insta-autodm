@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
+import { INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS } from "../config/meta";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
-import { encryptToken } from "../utils/tokenCrypto";
+import { decryptToken, encryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
 
@@ -62,12 +63,16 @@ function deriveMockUsername(userId: string, name: string | null, email: string):
   return email.split("@")[0].toLowerCase().replace(/[^a-z0-9._]/g, "");
 }
 
-function buildSetupChecklist(connected: boolean, source?: "mock" | "meta_oauth") {
+function buildSetupChecklist(
+  connected: boolean,
+  source?: "mock" | "meta_oauth",
+  webhookConfigured = false,
+) {
   return {
     professionalAccount: connected && source === "mock",
     facebookPageLinked: connected && source === "mock",
     metaDeveloperApp: connected && source === "meta_oauth",
-    webhookConfigured: false,
+    webhookConfigured: connected && (source === "mock" || webhookConfigured),
   };
 }
 
@@ -82,6 +87,8 @@ function formatAccountResponse(
     connectedAt: Date | null;
     lastSyncAt: Date | null;
     accessTokenEncrypted?: string;
+    webhookSubscribedAt?: Date | null;
+    webhookSubscribedFields?: string | null;
   } | null,
 ) {
   const connected = account?.connectionStatus === "connected";
@@ -91,6 +98,7 @@ function formatAccountResponse(
       : connected
         ? "meta_oauth"
         : undefined;
+  const webhookConfigured = Boolean(account?.webhookSubscribedAt);
 
   return {
     connected,
@@ -102,7 +110,9 @@ function formatAccountResponse(
     pageId: account?.pageId ?? null,
     connectedAt: account?.connectedAt?.toISOString() ?? null,
     lastSyncAt: account?.lastSyncAt?.toISOString() ?? null,
-    setupChecklist: buildSetupChecklist(connected, source),
+    webhookSubscribedAt: account?.webhookSubscribedAt?.toISOString() ?? null,
+    webhookSubscribedFields: account?.webhookSubscribedFields ?? null,
+    setupChecklist: buildSetupChecklist(connected, source, webhookConfigured),
   };
 }
 
@@ -111,6 +121,71 @@ function deriveFacebookUsername(profile: { id: string; name?: string }): string 
     return profile.name.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9._]/g, "");
   }
   return `fb_user_${profile.id}`;
+}
+
+/**
+ * Meta Step 3: enable this IG professional account to send webhook notifications
+ * to the app via POST /{ig-user-id}/subscribed_apps.
+ * Failures are logged; callers decide whether to surface them.
+ */
+async function enableAccountWebhookSubscription(params: {
+  userId: string;
+  accountId: string;
+  instagramUserId: string;
+  accessToken: string;
+  username: string;
+}): Promise<{ success: true; fields: string[] } | { success: false; error: string }> {
+  try {
+    const result = await metaGraphService.subscribeAppWebhooks({
+      igUserId: params.instagramUserId,
+      accessToken: params.accessToken,
+    });
+
+    const now = new Date();
+    const fieldsCsv = result.fields.join(",");
+
+    await prisma.instagramAccount.update({
+      where: { id: params.accountId },
+      data: {
+        webhookSubscribedAt: now,
+        webhookSubscribedFields: fieldsCsv,
+        lastSyncAt: now,
+      },
+    });
+
+    try {
+      await activityService.log(params.userId, {
+        type: "webhook_subscribed",
+        title: "Instagram webhooks enabled",
+        description: `Subscribed @${params.username} to ${fieldsCsv} via subscribed_apps.`,
+        metadata: {
+          source: "instagram_subscribed_apps",
+          instagramUserId: params.instagramUserId,
+          fields: result.fields,
+        },
+      });
+    } catch (error) {
+      logIntegrationError("webhook subscription activity log failed", error);
+    }
+
+    return { success: true, fields: result.fields };
+  } catch (error) {
+    const message =
+      error instanceof AppError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : "subscribed_apps failed";
+
+    logIntegrationError("subscribed_apps failed", error);
+    console.error("[instagram-webhooks] account not subscribed — real comments will not arrive:", {
+      userId: params.userId,
+      instagramUserId: params.instagramUserId,
+      message,
+    });
+
+    return { success: false, error: message };
+  }
 }
 
 export const instagramIntegrationService = {
@@ -157,6 +232,8 @@ export const instagramIntegrationService = {
         connectionStatus: "connected",
         connectedAt: now,
         lastSyncAt: now,
+        webhookSubscribedAt: now,
+        webhookSubscribedFields: INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS.join(","),
       },
       update: {
         instagramUserId,
@@ -168,6 +245,8 @@ export const instagramIntegrationService = {
         connectionStatus: "connected",
         connectedAt: now,
         lastSyncAt: now,
+        webhookSubscribedAt: now,
+        webhookSubscribedFields: INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS.join(","),
       },
     });
 
@@ -223,6 +302,9 @@ export const instagramIntegrationService = {
           connectionStatus: "connected",
           connectedAt: now,
           lastSyncAt: now,
+          // Cleared until subscribed_apps succeeds for this token/account.
+          webhookSubscribedAt: null,
+          webhookSubscribedFields: null,
         },
         update: {
           instagramUserId,
@@ -233,6 +315,8 @@ export const instagramIntegrationService = {
           connectionStatus: "connected",
           connectedAt: now,
           lastSyncAt: now,
+          webhookSubscribedAt: null,
+          webhookSubscribedFields: null,
         },
       });
     } catch (error) {
@@ -257,14 +341,91 @@ export const instagramIntegrationService = {
       logIntegrationError("connectViaOAuth activity log failed (connection saved)", error);
     }
 
+    const subscription = await enableAccountWebhookSubscription({
+      userId,
+      accountId: account.id,
+      instagramUserId,
+      accessToken: longLived.access_token,
+      username,
+    });
+
     console.log("[instagram-oauth] account saved:", {
       userId,
       instagramUserId,
       username: account.username,
       connectionStatus: account.connectionStatus,
+      webhookSubscribed: subscription.success,
     });
 
-    return formatAccountResponse(account);
+    const refreshed = await prisma.instagramAccount.findUnique({ where: { id: account.id } });
+    const response = formatAccountResponse(refreshed ?? account);
+
+    return {
+      ...response,
+      webhookSubscription: subscription,
+    };
+  },
+
+  /**
+   * Re-run Meta Step 3 for an already-connected Instagram account.
+   * Needed when OAuth completed before subscribed_apps was implemented.
+   */
+  async subscribeWebhooks(userId: string) {
+    const account = await prisma.instagramAccount.findUnique({
+      where: { userId },
+    });
+
+    if (!account || account.connectionStatus !== "connected") {
+      throw new AppError(404, "No connected Instagram account found");
+    }
+
+    if (account.accessTokenEncrypted === "mock_encrypted_token_placeholder") {
+      const now = new Date();
+      const fieldsCsv = INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS.join(",");
+      const updated = await prisma.instagramAccount.update({
+        where: { userId },
+        data: {
+          webhookSubscribedAt: now,
+          webhookSubscribedFields: fieldsCsv,
+          lastSyncAt: now,
+        },
+      });
+      return {
+        ...formatAccountResponse(updated),
+        webhookSubscription: { success: true as const, fields: [...INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS] },
+      };
+    }
+
+    let accessToken: string;
+    try {
+      accessToken = decryptToken(account.accessTokenEncrypted);
+    } catch {
+      throw new AppError(
+        400,
+        "Stored Instagram access token could not be decrypted. Disconnect and reconnect Instagram.",
+      );
+    }
+
+    const subscription = await enableAccountWebhookSubscription({
+      userId,
+      accountId: account.id,
+      instagramUserId: account.instagramUserId,
+      accessToken,
+      username: account.username,
+    });
+
+    if (!subscription.success) {
+      throw new AppError(
+        502,
+        `Instagram subscribed_apps failed: ${subscription.error}. Real comment webhooks will not arrive until this succeeds.`,
+      );
+    }
+
+    const refreshed = await prisma.instagramAccount.findUnique({ where: { userId } });
+    return {
+      ...formatAccountResponse(refreshed ?? account),
+      webhookSubscription: subscription,
+    };
   },
 
   async disconnect(userId: string) {

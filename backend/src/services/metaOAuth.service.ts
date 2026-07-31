@@ -152,13 +152,21 @@ export const metaOAuthService = {
     });
 
     const account = await instagramIntegrationService.connectViaOAuth(userId, query.code);
+    const subscription = account.webhookSubscription;
+    const webhookOk = subscription?.success === true;
+    const username = account.username ?? "instagram";
 
     return {
       status: "connected",
       oauthEnabled: true,
-      message: `Connected as @${account.username ?? "instagram"}.`,
+      message: webhookOk
+        ? `Connected as @${username}. Comment webhooks enabled.`
+        : `Connected as @${username}, but webhook subscription failed. Open Integrations and click Enable comment webhooks.`,
       username: account.username,
       accountType: account.accountType,
+      webhookSubscribed: webhookOk,
+      webhookSubscriptionError:
+        subscription && !subscription.success ? subscription.error : null,
     };
   },
 

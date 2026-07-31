@@ -5,6 +5,17 @@ export const INSTAGRAM_OAUTH_SCOPES = [
   "instagram_business_manage_messages",
 ] as const;
 
+/**
+ * Per-account Instagram webhook fields enabled via POST /{ig-user-id}/subscribed_apps.
+ * Required by Meta after app-level Webhooks product configuration — dashboard field
+ * toggles alone do not deliver real comment events for Instagram Login.
+ * @see https://developers.facebook.com/docs/instagram-platform/webhooks/
+ */
+export const INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS = [
+  "comments",
+  "live_comments",
+] as const;
+
 /** @deprecated Prefer INSTAGRAM_OAUTH_SCOPES — kept for public config compatibility. */
 export const META_OAUTH_SCOPES_PLANNED = INSTAGRAM_OAUTH_SCOPES;
 

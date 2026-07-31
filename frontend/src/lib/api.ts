@@ -152,7 +152,12 @@ export interface InstagramIntegrationStatus {
   pageId: string | null;
   connectedAt: string | null;
   lastSyncAt: string | null;
+  webhookSubscribedAt?: string | null;
+  webhookSubscribedFields?: string | null;
   setupChecklist: InstagramSetupChecklist;
+  webhookSubscription?:
+    | { success: true; fields: string[] }
+    | { success: false; error: string };
 }
 
 export interface ActivityEventRecord {
@@ -280,6 +285,13 @@ export const api = {
     request<{ disconnected: boolean }>(
       "/api/integrations/instagram/disconnect",
       { method: "DELETE" },
+      token,
+    ),
+
+  subscribeInstagramWebhooks: (token: string) =>
+    request<InstagramIntegrationStatus>(
+      "/api/integrations/instagram/subscribe-webhooks",
+      { method: "POST" },
       token,
     ),
 
