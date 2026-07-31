@@ -115,6 +115,30 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function handleSubscribeWebhooks() {
+    const token = getToken();
+    if (!token) return;
+
+    setActionLoading(true);
+    try {
+      const result = await api.subscribeInstagramWebhooks(token);
+      setStatus(result);
+      toast.success(
+        result.webhookSubscribedFields
+          ? `Comment webhooks enabled (${result.webhookSubscribedFields})`
+          : "Comment webhooks enabled",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Failed to subscribe Instagram webhooks via subscribed_apps",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   async function handleMockConnect() {
     const token = getToken();
     if (!token) return;
@@ -168,6 +192,7 @@ export default function IntegrationsPage() {
 
   const connected = status?.connected ?? false;
   const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
+  const webhookConfigured = status?.setupChecklist.webhookConfigured ?? false;
 
   const integrations = [
     {
@@ -213,14 +238,21 @@ export default function IntegrationsPage() {
       id: "webhook",
       name: "Instagram Webhooks",
       description:
-        "Receives real-time comment events from Meta when followers interact with your posts.",
-      status: status?.setupChecklist.webhookConfigured ? ("active" as const) : ("pending" as const),
+        "Receives real-time comment events from Meta when followers interact with your posts. Requires app-level Webhooks setup plus a per-account subscribed_apps Graph call after OAuth.",
+      status: webhookConfigured ? ("active" as const) : ("pending" as const),
       icon: Webhook,
       iconGradient: "from-brand-500 to-brand-600",
       details: [
         { label: "Endpoint", value: `${getApiBaseUrl()}/api/webhooks/instagram` },
         { label: "Verify token", value: "Configured" },
-        { label: "Events", value: connected ? "Awaiting Meta subscription" : "Not subscribed" },
+        {
+          label: "Account subscription",
+          value: !connected
+            ? "Not connected"
+            : webhookConfigured
+              ? status?.webhookSubscribedFields ?? "subscribed_apps OK"
+              : "Missing subscribed_apps",
+        },
       ],
     },
   ];
@@ -284,6 +316,20 @@ export default function IntegrationsPage() {
                 Setup Guide
               </Button>
             </Link>
+            {connected && !webhookConfigured && (
+              <Button
+                variant="primary"
+                onClick={handleSubscribeWebhooks}
+                disabled={actionLoading || loading}
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Webhook className="h-4 w-4" />
+                )}
+                Enable comment webhooks
+              </Button>
+            )}
             {connected && (
               <Button
                 variant="secondary"

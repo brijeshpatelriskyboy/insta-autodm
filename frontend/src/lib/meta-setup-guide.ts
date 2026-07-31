@@ -96,19 +96,36 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
   },
   {
     step: 7,
-    title: "Configure Instagram Webhooks",
-    summary: "Point Meta comment webhooks at Insta AutoDM to detect keyword triggers.",
+    title: "Configure Instagram Webhooks (app-level)",
+    summary: "Point Meta comment webhooks at Insta AutoDM and subscribe the comments field.",
     instructions: [
       "In Meta App Dashboard → Webhooks, add a callback URL (shown on this page).",
       "Paste the Verify Token shown on this page — it must match META_VERIFY_TOKEN on Railway.",
-      "Subscribe to the Instagram object and enable the comments field.",
-      "Send a test comment containing one of your keyword rules to verify Activity Log entries.",
-      "Real DMs are not sent yet — matched comments log as DM pending.",
+      "Subscribe to the Instagram object and enable the comments field (and live_comments if needed).",
+      "Dashboard Test webhooks only prove the callback URL works — they do not prove real comments will arrive.",
     ],
     links: [
       {
-        label: "Meta Webhooks docs",
-        href: "https://developers.facebook.com/docs/graph-api/webhooks/getting-started/",
+        label: "Instagram Platform Webhooks",
+        href: "https://developers.facebook.com/docs/instagram-platform/webhooks/",
+      },
+    ],
+  },
+  {
+    step: 8,
+    title: "Enable per-account webhook subscription",
+    summary:
+      "After OAuth, the app must call Graph subscribed_apps for that Instagram account — required by Meta Step 3.",
+    instructions: [
+      "Connect Instagram in Insta AutoDM. On success the backend calls POST /{ig-user-id}/subscribed_apps with comments,live_comments.",
+      "If the account was connected before this existed, open Integrations → Enable comment webhooks.",
+      "Meta also requires the app to be Live, and Advanced Access for comments/live_comments, before real comment notifications are delivered.",
+      "Post a real comment containing a keyword rule and confirm a webhook hits /api/webhooks/instagram.",
+    ],
+    links: [
+      {
+        label: "Enable Subscriptions (subscribed_apps)",
+        href: "https://developers.facebook.com/docs/instagram-platform/webhooks/#enable-subscriptions",
       },
     ],
   },

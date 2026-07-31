@@ -91,21 +91,24 @@ model InstagramConnectionRequest {
 }
 
 model InstagramAccount {
-  id                   String    @id @default(cuid())
-  userId               String    @unique
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  instagramUserId      String    @unique
-  username             String
-  accountType          String
-  profilePictureUrl    String?
-  accessTokenEncrypted String    @default("mock_encrypted_token_placeholder")
-  pageId               String?
-  connectionStatus     String    @default("disconnected")
-  connectedAt          DateTime?
-  lastSyncAt           DateTime?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  dmEvents             DmEvent[]
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instagramUserId         String    @unique
+  username                String
+  accountType             String
+  profilePictureUrl       String?
+  accessTokenEncrypted    String    @default("mock_encrypted_token_placeholder")
+  pageId                  String?
+  connectionStatus        String    @default("disconnected")
+  connectedAt             DateTime?
+  lastSyncAt              DateTime?
+  /** Set when POST /{ig-user-id}/subscribed_apps succeeds for this account. */
+  webhookSubscribedAt     DateTime?
+  webhookSubscribedFields String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  dmEvents                DmEvent[]
 
   @@map("instagram_accounts")
 }

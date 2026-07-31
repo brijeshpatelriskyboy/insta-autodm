@@ -4,6 +4,7 @@ import {
   getInstagramAppSecret,
   getMetaGraphApiVersion,
   getMetaRedirectUri,
+  INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS,
   last4,
   logOAuthClientDiagnostics,
 } from "../config/meta";
@@ -224,6 +225,65 @@ export const metaGraphService = {
     });
 
     return profile;
+  },
+
+  /**
+   * Enable webhook delivery for a specific Instagram professional account.
+   *
+   * Meta Instagram Login webhooks require BOTH:
+   * 1. App Dashboard: subscribe the Instagram object + fields (callback verify)
+   * 2. This Graph call: POST /{ig-user-id}/subscribed_apps with subscribed_fields
+   *
+   * Without step 2, dashboard "Test" webhooks still work, but real comments never
+   * reach the callback. Official docs:
+   * https://developers.facebook.com/docs/instagram-platform/webhooks/
+   *
+   * POST https://graph.instagram.com/{VERSION}/{IG_USER_ID}/subscribed_apps
+   */
+  async subscribeAppWebhooks(params: {
+    igUserId: string;
+    accessToken: string;
+    fields?: readonly string[];
+  }): Promise<{ success: true; fields: string[] }> {
+    const fields = [...(params.fields ?? INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS)];
+    if (fields.length === 0) {
+      throw new AppError(500, "No Instagram webhook fields configured for subscription");
+    }
+
+    const version = getMetaGraphApiVersion();
+    const url = new URL(
+      `https://graph.instagram.com/${version}/${encodeURIComponent(params.igUserId)}/subscribed_apps`,
+    );
+    url.searchParams.set("subscribed_fields", fields.join(","));
+    url.searchParams.set("access_token", params.accessToken);
+
+    console.log("[instagram-webhooks] subscribed_apps request:", {
+      igUserId: params.igUserId,
+      fields,
+      graphHost: "graph.instagram.com",
+      version,
+    });
+
+    const response = await fetch(url.toString(), { method: "POST" });
+    const raw = await parseJsonResponse<{ success?: boolean }>(
+      response,
+      "subscribed_apps",
+    );
+
+    if (raw.success !== true) {
+      console.error("[instagram-webhooks] subscribed_apps unexpected response:", {
+        igUserId: params.igUserId,
+        success: raw.success ?? null,
+      });
+      throw new AppError(502, "Instagram subscribed_apps did not return success=true");
+    }
+
+    console.log("[instagram-webhooks] subscribed_apps succeeded:", {
+      igUserId: params.igUserId,
+      fields,
+    });
+
+    return { success: true, fields };
   },
 
   /**
