@@ -28,11 +28,12 @@ function formatMoney(cents: number, currency = "usd"): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
-  });
+    timeZone: "UTC",
+  }).format(new Date(iso));
 }
 
 export default function BillingPage() {

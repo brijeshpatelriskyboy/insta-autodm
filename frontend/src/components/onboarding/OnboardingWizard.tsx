@@ -9,6 +9,7 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  Circle,
   KeyRound,
   MessageSquare,
   PartyPopper,
@@ -34,8 +35,8 @@ import {
 export function OnboardingWizard() {
   const router = useRouter();
   const toast = useToast();
-  const user = getStoredUser();
-  const userId = user?.id ?? "";
+  const [userId, setUserId] = useState("");
+  const [userName, setUserName] = useState("");
 
   const [step, setStep] = useState(0);
   const [keyword, setKeyword] = useState("GUIDE");
@@ -52,9 +53,13 @@ export function OnboardingWizard() {
       return;
     }
 
-    if (!userId) return;
+    const user = getStoredUser();
+    const id = user?.id ?? "";
+    setUserId(id);
+    setUserName(user?.name ?? "");
+    if (!id) return;
 
-    const saved = getOnboardingData(userId);
+    const saved = getOnboardingData(id);
     if (saved.completed || saved.skipped) {
       router.replace("/dashboard");
       return;
@@ -65,7 +70,7 @@ export function OnboardingWizard() {
     setDmMessage(saved.dmMessage);
     setInstagramConnected(saved.instagramConnected);
     setReady(true);
-  }, [router, userId]);
+  }, [router]);
 
   useEffect(() => {
     if (!userId || step !== 3) return;
@@ -208,7 +213,7 @@ export function OnboardingWizard() {
               </div>
               <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                 Welcome to Insta AutoDM
-                {user?.name ? `, ${user.name.split(" ")[0]}` : ""}!
+                {userName ? `, ${userName.split(" ")[0]}` : ""}!
               </h1>
               <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
                 In the next 2 minutes, you&apos;ll set up your first automation —
@@ -220,7 +225,7 @@ export function OnboardingWizard() {
                   { icon: MessageSquare, label: "Write your DM" },
                   { icon: Zap, label: "Go live" },
                 ].map((item) => {
-                  const Icon = item.icon;
+                  const Icon = item.icon ?? Circle;
                   return (
                     <div
                       key={item.label}

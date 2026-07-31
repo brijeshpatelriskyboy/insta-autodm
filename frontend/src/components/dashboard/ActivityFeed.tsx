@@ -1,7 +1,9 @@
 "use client";
 
+import { useCallback } from "react";
 import { Send, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { ClientTime } from "@/components/ui/ClientTime";
 import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { demoActivityFeed, formatRelativeTime } from "@/lib/demo-data";
 import Link from "next/link";
@@ -12,6 +14,8 @@ const typeStyles = {
 };
 
 export function ActivityFeed() {
+  const format = useCallback((timestamp: string) => formatRelativeTime(timestamp), []);
+
   return (
     <Card
       title="Recent Activity"
@@ -47,9 +51,11 @@ export function ActivityFeed() {
               </p>
               <p className="mt-0.5 text-xs text-slate-500">{item.detail}</p>
             </div>
-            <time className="shrink-0 text-xs text-slate-400">
-              {formatRelativeTime(item.timestamp)}
-            </time>
+            <ClientTime
+              timestamp={item.timestamp}
+              format={format}
+              className="shrink-0 text-xs text-slate-400"
+            />
           </div>
         ))}
       </div>

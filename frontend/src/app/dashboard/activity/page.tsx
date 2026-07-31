@@ -13,6 +13,9 @@ import {
   Unlink,
   MessageCircle,
   Clock,
+  Circle,
+  AlertCircle,
+  Webhook,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -32,6 +35,7 @@ import {
 
 const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }>> = {
   dm_sent: Send,
+  dm_failed: AlertCircle,
   comment_received: MessageCircle,
   keyword_matched: MessageSquare,
   dm_pending: Clock,
@@ -40,10 +44,12 @@ const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }
   rule_updated: Pencil,
   account_connected: Camera,
   account_disconnected: Unlink,
+  webhook_subscribed: Webhook,
 };
 
 const typeColors: Record<ActivityType, string> = {
   dm_sent: "bg-brand-50 text-brand-600",
+  dm_failed: "bg-red-50 text-red-600",
   comment_received: "bg-sky-50 text-sky-600",
   keyword_matched: "bg-pink-50 text-pink-600",
   dm_pending: "bg-amber-50 text-amber-600",
@@ -52,15 +58,18 @@ const typeColors: Record<ActivityType, string> = {
   rule_updated: "bg-amber-50 text-amber-600",
   account_connected: "bg-purple-50 text-purple-600",
   account_disconnected: "bg-slate-100 text-slate-600",
+  webhook_subscribed: "bg-brand-50 text-brand-600",
 };
 
 function ActivityItem({ event }: { event: ActivityEvent }) {
-  const Icon = typeIcons[event.type];
+  // Unknown API activity types must never render undefined (React #130).
+  const Icon = typeIcons[event.type] ?? Circle;
+  const colorClass = typeColors[event.type] ?? "bg-slate-100 text-slate-600";
 
   return (
     <div className="flex gap-4 rounded-xl border border-slate-100 bg-white p-4 transition-colors hover:border-slate-200 hover:bg-slate-50/50">
       <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${typeColors[event.type]}`}
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${colorClass}`}
       >
         <Icon className="h-5 w-5" />
       </div>
@@ -104,6 +113,7 @@ export default function ActivityPage() {
         setApiEvents(
           events.map((event) => ({
             id: event.id,
+            // Keep unknown backend types as-is; ActivityItem falls back safely.
             type: event.type as ActivityType,
             title: event.title,
             description: event.description,

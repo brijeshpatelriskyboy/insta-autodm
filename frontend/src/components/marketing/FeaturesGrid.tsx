@@ -2,6 +2,7 @@ import {
   Activity,
   BarChart3,
   Camera,
+  Circle,
   KeyRound,
   MessageSquare,
   Users,
@@ -47,7 +48,7 @@ export function FeaturesGrid({ showHeading = true, columns = 3 }: FeaturesGridPr
 
         <div className={showHeading ? `mt-16 ${gridClass}` : gridClass}>
           {features.map((feature, i) => {
-            const Icon = iconMap[feature.icon as keyof typeof iconMap];
+            const Icon = iconMap[feature.icon as keyof typeof iconMap] ?? Circle;
             return (
               <AnimateIn key={feature.title} delay={i * 80}>
                 <div className="group h-full rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300 hover:border-brand-200 hover:shadow-card">

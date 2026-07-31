@@ -28,6 +28,9 @@ export const demoTopKeywords = [
   { keyword: "COACHING", triggers: 321, conversion: 15, isActive: true },
 ];
 
+/** Fixed reference so demo timestamps match on server and client. */
+const DEMO_NOW = Date.parse("2026-07-01T12:00:00.000Z");
+
 export const demoActivityFeed = [
   {
     id: "a1",
@@ -35,7 +38,7 @@ export const demoActivityFeed = [
     action: "commented GUIDE",
     result: "DM sent",
     detail: "Free guide link delivered",
-    timestamp: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 4).toISOString(),
     type: "dm_sent" as const,
   },
   {
@@ -44,7 +47,7 @@ export const demoActivityFeed = [
     action: "commented START",
     result: "DM sent",
     detail: "Welcome sequence triggered",
-    timestamp: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 18).toISOString(),
     type: "dm_sent" as const,
   },
   {
@@ -53,7 +56,7 @@ export const demoActivityFeed = [
     action: "downloaded Free Guide",
     result: "Lead captured",
     detail: "GUIDE keyword conversion",
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 45).toISOString(),
     type: "lead" as const,
   },
   {
@@ -62,7 +65,7 @@ export const demoActivityFeed = [
     action: "commented COACHING",
     result: "DM sent",
     detail: "Coaching offer link sent",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 60 * 2).toISOString(),
     type: "dm_sent" as const,
   },
   {
@@ -71,7 +74,7 @@ export const demoActivityFeed = [
     action: "lead captured",
     result: "From Instagram",
     detail: "START keyword funnel",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 60 * 5).toISOString(),
     type: "lead" as const,
   },
   {
@@ -80,7 +83,7 @@ export const demoActivityFeed = [
     action: "commented PDF",
     result: "DM sent",
     detail: "PDF download link delivered",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
+    timestamp: new Date(DEMO_NOW - 1000 * 60 * 60 * 8).toISOString(),
     type: "dm_sent" as const,
   },
 ];
@@ -100,12 +103,17 @@ function generate30DaySeries(
 ): { date: string; label: string; [key: string]: string | number }[] {
   const days = 30;
   const data = [];
-  const now = new Date();
+  // Fixed end date so chart labels match on server and client.
+  const now = new Date(DEMO_NOW);
 
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    d.setUTCDate(d.getUTCDate() - i);
+    const label = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
     const date = d.toISOString().split("T")[0];
     const base = total / days;
     const wave = Math.sin(i / 3) * variance;
@@ -136,12 +144,16 @@ export function getDemoLeadsChart30Day() {
 
 export function getDemoConversionChart30Day() {
   const data = [];
-  const now = new Date();
+  const now = new Date(DEMO_NOW);
 
   for (let i = 29; i >= 0; i--) {
     const d = new Date(now);
-    d.setDate(d.getDate() - i);
-    const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    d.setUTCDate(d.getUTCDate() - i);
+    const label = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    });
     const date = d.toISOString().split("T")[0];
     const rate = 18 + Math.sin(i / 4) * 3 + (29 - i) * 0.15;
     data.push({ date, label, rate: Math.round(rate * 10) / 10 });

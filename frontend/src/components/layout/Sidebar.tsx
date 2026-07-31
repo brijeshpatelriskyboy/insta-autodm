@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   MessageSquareText,
@@ -13,9 +14,10 @@ import {
   Settings,
   HelpCircle,
   CreditCard,
+  Circle,
 } from "lucide-react";
 import { clearAuth, getStoredUser } from "@/lib/auth";
-import { useRouter } from "next/navigation";
+import type { User } from "@/lib/api";
 import { Logo } from "@/components/brand/Logo";
 import { BetaBadge } from "@/components/trust/BetaBadge";
 
@@ -41,16 +43,17 @@ interface SidebarProps {
 function NavLink({
   href,
   label,
-  icon: Icon,
+  icon,
   pathname,
   onNavigate,
 }: {
   href: string;
   label: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string }> | null;
   pathname: string;
   onNavigate?: () => void;
 }) {
+  const Icon = icon ?? Circle;
   const isActive =
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
@@ -73,7 +76,12 @@ function NavLink({
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const user = getStoredUser();
+  // Stable SSR/first-paint values; load localStorage user after mount only.
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    setUser(getStoredUser());
+  }, []);
 
   function handleLogout() {
     clearAuth();
@@ -137,7 +145,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
           <p className="truncate text-sm font-medium text-white">
             {user?.name ?? "Creator"}
           </p>
-          <p className="truncate text-xs text-slate-400">{user?.email}</p>
+          <p className="truncate text-xs text-slate-400">{user?.email ?? ""}</p>
         </div>
         <button
           type="button"

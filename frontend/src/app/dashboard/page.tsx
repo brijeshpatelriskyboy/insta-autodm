@@ -17,12 +17,14 @@ import {
   formatNumber,
 } from "@/lib/demo-data";
 import { getStoredUser } from "@/lib/auth";
+import type { User } from "@/lib/api";
 
 export default function DashboardPage() {
-  const user = getStoredUser();
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setUser(getStoredUser());
     const timer = setTimeout(() => setLoading(false), 600);
     return () => clearTimeout(timer);
   }, []);

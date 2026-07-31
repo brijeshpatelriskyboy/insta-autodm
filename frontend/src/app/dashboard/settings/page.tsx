@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bell, Lock, User } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -18,11 +18,17 @@ const tabs = [
 
 export default function SettingsPage() {
   const toast = useToast();
-  const user = getStoredUser();
   const [activeTab, setActiveTab] = useState("profile");
 
-  const [name, setName] = useState(user?.name ?? "");
-  const [email] = useState(user?.email ?? "");
+  // Stable empty defaults for SSR/hydration; hydrate from localStorage after mount.
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    const user = getStoredUser();
+    setName(user?.name ?? "");
+    setEmail(user?.email ?? "");
+  }, []);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");

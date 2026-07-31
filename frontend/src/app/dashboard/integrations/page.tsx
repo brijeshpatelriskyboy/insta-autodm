@@ -27,6 +27,7 @@ import {
   type MetaOAuthConfig,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { useMounted } from "@/hooks/useMounted";
 
 const SETUP_ITEMS = [
   { key: "professionalAccount" as const, label: "Instagram Professional account" },
@@ -35,9 +36,21 @@ const SETUP_ITEMS = [
   { key: "webhookConfigured" as const, label: "Webhook configured" },
 ];
 
+function formatLastSync(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(iso));
+}
+
 export default function IntegrationsPage() {
   const toast = useToast();
   const searchParams = useSearchParams();
+  const mounted = useMounted();
   const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
   const [metaConfig, setMetaConfig] = useState<MetaOAuthConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -214,9 +227,7 @@ export default function IntegrationsPage() {
         },
         {
           label: "Last sync",
-          value: status?.lastSyncAt
-            ? new Date(status.lastSyncAt).toLocaleString()
-            : "—",
+          value: status?.lastSyncAt ? formatLastSync(status.lastSyncAt) : "—",
         },
       ],
     },
@@ -243,7 +254,13 @@ export default function IntegrationsPage() {
       icon: Webhook,
       iconGradient: "from-brand-500 to-brand-600",
       details: [
-        { label: "Endpoint", value: `${getApiBaseUrl()}/api/webhooks/instagram` },
+        {
+          label: "Endpoint",
+          // Defer env-based API host until after mount to avoid SSR/client mismatch.
+          value: mounted
+            ? `${getApiBaseUrl()}/api/webhooks/instagram`
+            : "/api/webhooks/instagram",
+        },
         { label: "Verify token", value: "Configured" },
         {
           label: "Account subscription",
@@ -375,7 +392,7 @@ export default function IntegrationsPage() {
 
       <div className="grid gap-6">
         {integrations.map((integration) => {
-          const Icon = integration.icon;
+          const Icon = integration.icon ?? Circle;
           return (
             <Card key={integration.id} padding="lg">
               <div className="flex gap-4">
@@ -443,7 +460,7 @@ export default function IntegrationsPage() {
               status: "Backend online",
             },
           ].map((item) => {
-            const Icon = item.icon;
+            const Icon = item.icon ?? Circle;
             return (
               <div
                 key={item.label}
