@@ -119,7 +119,7 @@ export default function InstagramSetupPage() {
 
       <PageHeader
         title="Instagram Setup"
-        description="Follow this guide to prepare Insta AutoDM for real Meta OAuth. No permissions are requested yet."
+        description="Follow this guide to prepare Comment2DM for Meta OAuth and Instagram comment automation."
       />
 
       {oauthNotice && (

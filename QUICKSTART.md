@@ -1,4 +1,4 @@
-# Insta AutoDM — Quick Start (Windows)
+# Comment2DM — Quick Start (Windows)
 
 **Project location:** `C:\Users\brije\Desktop\insta dm`
 
@@ -26,7 +26,7 @@ Opens PostgreSQL, backend, and frontend in separate windows.
 
 ## Demo login
 
-- Email: `demo@instaautodm.com`
+- Email: `demo@comment2dm.com`
 - Password: `demo1234`
 - Or click **Sign in with demo account** on the login page
 

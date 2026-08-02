@@ -28,7 +28,7 @@ export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const DEMO_EMAIL = "demo@instaautodm.com";
+  const DEMO_EMAIL = "demo@comment2dm.com";
   const DEMO_PASSWORD = "demo1234";
 
   async function authenticate(
@@ -88,11 +88,11 @@ export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
             Turn every comment into a conversation that converts.
           </h2>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-            Insta AutoDM sends personalized DMs the moment someone comments your
+            Comment2DM sends personalized DMs the moment someone comments your
             keyword — so you never miss a lead.
           </p>
         </div>
-        <p className="text-xs text-slate-500">© Insta AutoDM</p>
+        <p className="text-xs text-slate-500">© Comment2DM</p>
       </div>
 
       <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8">

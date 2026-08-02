@@ -12,8 +12,8 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "Insta AutoDM — Turn Instagram Comments Into Conversations Automatically",
-    template: "%s | Insta AutoDM",
+    default: "Comment2DM — Turn Instagram Comments Into Conversations Automatically",
+    template: "%s | Comment2DM",
   },
   description:
     "Automatically DM people who comment on your posts, capture leads, and grow your audience on autopilot.",

@@ -102,7 +102,7 @@ export default function ConnectInstagramPage() {
                 Connect Instagram Business
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Authorize Insta AutoDM to monitor comments and send automated DMs
+                Authorize Comment2DM to monitor comments and send automated DMs
                 on your behalf.
               </p>
 

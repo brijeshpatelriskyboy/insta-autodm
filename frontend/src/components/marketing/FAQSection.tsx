@@ -22,7 +22,7 @@ export function FAQSection({ showHeading = true, limit }: FAQSectionProps) {
           <SectionHeading
             eyebrow="FAQ"
             title="Frequently asked questions"
-            description="Everything you need to know about Insta AutoDM."
+            description="Everything you need to know about Comment2DM."
           />
         )}
 

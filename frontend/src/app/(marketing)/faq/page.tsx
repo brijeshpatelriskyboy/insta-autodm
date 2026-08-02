@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "FAQ",
   description:
-    "Answers to common questions about Insta AutoDM — Instagram DM automation, pricing, compliance, and setup.",
+    "Answers to common questions about Comment2DM — Instagram DM automation, pricing, compliance, and setup.",
 };
 
 export default function FAQPage() {

@@ -1,4 +1,4 @@
-# Insta AutoDM — Production Deployment Guide
+# Comment2DM — Production Deployment Guide
 
 Deploy the marketing site + app so anyone can sign up, log in, and subscribe via Stripe.
 
@@ -27,7 +27,7 @@ Deploy the marketing site + app so anyone can sign up, log in, and subscribe via
 cd "insta dm"
 git init
 git add .
-git commit -m "Prepare Insta AutoDM for production deployment"
+git commit -m "Prepare Comment2DM for production deployment"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/insta-autodm.git
 git push -u origin main
@@ -163,7 +163,7 @@ cd backend
 npm run db:seed
 ```
 
-Demo login: `demo@instaautodm.com` / `demo1234`
+Demo login: `demo@comment2dm.com` / `demo1234`
 
 ---
 
@@ -190,16 +190,16 @@ Run through these on your public Vercel URL:
 
 ### Vercel (frontend)
 
-1. Vercel → Project → **Domains** → add `instaautodm.com`
+1. Vercel → Project → **Domains** → add your custom domain (e.g. `comment2dm.com`)
 2. Update DNS per Vercel instructions
 3. Update env vars:
-   - Vercel: `NEXT_PUBLIC_SITE_URL=https://instaautodm.com`
-   - Backend: `CORS_ORIGIN=https://instaautodm.com` and `FRONTEND_URL=https://instaautodm.com`
+   - Vercel: `NEXT_PUBLIC_SITE_URL=https://comment2dm.com`
+   - Backend: `CORS_ORIGIN=https://comment2dm.com` and `FRONTEND_URL=https://comment2dm.com`
 
 ### Railway (backend)
 
-1. Railway → Service → **Settings** → **Custom Domain** → `api.instaautodm.com`
-2. Update Vercel: `NEXT_PUBLIC_API_URL=https://api.instaautodm.com`
+1. Railway → Service → **Settings** → **Custom Domain** → `api.comment2dm.com` (optional)
+2. Update Vercel: `NEXT_PUBLIC_API_URL=https://api.comment2dm.com`
 3. Update Stripe webhook URL to new API domain
 
 ---
@@ -255,4 +255,4 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 6. Test       → signup, login, billing on public URL
 ```
 
-**Your public URL:** `https://your-app.vercel.app` — share this for anyone to use Insta AutoDM.
+**Your public URL:** `https://your-app.vercel.app` — share this for anyone to use Comment2DM.

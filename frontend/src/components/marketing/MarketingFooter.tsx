@@ -12,6 +12,7 @@ const footerLinks = {
     { href: "/contact", label: "Contact" },
     { href: "/terms", label: "Terms" },
     { href: "/privacy", label: "Privacy" },
+    { href: "/data-deletion", label: "Data Deletion" },
   ],
 };
 

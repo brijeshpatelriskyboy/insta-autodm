@@ -1,8 +1,8 @@
 import { getSiteUrl } from "./site";
 
 export const siteConfig = {
-  name: "Insta AutoDM",
-  tagline: "Turn Instagram Comments Into Conversations Automatically.",
+  name: "Comment2DM",
+  tagline: "Turn Instagram Comments Into Conversations Automatically",
   description:
     "Automatically DM people who comment on your posts, capture leads, and grow your audience on autopilot.",
   get url() {
@@ -33,7 +33,7 @@ export const howItWorksSteps = [
   {
     step: 2,
     title: "Keyword detected",
-    description: "Insta AutoDM instantly matches the comment to your keyword rule.",
+    description: "Comment2DM instantly matches the comment to your keyword rule.",
     highlight: null,
   },
   {
@@ -143,7 +143,7 @@ export const pricingPlans = [
 export const testimonials = [
   {
     quote:
-      "I went from manually DMing 50 people a day to zero. Insta AutoDM handles everything while I focus on creating content.",
+      "I went from manually DMing 50 people a day to zero. Comment2DM handles everything while I focus on creating content.",
     name: "Sarah Chen",
     role: "Fitness Coach",
     followers: "124K followers",
@@ -185,19 +185,19 @@ export const testimonials = [
 
 export const faqs = [
   {
-    question: "How does Insta AutoDM work?",
+    question: "How does Comment2DM work?",
     answer:
-      "You connect your Instagram Business account, create keyword rules (like GUIDE or START), and set the DM message to send. When someone comments that keyword on your post or reel, Insta AutoDM automatically sends your personalized DM within seconds.",
+      "You connect your Instagram Business or Creator account, create keyword rules (like GUIDE or START), and set the DM message to send. When someone comments that keyword on your post or reel, Comment2DM automatically sends your personalized DM within seconds.",
   },
   {
     question: "Is this allowed by Instagram / Meta?",
     answer:
-      "Yes. Insta AutoDM uses Meta's official Instagram Messaging API for Business accounts. We follow Meta's platform policies and rate limits to keep your account safe and compliant.",
+      "Yes. Comment2DM uses Meta's official Instagram APIs for Business and Creator accounts. We follow Meta's platform policies and rate limits to keep your account safe and compliant.",
   },
   {
     question: "Do I need an Instagram Business account?",
     answer:
-      "Yes. You need an Instagram Business or Creator account connected to a Facebook Page. Personal accounts cannot use the Instagram Messaging API. We'll guide you through setup in under 5 minutes.",
+      "Yes. You need an Instagram Business or Creator account. Personal accounts cannot use the Instagram Messaging API. We'll guide you through setup in under 5 minutes.",
   },
   {
     question: "How fast are DMs sent after a comment?",

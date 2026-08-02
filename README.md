@@ -1,6 +1,8 @@
-# Insta AutoDM
+# Comment2DM
 
 A SaaS MVP that automatically sends Instagram DMs when someone comments a specific keyword on a creator's post or reel.
+
+> **Product name:** Comment2DM (repository and deploy project names may still use `insta-autodm` for infrastructure continuity).
 
 > **Windows quick start:** See [QUICKSTART.md](./QUICKSTART.md) — run `scripts\dev.ps1` to start, `scripts\restart-frontend.ps1` if login breaks.
 
@@ -88,7 +90,7 @@ npm run db:seed
 ```
 
 **Demo credentials:**
-- Email: `demo@instaautodm.com`
+- Email: `demo@comment2dm.com`
 - Password: `demo1234`
 
 ---

@@ -30,9 +30,9 @@ export default function TermsPage() {
 
           <h2 className="text-lg font-semibold text-slate-900">2. Account Requirements</h2>
           <p>
-            You must have a valid Instagram Business or Creator account connected
-            to a Facebook Page. You are responsible for maintaining compliance with
-            Meta&apos;s Platform Policies and Community Guidelines.
+            You must have a valid Instagram Business or Creator account. You are
+            responsible for maintaining compliance with Meta&apos;s Platform Policies
+            and Community Guidelines.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">3. Acceptable Use</h2>
@@ -59,8 +59,8 @@ export default function TermsPage() {
           <h2 className="text-lg font-semibold text-slate-900">6. Contact</h2>
           <p>
             Questions about these terms? Email{" "}
-            <a href="mailto:legal@instaautodm.com" className="text-brand-600 hover:text-brand-700">
-              legal@instaautodm.com
+            <a href="mailto:legal@comment2dm.com" className="text-brand-600 hover:text-brand-700">
+              legal@comment2dm.com
             </a>
             .
           </p>

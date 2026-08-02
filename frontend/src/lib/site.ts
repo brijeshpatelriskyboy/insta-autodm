@@ -1,3 +1,4 @@
 export function getSiteUrl(): string {
-  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://instaautodm.com";
+  // Prefer env in production. Fallback keeps OG/canonical URLs on the live Vercel host.
+  return process.env.NEXT_PUBLIC_SITE_URL ?? "https://insta-autodm-three.vercel.app";
 }

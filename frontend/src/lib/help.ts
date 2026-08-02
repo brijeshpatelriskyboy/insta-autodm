@@ -1,13 +1,13 @@
 export const faqItems = [
   {
-    question: "How does Insta AutoDM work?",
+    question: "How does Comment2DM work?",
     answer:
-      "When someone comments a specific keyword on your Instagram post or reel, Insta AutoDM automatically sends them a personalized DM with your pre-configured message or link.",
+      "When someone comments a specific keyword on your Instagram post or reel, Comment2DM automatically sends them a personalized DM with your pre-configured message or link.",
   },
   {
     question: "Do I need a Business Instagram account?",
     answer:
-      "Yes. Meta requires an Instagram Business or Creator account connected to a Facebook Page to use the Messaging API and webhooks.",
+      "Yes. Meta requires an Instagram Business or Creator account to use the Messaging API and webhooks. Comment2DM supports Instagram Login for professional accounts.",
   },
   {
     question: "Can I use multiple keywords?",
@@ -22,12 +22,12 @@ export const faqItems = [
   {
     question: "Is my data secure?",
     answer:
-      "Your credentials are encrypted and stored securely. We never share your data with third parties. Meta OAuth integration is coming in a future release.",
+      "Your credentials are encrypted and stored securely. We never share your data with third parties. Access tokens are encrypted at rest and never exposed in client-side code.",
   },
   {
-    question: "When will live Instagram integration be available?",
+    question: "Is Comment2DM in beta?",
     answer:
-      "Meta OAuth and live webhook processing are planned for the next phase. You can configure rules now and connect your account when the integration launches.",
+      "Yes. Comment2DM is currently in beta. Instagram Business and Creator account automation is available for connected test accounts while we complete Meta App Review.",
   },
 ];
 
@@ -35,7 +35,7 @@ export const gettingStartedSteps = [
   {
     step: 1,
     title: "Create your account",
-    description: "Sign up and access your Insta AutoDM dashboard.",
+    description: "Sign up and access your Comment2DM dashboard.",
   },
   {
     step: 2,
@@ -45,7 +45,7 @@ export const gettingStartedSteps = [
   {
     step: 3,
     title: "Connect Instagram",
-    description: "Link your Business account via Meta OAuth (coming soon) from the Integrations page.",
+    description: "Link your Business or Creator account via Meta OAuth from the Integrations page.",
   },
   {
     step: 4,

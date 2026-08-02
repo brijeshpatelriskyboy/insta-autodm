@@ -34,7 +34,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">Insta AutoDM</p>
+            <p className="text-sm font-semibold text-slate-900">Comment2DM</p>
             <BetaBadge />
           </div>
         </header>
