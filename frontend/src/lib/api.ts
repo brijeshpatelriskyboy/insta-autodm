@@ -142,6 +142,8 @@ export interface InstagramSetupChecklist {
   webhookConfigured: boolean;
 }
 
+export type GraphApiStatus = "active" | "pending" | "error" | "disconnected";
+
 export interface InstagramIntegrationStatus {
   connected: boolean;
   connectionStatus: string;
@@ -154,6 +156,10 @@ export interface InstagramIntegrationStatus {
   lastSyncAt: string | null;
   webhookSubscribedAt?: string | null;
   webhookSubscribedFields?: string | null;
+  /** Live Meta Graph access check via Instagram profile request (not pageId). */
+  graphApiStatus?: GraphApiStatus;
+  graphApiVerifiedAt?: string | null;
+  graphApiError?: string | null;
   setupChecklist: InstagramSetupChecklist;
   webhookSubscription?:
     | { success: true; fields: string[] }

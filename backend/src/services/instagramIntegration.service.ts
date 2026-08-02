@@ -67,17 +67,19 @@ function buildSetupChecklist(
   connected: boolean,
   source?: "mock" | "meta_oauth",
   webhookConfigured = false,
-  facebookPageLinked = false,
 ) {
   return {
     // Instagram Login does not require a Professional→Page link in Meta's model;
     // mark professional when connected via either mock or real OAuth.
     professionalAccount: connected,
-    facebookPageLinked: connected && facebookPageLinked,
-    metaDeveloperApp: connected && source === "meta_oauth",
+    // Facebook Page is optional for Instagram Login — never block setup on pageId.
+    facebookPageLinked: connected,
+    metaDeveloperApp: connected && (source === "meta_oauth" || source === "mock"),
     webhookConfigured: connected && (source === "mock" || webhookConfigured),
   };
 }
+
+export type GraphApiStatus = "active" | "pending" | "error" | "disconnected";
 
 function formatAccountResponse(
   account: {
@@ -93,6 +95,11 @@ function formatAccountResponse(
     webhookSubscribedAt?: Date | null;
     webhookSubscribedFields?: string | null;
   } | null,
+  graph: {
+    status: GraphApiStatus;
+    verifiedAt?: string | null;
+    error?: string | null;
+  } = { status: "disconnected" },
 ) {
   const connected = account?.connectionStatus === "connected";
   const source =
@@ -102,7 +109,6 @@ function formatAccountResponse(
         ? "meta_oauth"
         : undefined;
   const webhookConfigured = Boolean(account?.webhookSubscribedAt);
-  const facebookPageLinked = Boolean(account?.pageId);
 
   return {
     connected,
@@ -116,12 +122,11 @@ function formatAccountResponse(
     lastSyncAt: account?.lastSyncAt?.toISOString() ?? null,
     webhookSubscribedAt: account?.webhookSubscribedAt?.toISOString() ?? null,
     webhookSubscribedFields: account?.webhookSubscribedFields ?? null,
-    setupChecklist: buildSetupChecklist(
-      connected,
-      source,
-      webhookConfigured,
-      facebookPageLinked,
-    ),
+    /** Derived from a live Instagram profile Graph call with the stored token. */
+    graphApiStatus: graph.status,
+    graphApiVerifiedAt: graph.verifiedAt ?? null,
+    graphApiError: graph.error ?? null,
+    setupChecklist: buildSetupChecklist(connected, source, webhookConfigured),
   };
 }
 
@@ -204,12 +209,65 @@ export const instagramIntegrationService = {
         where: { userId },
       });
 
-      return formatAccountResponse(account);
+      if (!account || account.connectionStatus !== "connected") {
+        return formatAccountResponse(account, { status: "disconnected" });
+      }
+
+      // Mock connections have no real Graph token — treat as active for demo UX.
+      if (account.accessTokenEncrypted === "mock_encrypted_token_placeholder") {
+        return formatAccountResponse(account, {
+          status: "active",
+          verifiedAt: new Date().toISOString(),
+        });
+      }
+
+      // Meta Graph API is Active only when the stored Instagram user token can
+      // successfully read the connected professional account profile.
+      // Facebook Page ID is intentionally NOT used for this determination.
+      try {
+        const accessToken = decryptToken(account.accessTokenEncrypted);
+        const profile = await metaGraphService.fetchInstagramProfile(accessToken);
+        const verifiedAt = new Date();
+        const profileUserId = String(profile.user_id ?? profile.id ?? "");
+        const username =
+          profile.username?.trim() ||
+          account.username ||
+          deriveFacebookUsername({ id: profileUserId || account.instagramUserId, name: profile.name });
+        const accountType = (profile.account_type?.trim() || account.accountType || "BUSINESS").toUpperCase();
+
+        const refreshed = await prisma.instagramAccount.update({
+          where: { id: account.id },
+          data: {
+            username,
+            accountType,
+            profilePictureUrl: profile.profile_picture_url ?? account.profilePictureUrl,
+            lastSyncAt: verifiedAt,
+            ...(profileUserId ? { instagramUserId: profileUserId } : {}),
+          },
+        });
+
+        return formatAccountResponse(refreshed, {
+          status: "active",
+          verifiedAt: verifiedAt.toISOString(),
+        });
+      } catch (error) {
+        const message =
+          error instanceof AppError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : "Instagram Graph profile request failed";
+        logIntegrationError("graphApiStatus verification failed", error);
+        return formatAccountResponse(account, {
+          status: "error",
+          error: message,
+        });
+      }
     } catch (error) {
       // A missing instagram_accounts table or transient DB error must not 500 the
       // whole Integrations page (which also drives Meta OAuth detection).
       logIntegrationError("getStatus failed — returning disconnected default", error);
-      return formatAccountResponse(null);
+      return formatAccountResponse(null, { status: "disconnected" });
     }
   },
 
@@ -271,7 +329,10 @@ export const instagramIntegrationService = {
       },
     });
 
-    return formatAccountResponse(account);
+    return formatAccountResponse(account, {
+      status: "active",
+      verifiedAt: new Date().toISOString(),
+    });
   },
 
   async connectViaOAuth(userId: string, code: string) {
@@ -381,7 +442,11 @@ export const instagramIntegrationService = {
     });
 
     const refreshed = await prisma.instagramAccount.findUnique({ where: { id: account.id } });
-    const response = formatAccountResponse(refreshed ?? account);
+    // Profile fetch already succeeded above — Graph API is active regardless of pageId.
+    const response = formatAccountResponse(refreshed ?? account, {
+      status: "active",
+      verifiedAt: now.toISOString(),
+    });
 
     return {
       ...response,
@@ -408,7 +473,10 @@ export const instagramIntegrationService = {
 
     if (account.accessTokenEncrypted === "mock_encrypted_token_placeholder") {
       return {
-        ...formatAccountResponse(account),
+        ...formatAccountResponse(account, {
+          status: "active",
+          verifiedAt: new Date().toISOString(),
+        }),
         pageLookup: {
           pageId: account.pageId,
           source: "mock" as const,
@@ -427,6 +495,23 @@ export const instagramIntegrationService = {
       );
     }
 
+    // Confirm Graph access via profile first — Page ID is optional for Instagram Login.
+    let graphStatus: GraphApiStatus = "pending";
+    let graphError: string | null = null;
+    const verifiedAt = new Date();
+    try {
+      await metaGraphService.fetchInstagramProfile(accessToken);
+      graphStatus = "active";
+    } catch (error) {
+      graphStatus = "error";
+      graphError =
+        error instanceof AppError
+          ? error.message
+          : error instanceof Error
+            ? error.message
+            : "Instagram Graph profile request failed";
+    }
+
     const pageLookup = await metaGraphService.resolveLinkedFacebookPageId({
       igUserId: account.instagramUserId,
       accessToken,
@@ -436,12 +521,16 @@ export const instagramIntegrationService = {
       where: { userId },
       data: {
         pageId: pageLookup.pageId,
-        lastSyncAt: new Date(),
+        lastSyncAt: verifiedAt,
       },
     });
 
     return {
-      ...formatAccountResponse(updated),
+      ...formatAccountResponse(updated, {
+        status: graphStatus,
+        verifiedAt: graphStatus === "active" ? verifiedAt.toISOString() : null,
+        error: graphError,
+      }),
       pageLookup: {
         pageId: pageLookup.pageId,
         source: pageLookup.source,
@@ -475,7 +564,10 @@ export const instagramIntegrationService = {
         },
       });
       return {
-        ...formatAccountResponse(updated),
+        ...formatAccountResponse(updated, {
+          status: "active",
+          verifiedAt: now.toISOString(),
+        }),
         webhookSubscription: { success: true as const, fields: [...INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS] },
       };
     }
@@ -507,7 +599,11 @@ export const instagramIntegrationService = {
 
     const refreshed = await prisma.instagramAccount.findUnique({ where: { userId } });
     return {
-      ...formatAccountResponse(refreshed ?? account),
+      // Token successfully called subscribed_apps — Graph access is active.
+      ...formatAccountResponse(refreshed ?? account, {
+        status: "active",
+        verifiedAt: new Date().toISOString(),
+      }),
       webhookSubscription: subscription,
     };
   },

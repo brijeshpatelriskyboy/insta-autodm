@@ -31,7 +31,10 @@ import { useMounted } from "@/hooks/useMounted";
 
 const SETUP_ITEMS = [
   { key: "professionalAccount" as const, label: "Instagram Professional account" },
-  { key: "facebookPageLinked" as const, label: "Facebook Page linked" },
+  {
+    key: "facebookPageLinked" as const,
+    label: "Facebook Page (optional for Instagram Login)",
+  },
   { key: "metaDeveloperApp" as const, label: "Meta Developer app" },
   { key: "webhookConfigured" as const, label: "Webhook configured" },
 ];
@@ -232,6 +235,8 @@ export default function IntegrationsPage() {
   const connected = status?.connected ?? false;
   const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
   const webhookConfigured = status?.setupChecklist.webhookConfigured ?? false;
+  const graphApiStatus =
+    status?.graphApiStatus ?? (connected ? ("pending" as const) : ("disconnected" as const));
 
   const integrations = [
     {
@@ -261,8 +266,8 @@ export default function IntegrationsPage() {
       id: "meta",
       name: "Meta Graph API",
       description:
-        "Required for Instagram messaging, comment webhooks, and account verification.",
-      status: connected ? ("pending" as const) : ("disconnected" as const),
+        "Active when the stored Instagram Login token can read the connected professional account. A Facebook Page ID is not required.",
+      status: graphApiStatus,
       icon: Server,
       iconGradient: "from-blue-500 to-blue-600",
       details: [
@@ -274,7 +279,7 @@ export default function IntegrationsPage() {
           value: status?.pageId
             ? status.pageId
             : connected
-              ? "Not returned (Instagram Login)"
+              ? "Not returned — Instagram Login"
               : "—",
         },
       ],
@@ -504,8 +509,15 @@ export default function IntegrationsPage() {
             },
             {
               icon: Server,
-              label: "API connectivity",
-              status: "Backend online",
+              label: "Meta Graph API",
+              status:
+                graphApiStatus === "active"
+                  ? "Active — Instagram profile reachable"
+                  : graphApiStatus === "error"
+                    ? status?.graphApiError ?? "Graph token check failed"
+                    : connected
+                      ? "Pending verification"
+                      : "Connect Instagram to verify",
             },
           ].map((item) => {
             const Icon = item.icon ?? Circle;
