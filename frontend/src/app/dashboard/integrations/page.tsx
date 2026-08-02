@@ -152,6 +152,32 @@ export default function IntegrationsPage() {
     }
   }
 
+  async function handleSyncPageId() {
+    const token = getToken();
+    if (!token) return;
+
+    setActionLoading(true);
+    try {
+      const result = await api.syncInstagramFacebookPageId(token);
+      setStatus(result);
+      if (result.pageId) {
+        toast.success(`Facebook Page ID saved: ${result.pageId}`);
+      } else {
+        toast.info(
+          "Meta did not return a Facebook Page ID for this Instagram Login token (Page is optional).",
+        );
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : "Failed to sync Facebook Page ID from Meta Graph",
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   async function handleMockConnect() {
     const token = getToken();
     if (!token) return;
@@ -240,9 +266,17 @@ export default function IntegrationsPage() {
       icon: Server,
       iconGradient: "from-blue-500 to-blue-600",
       details: [
-        { label: "API version", value: "v21.0 (planned)" },
+        { label: "API version", value: metaConfig?.graphApiVersion ?? "v21.0" },
         { label: "IG User ID", value: status?.instagramUserId ?? "—" },
-        { label: "Page ID", value: status?.pageId ?? "—" },
+        {
+          label: "Page ID",
+          // Instagram Login does not require a Facebook Page; null means Meta did not return one.
+          value: status?.pageId
+            ? status.pageId
+            : connected
+              ? "Not returned (Instagram Login)"
+              : "—",
+        },
       ],
     },
     {
@@ -345,6 +379,20 @@ export default function IntegrationsPage() {
                   <Webhook className="h-4 w-4" />
                 )}
                 Enable comment webhooks
+              </Button>
+            )}
+            {connected && !status?.pageId && (
+              <Button
+                variant="secondary"
+                onClick={handleSyncPageId}
+                disabled={actionLoading || loading}
+              >
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Sync Page ID
               </Button>
             )}
             {connected && (
