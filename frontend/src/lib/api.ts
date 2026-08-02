@@ -295,6 +295,17 @@ export const api = {
       token,
     ),
 
+  syncInstagramFacebookPageId: (token: string) =>
+    request<
+      InstagramIntegrationStatus & {
+        pageLookup?: {
+          pageId: string | null;
+          source: string;
+          probes: unknown[];
+        };
+      }
+    >("/api/integrations/instagram/sync-page-id", { method: "POST" }, token),
+
   getMetaOAuthConfig: () =>
     request<MetaOAuthConfig>("/api/integrations/instagram/meta-config"),
 

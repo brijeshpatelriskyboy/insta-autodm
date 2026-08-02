@@ -37,6 +37,26 @@ type InstagramProfile = {
   profile_picture_url?: string;
 };
 
+export type FacebookPageLookupProbe = {
+  host: "graph.instagram.com" | "graph.facebook.com";
+  path: string;
+  fields: string;
+  httpStatus: number;
+  ok: boolean;
+  /** Full Graph JSON body with tokens omitted (never includes access_token). */
+  body: unknown;
+};
+
+export type FacebookPageLookupResult = {
+  pageId: string | null;
+  source:
+    | "instagram_me_page_field"
+    | "facebook_me_accounts"
+    | "not_available"
+    | "error";
+  probes: FacebookPageLookupProbe[];
+};
+
 async function parseJsonResponse<T>(response: Response, context: string): Promise<T> {
   const body = (await response.json()) as T & MetaGraphError;
 
@@ -225,6 +245,134 @@ export const metaGraphService = {
     });
 
     return profile;
+  },
+
+  /**
+   * Attempt to resolve the Facebook Page ID linked to an Instagram professional account.
+   *
+   * Instagram Login docs do NOT list a Page ID on `/me` and state a Facebook Page is not
+   * required. Facebook Login uses `GET /me/accounts` on graph.facebook.com instead.
+   * This method probes both paths with the stored Instagram user token and returns the
+   * exact Graph JSON bodies so callers can persist a Page ID only when Meta returns one.
+   *
+   * @see https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/get-started/
+   * @see https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/business-login-for-instagram/
+   */
+  async resolveLinkedFacebookPageId(params: {
+    igUserId: string;
+    accessToken: string;
+  }): Promise<FacebookPageLookupResult> {
+    const version = getMetaGraphApiVersion();
+    const probes: FacebookPageLookupProbe[] = [];
+
+    async function probe(
+      host: "graph.instagram.com" | "graph.facebook.com",
+      path: string,
+      fields: string,
+    ): Promise<Record<string, unknown>> {
+      const url = new URL(`https://${host}/${version}${path}`);
+      url.searchParams.set("fields", fields);
+      url.searchParams.set("access_token", params.accessToken);
+
+      const response = await fetch(url.toString(), { method: "GET" });
+      const body = (await response.json()) as Record<string, unknown>;
+      probes.push({
+        host,
+        path,
+        fields,
+        httpStatus: response.status,
+        ok: response.ok && !body.error,
+        body,
+      });
+      return body;
+    }
+
+    try {
+      // 1) Documented Instagram Login profile fields (baseline).
+      await probe(
+        "graph.instagram.com",
+        "/me",
+        "user_id,username,name,account_type,profile_picture_url",
+      );
+
+      // 2) Ask Instagram Login host for any page-shaped fields (exact success/error).
+      const igPageProbe = await probe(
+        "graph.instagram.com",
+        "/me",
+        "user_id,username,id,page_id,facebook_page,connected_facebook_page",
+      );
+
+      const igPageId =
+        (typeof igPageProbe.page_id === "string" && igPageProbe.page_id) ||
+        (typeof igPageProbe.facebook_page === "string" && igPageProbe.facebook_page) ||
+        (igPageProbe.connected_facebook_page &&
+        typeof igPageProbe.connected_facebook_page === "object" &&
+        typeof (igPageProbe.connected_facebook_page as { id?: unknown }).id === "string"
+          ? (igPageProbe.connected_facebook_page as { id: string }).id
+          : null) ||
+        (typeof igPageProbe.connected_facebook_page === "string"
+          ? igPageProbe.connected_facebook_page
+          : null);
+
+      if (igPageId) {
+        console.log("[instagram-oauth] facebook page id from Instagram Login fields:", {
+          igUserId: params.igUserId,
+          pageId: igPageId,
+        });
+        return { pageId: igPageId, source: "instagram_me_page_field", probes };
+      }
+
+      // 3) Facebook Login path: list Pages and match instagram_business_account.
+      const accountsBody = await probe(
+        "graph.facebook.com",
+        "/me/accounts",
+        "id,name,instagram_business_account",
+      );
+
+      const rows = Array.isArray(accountsBody.data) ? accountsBody.data : [];
+      for (const row of rows) {
+        if (!row || typeof row !== "object") continue;
+        const page = row as {
+          id?: unknown;
+          instagram_business_account?: { id?: unknown };
+        };
+        const linkedIgId =
+          page.instagram_business_account &&
+          typeof page.instagram_business_account === "object"
+            ? String(page.instagram_business_account.id ?? "")
+            : "";
+        if (linkedIgId && linkedIgId === params.igUserId && typeof page.id === "string") {
+          console.log("[instagram-oauth] facebook page id from me/accounts:", {
+            igUserId: params.igUserId,
+            pageId: page.id,
+          });
+          return { pageId: page.id, source: "facebook_me_accounts", probes };
+        }
+      }
+
+      console.log("[instagram-oauth] no facebook page id available for Instagram Login token:", {
+        igUserId: params.igUserId,
+        probeCount: probes.length,
+        probeStatuses: probes.map((p) => ({
+          host: p.host,
+          path: p.path,
+          httpStatus: p.httpStatus,
+          ok: p.ok,
+          error:
+            p.body && typeof p.body === "object" && "error" in p.body
+              ? (p.body as { error?: { message?: string; code?: number } }).error
+              : null,
+        })),
+      });
+
+      return { pageId: null, source: "not_available", probes };
+    } catch (error) {
+      console.error("[instagram-oauth] facebook page lookup failed:", {
+        igUserId: params.igUserId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return { pageId: null, source: "error", probes };
+    }
   },
 
   /**

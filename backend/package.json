@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev --name init",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:apply-dm-event-private-reply": "node scripts/apply-dm-event-private-reply.cjs",
+    "meta:probe-page-id": "node scripts/probe-instagram-page-id.cjs",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },

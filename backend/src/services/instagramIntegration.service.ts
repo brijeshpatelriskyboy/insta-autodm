@@ -67,10 +67,13 @@ function buildSetupChecklist(
   connected: boolean,
   source?: "mock" | "meta_oauth",
   webhookConfigured = false,
+  facebookPageLinked = false,
 ) {
   return {
-    professionalAccount: connected && source === "mock",
-    facebookPageLinked: connected && source === "mock",
+    // Instagram Login does not require a Professional→Page link in Meta's model;
+    // mark professional when connected via either mock or real OAuth.
+    professionalAccount: connected,
+    facebookPageLinked: connected && facebookPageLinked,
     metaDeveloperApp: connected && source === "meta_oauth",
     webhookConfigured: connected && (source === "mock" || webhookConfigured),
   };
@@ -99,6 +102,7 @@ function formatAccountResponse(
         ? "meta_oauth"
         : undefined;
   const webhookConfigured = Boolean(account?.webhookSubscribedAt);
+  const facebookPageLinked = Boolean(account?.pageId);
 
   return {
     connected,
@@ -112,7 +116,12 @@ function formatAccountResponse(
     lastSyncAt: account?.lastSyncAt?.toISOString() ?? null,
     webhookSubscribedAt: account?.webhookSubscribedAt?.toISOString() ?? null,
     webhookSubscribedFields: account?.webhookSubscribedFields ?? null,
-    setupChecklist: buildSetupChecklist(connected, source, webhookConfigured),
+    setupChecklist: buildSetupChecklist(
+      connected,
+      source,
+      webhookConfigured,
+      facebookPageLinked,
+    ),
   };
 }
 
@@ -288,6 +297,14 @@ export const instagramIntegrationService = {
     const profilePictureUrl = profile.profile_picture_url ?? null;
     const accessTokenEncrypted = encryptToken(longLived.access_token);
 
+    // Instagram Login may not return a Facebook Page ID (Page is optional for this API).
+    // Probe Graph and persist only when Meta actually returns one.
+    const pageLookup = await metaGraphService.resolveLinkedFacebookPageId({
+      igUserId: instagramUserId,
+      accessToken: longLived.access_token,
+    });
+    const pageId = pageLookup.pageId;
+
     let account;
     try {
       account = await prisma.instagramAccount.upsert({
@@ -299,6 +316,7 @@ export const instagramIntegrationService = {
           accountType,
           profilePictureUrl,
           accessTokenEncrypted,
+          pageId,
           connectionStatus: "connected",
           connectedAt: now,
           lastSyncAt: now,
@@ -312,6 +330,7 @@ export const instagramIntegrationService = {
           accountType,
           profilePictureUrl,
           accessTokenEncrypted,
+          pageId,
           connectionStatus: "connected",
           connectedAt: now,
           lastSyncAt: now,
@@ -333,6 +352,8 @@ export const instagramIntegrationService = {
           source: "instagram_oauth",
           instagramUserId,
           accountType,
+          pageId,
+          pageLookupSource: pageLookup.source,
           expiresIn: longLived.expires_in ?? shortLived.expires_in ?? null,
           permissions: shortLived.permissions ?? null,
         },
@@ -354,6 +375,8 @@ export const instagramIntegrationService = {
       instagramUserId,
       username: account.username,
       connectionStatus: account.connectionStatus,
+      pageId,
+      pageLookupSource: pageLookup.source,
       webhookSubscribed: subscription.success,
     });
 
@@ -363,6 +386,67 @@ export const instagramIntegrationService = {
     return {
       ...response,
       webhookSubscription: subscription,
+      pageLookup: {
+        pageId: pageLookup.pageId,
+        source: pageLookup.source,
+        probes: pageLookup.probes,
+      },
+    };
+  },
+
+  /**
+   * Re-probe Meta for a Facebook Page ID on an already-connected Instagram Login account.
+   */
+  async syncFacebookPageId(userId: string) {
+    const account = await prisma.instagramAccount.findUnique({
+      where: { userId },
+    });
+
+    if (!account || account.connectionStatus !== "connected") {
+      throw new AppError(404, "No connected Instagram account found");
+    }
+
+    if (account.accessTokenEncrypted === "mock_encrypted_token_placeholder") {
+      return {
+        ...formatAccountResponse(account),
+        pageLookup: {
+          pageId: account.pageId,
+          source: "mock" as const,
+          probes: [],
+        },
+      };
+    }
+
+    let accessToken: string;
+    try {
+      accessToken = decryptToken(account.accessTokenEncrypted);
+    } catch {
+      throw new AppError(
+        400,
+        "Stored Instagram access token could not be decrypted. Disconnect and reconnect Instagram.",
+      );
+    }
+
+    const pageLookup = await metaGraphService.resolveLinkedFacebookPageId({
+      igUserId: account.instagramUserId,
+      accessToken,
+    });
+
+    const updated = await prisma.instagramAccount.update({
+      where: { userId },
+      data: {
+        pageId: pageLookup.pageId,
+        lastSyncAt: new Date(),
+      },
+    });
+
+    return {
+      ...formatAccountResponse(updated),
+      pageLookup: {
+        pageId: pageLookup.pageId,
+        source: pageLookup.source,
+        probes: pageLookup.probes,
+      },
     };
   },
 
