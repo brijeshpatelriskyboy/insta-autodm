@@ -212,7 +212,7 @@ export function OnboardingWizard() {
                 <Sparkles className="h-7 w-7" />
               </div>
               <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                Welcome to Insta AutoDM
+                Welcome to Comment2DM
                 {userName ? `, ${userName.split(" ")[0]}` : ""}!
               </h1>
               <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-slate-600 sm:text-base">
@@ -342,8 +342,8 @@ export function OnboardingWizard() {
                   Instagram Business connection
                 </p>
                 <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
-                  Meta OAuth integration coming soon. For now, connect your account
-                  to enable live automations.
+                  Connect your Instagram Business or Creator account with Meta OAuth
+                  to enable comment monitoring and automated DMs for test accounts.
                 </p>
                 <Button
                   type="button"

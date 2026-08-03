@@ -27,10 +27,10 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
   {
     step: 2,
     title: "Create Meta App",
-    summary: "Create a Business app for Insta AutoDM in the App Dashboard.",
+    summary: "Create a Business app for Comment2DM in the App Dashboard.",
     instructions: [
       "Click Create App → choose Business as the app type.",
-      "Name the app (e.g. Insta AutoDM) and connect a Business portfolio if prompted.",
+      "Name the app Comment2DM and connect a Business portfolio if prompted.",
       "Note your Instagram App ID — you will add it as INSTAGRAM_APP_ID on Railway.",
     ],
     links: [{ label: "Create a Meta App", href: "https://developers.facebook.com/apps/" }],
@@ -85,7 +85,7 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
     instructions: [
       "Convert Instagram to a Professional (Business or Creator) account.",
       "Confirm the account can grant Instagram Business Login permissions.",
-      "Use Connect Instagram in Insta AutoDM to start the OAuth flow.",
+      "Use Connect Instagram in Comment2DM to start the OAuth flow.",
     ],
     links: [
       {
@@ -97,7 +97,7 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
   {
     step: 7,
     title: "Configure Instagram Webhooks (app-level)",
-    summary: "Point Meta comment webhooks at Insta AutoDM and subscribe the comments field.",
+    summary: "Point Meta comment webhooks at Comment2DM and subscribe the comments field.",
     instructions: [
       "In Meta App Dashboard → Webhooks, add a callback URL (shown on this page).",
       "Paste the Verify Token shown on this page — it must match META_VERIFY_TOKEN on Railway.",
@@ -117,7 +117,7 @@ export const META_SETUP_STEPS: MetaSetupStep[] = [
     summary:
       "After OAuth, the app must call Graph subscribed_apps for that Instagram account — required by Meta Step 3.",
     instructions: [
-      "Connect Instagram in Insta AutoDM. On success the backend calls POST /{ig-user-id}/subscribed_apps with comments,live_comments.",
+      "Connect Instagram in Comment2DM. On success the backend calls POST /{ig-user-id}/subscribed_apps with comments,live_comments.",
       "If the account was connected before this existed, open Integrations → Enable comment webhooks.",
       "Meta also requires the app to be Live, and Advanced Access for comments/live_comments, before real comment notifications are delivered.",
       "Post a real comment containing a keyword rule and confirm a webhook hits /api/webhooks/instagram.",

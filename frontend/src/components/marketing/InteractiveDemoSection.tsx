@@ -81,7 +81,7 @@ export function InteractiveDemoSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="Live demo"
-          title="See Insta AutoDM in action"
+          title="See Comment2DM in action"
           description="Watch the full flow in 30 seconds — from comment to captured lead, completely automatic."
         />
 
@@ -200,7 +200,7 @@ export function InteractiveDemoSection() {
               <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-bold text-white">
-                    IA
+                    C2
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-900">coach_sarah</p>
@@ -209,7 +209,7 @@ export function InteractiveDemoSection() {
                 </div>
                 <div className="flex items-center gap-1 rounded-full bg-brand-50 px-2 py-1 text-xs font-medium text-brand-700">
                   <Sparkles className="h-3 w-3" />
-                  AutoDM
+                  Comment2DM
                 </div>
               </div>
 
@@ -239,7 +239,7 @@ export function InteractiveDemoSection() {
                       className="mt-2 block text-sm font-medium text-brand-600 hover:text-brand-700"
                       onClick={(e) => e.preventDefault()}
                     >
-                      instaautodm.com/guide
+                      comment2dm.com/guide
                     </a>
                     <p className="mt-2 text-sm text-slate-600">
                       Let me know if you have any questions!

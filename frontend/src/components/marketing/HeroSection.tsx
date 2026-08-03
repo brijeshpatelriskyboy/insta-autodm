@@ -79,7 +79,7 @@ export function HeroSection() {
                 <div className="h-3 w-3 rounded-full bg-emerald-400/80" />
               </div>
               <span className="ml-2 text-xs font-medium text-slate-500">
-                Insta AutoDM Dashboard
+                Comment2DM Dashboard
               </span>
             </div>
             <div className="grid gap-0 sm:grid-cols-5">

@@ -17,8 +17,9 @@ export const metadata: Metadata = {
     "social media automation",
   ],
   openGraph: {
-    title: siteConfig.name,
+    title: `${siteConfig.name} — ${siteConfig.tagline}`,
     description: siteConfig.description,
+    siteName: siteConfig.name,
     type: "website",
   },
 };

@@ -21,7 +21,7 @@ export default function HelpPage() {
     <div className="space-y-8">
       <PageHeader
         title="Help Center"
-        description="Everything you need to get started and make the most of Insta AutoDM."
+        description="Everything you need to get started and make the most of Comment2DM."
       />
 
       <Card
@@ -60,7 +60,7 @@ export default function HelpPage() {
         </div>
       </Card>
 
-      <Card title="FAQ" description="Common questions about Insta AutoDM.">
+      <Card title="FAQ" description="Common questions about Comment2DM.">
         <div className="divide-y divide-slate-100">
           {faqItems.map((item, index) => {
             const isOpen = openFaq === index;

@@ -31,4 +31,4 @@ Start-Process powershell -ArgumentList @(
 
 Write-Host "`nFrontend restarting in a new window."
 Write-Host "Login: http://localhost:3000/login"
-Write-Host "Demo:  demo@instaautodm.com / demo1234"
+Write-Host "Demo:  demo@comment2dm.com / demo1234"

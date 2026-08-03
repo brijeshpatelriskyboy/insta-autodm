@@ -1,11 +1,11 @@
 ---
-description: Insta AutoDM project context, run commands, and known fixes
+description: Comment2DM project context, run commands, and known fixes
 alwaysApply: true
 ---
 
-# Insta AutoDM — Locked Project
+# Comment2DM — Locked Project
 
-Monorepo at `C:\Users\brije\Desktop\insta dm`. MVP SaaS: auto-send Instagram DMs on keyword comments.
+Monorepo at `C:\Users\brije\Desktop\insta dm`. MVP SaaS: auto-send Instagram DMs on keyword comments. Product name: Comment2DM (repo/folders may still use insta-autodm).
 
 ## Stack
 
@@ -30,7 +30,7 @@ Node PATH prefix: `$env:LOCALAPPDATA\node-portable\node-v22.16.0-win-x64`
 - Frontend: http://localhost:3000
 - Login: http://localhost:3000/login
 - Backend: http://localhost:4000
-- Demo: `demo@instaautodm.com` / `demo1234` (one-click button on login page)
+- Demo: `demo@comment2dm.com` / `demo1234` (one-click button on login page)
 
 ## Architecture notes
 

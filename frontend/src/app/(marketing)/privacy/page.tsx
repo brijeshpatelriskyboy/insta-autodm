@@ -53,17 +53,21 @@ export default function PrivacyPage() {
           <p>
             You may request access, correction, or deletion of your personal data
             at any time by contacting{" "}
-            <a href="mailto:privacy@instaautodm.com" className="text-brand-600 hover:text-brand-700">
-              privacy@instaautodm.com
+            <a href="mailto:privacy@comment2dm.com" className="text-brand-600 hover:text-brand-700">
+              privacy@comment2dm.com
             </a>
-            .
+            . You can also use our{" "}
+            <a href="/data-deletion" className="text-brand-600 hover:text-brand-700">
+              Data Deletion
+            </a>{" "}
+            instructions.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Contact</h2>
           <p>
             For privacy-related inquiries, email{" "}
-            <a href="mailto:privacy@instaautodm.com" className="text-brand-600 hover:text-brand-700">
-              privacy@instaautodm.com
+            <a href="mailto:privacy@comment2dm.com" className="text-brand-600 hover:text-brand-700">
+              privacy@comment2dm.com
             </a>
             .
           </p>

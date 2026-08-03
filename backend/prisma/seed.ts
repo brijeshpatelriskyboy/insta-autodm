@@ -3,21 +3,40 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+const DEMO_EMAIL = "demo@comment2dm.com";
+const LEGACY_DEMO_EMAIL = "demo@instaautodm.com";
+
 async function main() {
   const passwordHash = await bcrypt.hash("demo1234", 10);
 
-  const user = await prisma.user.upsert({
-    where: { email: "demo@instaautodm.com" },
-    update: {
-      name: "Demo Creator",
-      passwordHash,
-    },
-    create: {
-      email: "demo@instaautodm.com",
-      name: "Demo Creator",
-      passwordHash,
-    },
+  const legacy = await prisma.user.findUnique({
+    where: { email: LEGACY_DEMO_EMAIL },
   });
+
+  let user;
+  if (legacy) {
+    user = await prisma.user.update({
+      where: { email: LEGACY_DEMO_EMAIL },
+      data: {
+        email: DEMO_EMAIL,
+        name: "Demo Creator",
+        passwordHash,
+      },
+    });
+  } else {
+    user = await prisma.user.upsert({
+      where: { email: DEMO_EMAIL },
+      update: {
+        name: "Demo Creator",
+        passwordHash,
+      },
+      create: {
+        email: DEMO_EMAIL,
+        name: "Demo Creator",
+        passwordHash,
+      },
+    });
+  }
 
   const rules = [
     {

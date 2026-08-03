@@ -7,15 +7,15 @@ import { SectionHeading } from "@/components/marketing/SectionHeading";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with the Insta AutoDM team. Questions about pricing, enterprise plans, or partnerships.",
+    "Get in touch with the Comment2DM Team. Questions about pricing, enterprise plans, or partnerships.",
 };
 
 const contactInfo = [
   {
     icon: Mail,
     title: "Email",
-    value: "hello@instaautodm.com",
-    href: "mailto:hello@instaautodm.com",
+    value: "hello@comment2dm.com",
+    href: "mailto:hello@comment2dm.com",
   },
   {
     icon: MessageSquare,

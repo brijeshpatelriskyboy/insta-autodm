@@ -17,7 +17,7 @@ const host =
 const app = createApp();
 
 async function bootstrap(): Promise<void> {
-  console.log("[startup] Insta AutoDM API");
+  console.log("[startup] Comment2DM API");
   console.log(`[startup] PORT=${port} (process.env.PORT=${process.env.PORT ?? "unset"})`);
   console.log(
     `[startup] DATABASE_URL=${process.env.DATABASE_URL ? "configured" : "MISSING"}`,

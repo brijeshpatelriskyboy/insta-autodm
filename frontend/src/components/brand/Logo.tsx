@@ -33,7 +33,7 @@ export function Logo({ size = "md", showText = true, variant = "dark" }: LogoPro
               variant === "light" ? "text-white" : "text-slate-900"
             }`}
           >
-            Insta AutoDM
+            Comment2DM
           </p>
           {size !== "sm" && (
             <p
@@ -41,7 +41,7 @@ export function Logo({ size = "md", showText = true, variant = "dark" }: LogoPro
                 variant === "light" ? "text-slate-400" : "text-slate-500"
               }`}
             >
-              DM Automation
+              Comment to DM
             </p>
           )}
         </div>

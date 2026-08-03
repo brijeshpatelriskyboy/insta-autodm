@@ -6,7 +6,8 @@ export function BetaBanner() {
       <p className="mx-auto flex max-w-7xl items-start gap-2 text-sm text-amber-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
         <span>
-          Instagram automation is currently in beta. Real Instagram connection coming soon.
+          Comment2DM is currently in beta. Instagram Business and Creator account
+          automation is available for connected test accounts.
         </span>
       </p>
     </div>

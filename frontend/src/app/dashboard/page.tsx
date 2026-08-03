@@ -38,13 +38,13 @@ export default function DashboardPage() {
             <BetaBadge />
           </span>
         }
-        description="You're in early access — preview sample metrics below while Instagram connection is in development."
+        description="You're in early access — Comment2DM is in beta for connected Instagram test accounts."
       />
 
       <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-        <span className="font-semibold">Beta disclaimer:</span> Overview metrics, activity,
-        and connection status use sample data for preview only. Live Instagram automation and
-        real analytics will appear after you connect your account.
+        <span className="font-semibold">Beta disclaimer:</span> Overview metrics may include
+        sample preview data. Live Instagram automation for Business and Creator accounts is
+        available after you connect a test account and enable comment webhooks.
       </div>
 
       <div>
