@@ -10,7 +10,6 @@ import webhookRoutes from "./routes/webhook.routes";
 import instagramRoutes from "./routes/instagram.routes";
 import integrationsRoutes from "./routes/integrations.routes";
 import metaRoutes from "./routes/meta.routes";
-import metaTestRoutes from "./routes/metaTest.routes";
 import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import { billingController } from "./controllers/billing.controller";
@@ -46,9 +45,6 @@ export function createApp() {
   // Public Instagram OAuth callback — no auth; must stay registered in all envs.
   // Final production path: GET /api/meta/callback
   app.use("/api/meta", metaRoutes);
-
-  // TEMPORARY — Meta comments Graph probe; remove after production test.
-  app.use("/api/meta-test", metaTestRoutes);
 
   app.use("/api/auth", authRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
