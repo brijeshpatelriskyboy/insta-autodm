@@ -62,6 +62,10 @@ model DmEvent {
   mediaId            String?
   messageId          String?
   errorSummary       String?
+  /** Meta Graph API error.code from the last failed private-reply attempt. */
+  metaErrorCode      Int?
+  /** Meta Graph API error.message from the last failed private-reply attempt (sanitized). */
+  metaErrorMessage   String?
   attemptCount       Int              @default(1)
   lastAttemptAt      DateTime?
   createdAt          DateTime         @default(now())
