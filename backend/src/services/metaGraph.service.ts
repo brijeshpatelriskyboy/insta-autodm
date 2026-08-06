@@ -482,15 +482,16 @@ export const metaGraphService = {
       if (!response.ok || raw.error || !raw.message_id) {
         const message =
           raw.error?.message ?? `Instagram private reply failed (HTTP ${response.status})`;
+        const metaCode = typeof raw.error?.code === "number" ? raw.error.code : null;
         console.error("[instagram-dm] private reply failed:", {
           status: response.status,
           type: raw.error?.type ?? null,
-          code: raw.error?.code ?? null,
+          code: metaCode,
           message,
           commentId: params.commentId,
           igUserId: params.igUserId,
         });
-        throw new AppError(502, message);
+        throw new AppError(502, message, metaCode, message);
       }
 
       console.log("[instagram-dm] private reply sent:", {
@@ -509,12 +510,16 @@ export const metaGraphService = {
         throw error;
       }
       if (error instanceof Error && error.name === "AbortError") {
-        throw new AppError(504, `Instagram private reply timed out after ${timeoutMs}ms`);
+        throw new AppError(
+          504,
+          `Instagram private reply timed out after ${timeoutMs}ms`,
+          null,
+          `Instagram private reply timed out after ${timeoutMs}ms`,
+        );
       }
-      throw new AppError(
-        502,
-        error instanceof Error ? error.message : "Instagram private reply request failed",
-      );
+      const fallback =
+        error instanceof Error ? error.message : "Instagram private reply request failed";
+      throw new AppError(502, fallback, null, fallback);
     } finally {
       clearTimeout(timer);
     }

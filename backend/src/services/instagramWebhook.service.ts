@@ -1,6 +1,6 @@
 import { DmEventStatus, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { AppError } from "../utils/errors";
+import { AppError, getMetaErrorDetails } from "../utils/errors";
 import { decryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
@@ -9,6 +9,35 @@ import { metaGraphService } from "./metaGraph.service";
 export const MAX_DM_ATTEMPTS = 3;
 
 const ERROR_SUMMARY_MAX = 240;
+
+export type DmFailureStatus = "retrying" | "action_required";
+
+export function resolveDmFailureStatus(attemptCount: number): DmFailureStatus {
+  return attemptCount >= MAX_DM_ATTEMPTS ? "action_required" : "retrying";
+}
+
+export function dmFailureActivityTitle(failureStatus: DmFailureStatus): string {
+  return failureStatus === "retrying" ? "Failed — retrying" : "Failed — action required";
+}
+
+/**
+ * Build a sanitized, length-capped errorSummary that preserves Meta code when present.
+ * Never includes tokens.
+ */
+export function formatDmErrorSummary(params: {
+  metaCode?: number | null;
+  metaMessage?: string | null;
+  fallback?: unknown;
+}): string {
+  const rawMessage =
+    params.metaMessage?.trim() ||
+    (params.fallback !== undefined ? sanitizeErrorSummary(params.fallback) : "Unknown error");
+  const sanitizedMessage = sanitizeErrorSummary(rawMessage);
+  if (typeof params.metaCode === "number") {
+    return sanitizeErrorSummary(`[${params.metaCode}] ${sanitizedMessage}`);
+  }
+  return sanitizedMessage;
+}
 
 export interface ParsedComment {
   instagramAccountId: string;
@@ -207,6 +236,8 @@ export async function claimCommentForSend(params: {
             attemptCount: { increment: 1 },
             lastAttemptAt: new Date(),
             errorSummary: null,
+            metaErrorCode: null,
+            metaErrorMessage: null,
             mediaId: mediaId ?? existing.mediaId,
             ...(ruleId ? { ruleId } : {}),
           },
@@ -275,6 +306,8 @@ async function claimCommentForSendAfterConflict(params: {
       attemptCount: { increment: 1 },
       lastAttemptAt: new Date(),
       errorSummary: null,
+      metaErrorCode: null,
+      metaErrorMessage: null,
       mediaId: params.mediaId ?? existing.mediaId,
       ...(params.ruleId ? { ruleId: params.ruleId } : {}),
     },
@@ -296,6 +329,9 @@ function buildActivityMetadata(params: {
   messageId?: string | null;
   errorSummary?: string | null;
   attemptCount?: number;
+  metaErrorCode?: number | null;
+  metaErrorMessage?: string | null;
+  failureStatus?: DmFailureStatus | null;
 }) {
   return {
     keyword: params.keyword,
@@ -310,7 +346,50 @@ function buildActivityMetadata(params: {
     messageId: params.messageId ?? null,
     errorSummary: params.errorSummary ?? null,
     attemptCount: params.attemptCount ?? null,
+    metaErrorCode: params.metaErrorCode ?? null,
+    metaErrorMessage: params.metaErrorMessage ?? null,
+    failureStatus: params.failureStatus ?? null,
     timestamp: new Date().toISOString(),
+  };
+}
+
+function buildDmFailedActivity(params: {
+  commenter: string;
+  keyword: string;
+  ruleId: string;
+  comment: ParsedComment;
+  attemptCount: number;
+  metaErrorCode: number | null;
+  metaErrorMessage: string | null;
+  errorSummary: string;
+  reasonPrefix?: string;
+}) {
+  const failureStatus = resolveDmFailureStatus(params.attemptCount);
+  const title = dmFailureActivityTitle(failureStatus);
+  const detail =
+    typeof params.metaErrorCode === "number"
+      ? `(${params.metaErrorCode}): ${params.metaErrorMessage ?? params.errorSummary}`
+      : params.metaErrorMessage || params.errorSummary;
+  const prefix = params.reasonPrefix ?? "Private reply";
+  const description = sanitizeErrorSummary(
+    `${prefix} to ${params.commenter} failed ${detail}`.replace(/\s+/g, " ").trim(),
+  );
+
+  return {
+    type: "dm_failed" as const,
+    title,
+    description,
+    metadata: buildActivityMetadata({
+      keyword: params.keyword,
+      ruleId: params.ruleId,
+      comment: params.comment,
+      dmStatus: "failed",
+      errorSummary: params.errorSummary,
+      attemptCount: params.attemptCount,
+      metaErrorCode: params.metaErrorCode,
+      metaErrorMessage: params.metaErrorMessage,
+      failureStatus,
+    }),
   };
 }
 
@@ -423,24 +502,40 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     }
     accessToken = decryptToken(account.accessTokenEncrypted);
   } catch (error) {
-    const errorSummary = sanitizeErrorSummary(error);
+    const metaErrorCode = null;
+    const metaErrorMessage = sanitizeErrorSummary(error);
+    const errorSummary = formatDmErrorSummary({
+      metaCode: metaErrorCode,
+      metaMessage: metaErrorMessage,
+      fallback: error,
+    });
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
-      data: { status: DmEventStatus.failed, errorSummary },
+      data: {
+        status: DmEventStatus.failed,
+        errorSummary,
+        metaErrorCode,
+        metaErrorMessage,
+      },
+    });
+
+    const failedActivity = buildDmFailedActivity({
+      commenter,
+      keyword: matchedRule.keyword,
+      ruleId: matchedRule.id,
+      comment,
+      attemptCount: claim.attemptCount,
+      metaErrorCode,
+      metaErrorMessage,
+      errorSummary,
+      reasonPrefix: "Private reply",
     });
 
     await activityService.log(account.userId, {
-      type: "dm_failed",
-      title: "DM failed",
-      description: `Private reply to ${commenter} failed: token decrypt error.`,
-      metadata: buildActivityMetadata({
-        keyword: matchedRule.keyword,
-        ruleId: matchedRule.id,
-        comment,
-        dmStatus: "failed",
-        errorSummary,
-        attemptCount: claim.attemptCount,
-      }),
+      type: failedActivity.type,
+      title: failedActivity.title,
+      description: failedActivity.description,
+      metadata: failedActivity.metadata,
     });
 
     console.error("[webhook] token decrypt failed:", {
@@ -451,6 +546,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       matched: true,
       sendResult: "failed_decrypt",
       errorSummary,
+      failureStatus: resolveDmFailureStatus(claim.attemptCount),
     });
 
     return { matched: true, sent: false, failed: true, duplicate: false, eventsCreated: eventsCreated + 1 };
@@ -475,6 +571,8 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
         status: DmEventStatus.sent,
         messageId: result.messageId,
         errorSummary: null,
+        metaErrorCode: null,
+        metaErrorMessage: null,
       },
     });
 
@@ -505,27 +603,43 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
     return { matched: true, sent: true, failed: false, duplicate: false, eventsCreated: eventsCreated + 1 };
   } catch (error) {
-    const errorSummary = sanitizeErrorSummary(
-      error instanceof AppError ? error.message : error,
-    );
+    const details = getMetaErrorDetails(error);
+    const metaErrorCode = details.metaCode;
+    const metaErrorMessage = details.metaMessage
+      ? sanitizeErrorSummary(details.metaMessage)
+      : sanitizeErrorSummary(error instanceof AppError ? error.message : error);
+    const errorSummary = formatDmErrorSummary({
+      metaCode: metaErrorCode,
+      metaMessage: metaErrorMessage,
+      fallback: error instanceof AppError ? error.message : error,
+    });
 
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
-      data: { status: DmEventStatus.failed, errorSummary },
+      data: {
+        status: DmEventStatus.failed,
+        errorSummary,
+        metaErrorCode,
+        metaErrorMessage,
+      },
+    });
+
+    const failedActivity = buildDmFailedActivity({
+      commenter,
+      keyword: matchedRule.keyword,
+      ruleId: matchedRule.id,
+      comment,
+      attemptCount: claim.attemptCount,
+      metaErrorCode,
+      metaErrorMessage,
+      errorSummary,
     });
 
     await activityService.log(account.userId, {
-      type: "dm_failed",
-      title: "DM failed",
-      description: `Private reply to ${commenter} failed.`,
-      metadata: buildActivityMetadata({
-        keyword: matchedRule.keyword,
-        ruleId: matchedRule.id,
-        comment,
-        dmStatus: "failed",
-        errorSummary,
-        attemptCount: claim.attemptCount,
-      }),
+      type: failedActivity.type,
+      title: failedActivity.title,
+      description: failedActivity.description,
+      metadata: failedActivity.metadata,
     });
 
     console.error("[webhook] private reply failed:", {
@@ -536,7 +650,9 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       matched: true,
       sendResult: "failed",
       errorSummary,
+      metaErrorCode,
       attemptCount: claim.attemptCount,
+      failureStatus: resolveDmFailureStatus(claim.attemptCount),
     });
 
     return { matched: true, sent: false, failed: true, duplicate: false, eventsCreated: eventsCreated + 1 };
@@ -548,6 +664,9 @@ export const instagramWebhookService = {
   commentMatchesKeyword,
   claimCommentForSend,
   sanitizeErrorSummary,
+  formatDmErrorSummary,
+  resolveDmFailureStatus,
+  dmFailureActivityTitle,
 
   async processWebhookPayload(body: unknown): Promise<WebhookProcessResult> {
     const payload = body as { object?: string; entry?: unknown[] };

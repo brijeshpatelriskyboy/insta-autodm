@@ -57,11 +57,15 @@ vi.mock("../utils/tokenCrypto", () => ({
 
 import {
   commentMatchesKeyword,
+  dmFailureActivityTitle,
+  formatDmErrorSummary,
   instagramWebhookService,
   MAX_DM_ATTEMPTS,
   parseInstagramCommentWebhook,
+  resolveDmFailureStatus,
   sanitizeErrorSummary,
 } from "./instagramWebhook.service";
+import { AppError } from "../utils/errors";
 
 const sampleWebhook = {
   object: "instagram",
@@ -132,6 +136,17 @@ describe("instagramWebhook.service helpers", () => {
     expect(summary).not.toMatch(/\bshh\b/);
     expect(summary).toMatch(/REDACTED/);
     expect(summary.length).toBeLessThanOrEqual(240);
+  });
+
+  it("formats Meta error summaries with code and resolves failure titles", () => {
+    expect(formatDmErrorSummary({ metaCode: 190, metaMessage: "Invalid OAuth" })).toBe(
+      "[190] Invalid OAuth",
+    );
+    expect(resolveDmFailureStatus(1)).toBe("retrying");
+    expect(resolveDmFailureStatus(2)).toBe("retrying");
+    expect(resolveDmFailureStatus(3)).toBe("action_required");
+    expect(dmFailureActivityTitle("retrying")).toBe("Failed — retrying");
+    expect(dmFailureActivityTitle("action_required")).toBe("Failed — action required");
   });
 
   it("parses comment webhooks and skips missing commentId", () => {
@@ -371,10 +386,110 @@ describe("processWebhookPayload private reply flow", () => {
     expect(mockDmUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "dm-1" },
-        data: expect.objectContaining({ status: DmEventStatus.failed }),
+        data: expect.objectContaining({
+          status: DmEventStatus.failed,
+          metaErrorCode: null,
+          metaErrorMessage: "Invalid encrypted token format",
+        }),
       }),
     );
-    expect(mockActivityLog.mock.calls.map((c) => c[1].type)).toContain("dm_failed");
+    const failedCall = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
+    expect(failedCall?.[1].title).toBe("Failed — retrying");
+    expect(failedCall?.[1].type).toBe("dm_failed");
+  });
+
+  it("stores Meta error code/message and titles Failed — retrying when attempts remain", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    mockDmFindUnique.mockResolvedValue(null);
+    mockDmCreate.mockResolvedValue({
+      id: "dm-1",
+      attemptCount: 1,
+      status: DmEventStatus.sending,
+    });
+    mockDecryptToken.mockReturnValue("decrypted-access-token");
+    mockSendPrivateReply.mockRejectedValue(
+      new AppError(502, "User not eligible for private reply", 10, "User not eligible for private reply"),
+    );
+
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+
+    expect(result.failed).toBe(1);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-1" },
+        data: expect.objectContaining({
+          status: DmEventStatus.failed,
+          metaErrorCode: 10,
+          metaErrorMessage: "User not eligible for private reply",
+          errorSummary: "[10] User not eligible for private reply",
+        }),
+      }),
+    );
+
+    const failedCall = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
+    expect(failedCall?.[1]).toEqual(
+      expect.objectContaining({
+        type: "dm_failed",
+        title: "Failed — retrying",
+        description: expect.stringContaining("(10): User not eligible for private reply"),
+      }),
+    );
+    expect(failedCall?.[1].metadata).toEqual(
+      expect.objectContaining({
+        metaErrorCode: 10,
+        metaErrorMessage: "User not eligible for private reply",
+        failureStatus: "retrying",
+        attemptCount: 1,
+      }),
+    );
+    expect(JSON.stringify(failedCall?.[1])).not.toMatch(/decrypted-access-token/);
+  });
+
+  it("titles Failed — action required when attemptCount reaches MAX_DM_ATTEMPTS", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    mockDmFindUnique.mockResolvedValue({
+      id: "dm-1",
+      status: DmEventStatus.failed,
+      attemptCount: 2,
+      mediaId: "media-99",
+    });
+    mockDmUpdateMany.mockResolvedValue({ count: 1 });
+    mockDmFindUniqueOrThrow.mockResolvedValue({
+      id: "dm-1",
+      attemptCount: 3,
+      status: DmEventStatus.sending,
+    });
+    mockDecryptToken.mockReturnValue("decrypted-access-token");
+    mockSendPrivateReply.mockRejectedValue(
+      new AppError(502, "Application request limit reached", 4, "Application request limit reached"),
+    );
+
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+
+    expect(result.failed).toBe(1);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: DmEventStatus.failed,
+          metaErrorCode: 4,
+          metaErrorMessage: "Application request limit reached",
+          errorSummary: "[4] Application request limit reached",
+        }),
+      }),
+    );
+
+    const failedCall = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
+    expect(failedCall?.[1].title).toBe("Failed — action required");
+    expect(failedCall?.[1].type).toBe("dm_failed");
+    expect(failedCall?.[1].metadata).toEqual(
+      expect.objectContaining({
+        failureStatus: "action_required",
+        attemptCount: 3,
+        metaErrorCode: 4,
+      }),
+    );
   });
 
   it("logs dm_failed on Meta API failure and retries failed→sending later", async () => {
@@ -391,7 +506,8 @@ describe("processWebhookPayload private reply flow", () => {
 
     const first = await instagramWebhookService.processWebhookPayload(sampleWebhook);
     expect(first.failed).toBe(1);
-    expect(mockActivityLog.mock.calls.map((c) => c[1].type)).toContain("dm_failed");
+    const firstFail = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
+    expect(firstFail?.[1].title).toBe("Failed — retrying");
 
     vi.clearAllMocks();
     mockActivityLog.mockResolvedValue({ id: "act-2" });
@@ -422,7 +538,11 @@ describe("processWebhookPayload private reply flow", () => {
           status: DmEventStatus.failed,
           attemptCount: { lt: MAX_DM_ATTEMPTS },
         }),
-        data: expect.objectContaining({ status: DmEventStatus.sending }),
+        data: expect.objectContaining({
+          status: DmEventStatus.sending,
+          metaErrorCode: null,
+          metaErrorMessage: null,
+        }),
       }),
     );
     expect(mockActivityLog.mock.calls.map((c) => c[1].type)).toContain("dm_sent");
