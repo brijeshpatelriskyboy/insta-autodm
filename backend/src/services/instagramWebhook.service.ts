@@ -10,14 +10,16 @@ export const MAX_DM_ATTEMPTS = 3;
 
 const ERROR_SUMMARY_MAX = 240;
 
-export type DmFailureStatus = "retrying" | "action_required";
+export type DmFailureStatus = "retry_available" | "action_required";
 
 export function resolveDmFailureStatus(attemptCount: number): DmFailureStatus {
-  return attemptCount >= MAX_DM_ATTEMPTS ? "action_required" : "retrying";
+  return attemptCount >= MAX_DM_ATTEMPTS ? "action_required" : "retry_available";
 }
 
 export function dmFailureActivityTitle(failureStatus: DmFailureStatus): string {
-  return failureStatus === "retrying" ? "Failed — retrying" : "Failed — action required";
+  return failureStatus === "retry_available"
+    ? "Failed — retry available"
+    : "Failed — action required";
 }
 
 /**

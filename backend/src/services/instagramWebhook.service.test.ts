@@ -142,10 +142,10 @@ describe("instagramWebhook.service helpers", () => {
     expect(formatDmErrorSummary({ metaCode: 190, metaMessage: "Invalid OAuth" })).toBe(
       "[190] Invalid OAuth",
     );
-    expect(resolveDmFailureStatus(1)).toBe("retrying");
-    expect(resolveDmFailureStatus(2)).toBe("retrying");
+    expect(resolveDmFailureStatus(1)).toBe("retry_available");
+    expect(resolveDmFailureStatus(2)).toBe("retry_available");
     expect(resolveDmFailureStatus(3)).toBe("action_required");
-    expect(dmFailureActivityTitle("retrying")).toBe("Failed — retrying");
+    expect(dmFailureActivityTitle("retry_available")).toBe("Failed — retry available");
     expect(dmFailureActivityTitle("action_required")).toBe("Failed — action required");
   });
 
@@ -394,11 +394,11 @@ describe("processWebhookPayload private reply flow", () => {
       }),
     );
     const failedCall = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
-    expect(failedCall?.[1].title).toBe("Failed — retrying");
+    expect(failedCall?.[1].title).toBe("Failed — retry available");
     expect(failedCall?.[1].type).toBe("dm_failed");
   });
 
-  it("stores Meta error code/message and titles Failed — retrying when attempts remain", async () => {
+  it("stores Meta error code/message and titles Failed — retry available when attempts remain", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([activeRule]);
     mockDmFindUnique.mockResolvedValue(null);
@@ -431,7 +431,7 @@ describe("processWebhookPayload private reply flow", () => {
     expect(failedCall?.[1]).toEqual(
       expect.objectContaining({
         type: "dm_failed",
-        title: "Failed — retrying",
+        title: "Failed — retry available",
         description: expect.stringContaining("(10): User not eligible for private reply"),
       }),
     );
@@ -439,7 +439,7 @@ describe("processWebhookPayload private reply flow", () => {
       expect.objectContaining({
         metaErrorCode: 10,
         metaErrorMessage: "User not eligible for private reply",
-        failureStatus: "retrying",
+        failureStatus: "retry_available",
         attemptCount: 1,
       }),
     );
@@ -507,7 +507,7 @@ describe("processWebhookPayload private reply flow", () => {
     const first = await instagramWebhookService.processWebhookPayload(sampleWebhook);
     expect(first.failed).toBe(1);
     const firstFail = mockActivityLog.mock.calls.find((c) => c[1].type === "dm_failed");
-    expect(firstFail?.[1].title).toBe("Failed — retrying");
+    expect(firstFail?.[1].title).toBe("Failed — retry available");
 
     vi.clearAllMocks();
     mockActivityLog.mockResolvedValue({ id: "act-2" });
