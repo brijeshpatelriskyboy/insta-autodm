@@ -61,6 +61,7 @@ export default function RulesPage() {
     keyword: string;
     dmMessage: string;
     isActive: boolean;
+    instagramMediaId: string | null;
   }) {
     const token = getToken();
     if (!token) return;
@@ -75,6 +76,7 @@ export default function RulesPage() {
     keyword: string;
     dmMessage: string;
     isActive: boolean;
+    instagramMediaId: string | null;
   }) {
     const token = getToken();
     if (!token || !editingRule) return;

@@ -64,6 +64,7 @@ import {
   parseInstagramCommentWebhook,
   resolveDmFailureStatus,
   sanitizeErrorSummary,
+  selectMatchingKeywordRule,
 } from "./instagramWebhook.service";
 import { AppError } from "../utils/errors";
 
@@ -125,6 +126,26 @@ describe("instagramWebhook.service helpers", () => {
   it("matches keywords case-insensitively as substrings", () => {
     expect(commentMatchesKeyword("Need the PRICE now", "price")).toBe(true);
     expect(commentMatchesKeyword("hello", "price")).toBe(false);
+  });
+
+  it("prefers post-scoped keyword rule over a global rule", () => {
+    const rules = [
+      { id: "global", keyword: "GUIDE", instagramMediaId: null as string | null },
+      { id: "post-a", keyword: "GUIDE", instagramMediaId: "media-a" },
+      { id: "post-b", keyword: "GUIDE", instagramMediaId: "media-b" },
+    ];
+    expect(selectMatchingKeywordRule(rules, "send GUIDE please", "media-a")?.id).toBe("post-a");
+    expect(selectMatchingKeywordRule(rules, "GUIDE", "media-b")?.id).toBe("post-b");
+  });
+
+  it("falls back to the global keyword rule when no post-specific rule exists", () => {
+    const rules = [
+      { id: "global", keyword: "GUIDE", instagramMediaId: null as string | null },
+      { id: "post-a", keyword: "GUIDE", instagramMediaId: "media-a" },
+    ];
+    expect(selectMatchingKeywordRule(rules, "GUIDE", "media-other")?.id).toBe("global");
+    expect(selectMatchingKeywordRule(rules, "GUIDE", null)?.id).toBe("global");
+    expect(selectMatchingKeywordRule(rules, "nope", "media-a")).toBeNull();
   });
 
   it("sanitizes and truncates error summaries without secrets", () => {

@@ -111,8 +111,31 @@ export interface KeywordRule {
   keyword: string;
   dmMessage: string;
   isActive: boolean;
+  /** Null = global (all posts). */
+  instagramMediaId: string | null;
+  mediaScopeKey: string;
+  /** Cached dashboard preview only — not used for matching. */
+  mediaType: string | null;
+  mediaThumbnailUrl: string | null;
+  mediaCaption: string | null;
+  mediaPermalink: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface InstagramMediaItem {
+  id: string;
+  caption: string | null;
+  mediaType: string | null;
+  thumbnailUrl: string | null;
+  permalink: string | null;
+  timestamp: string | null;
+}
+
+export interface InstagramMediaListResponse {
+  instagramUserId: string;
+  username: string;
+  media: InstagramMediaItem[];
 }
 
 export interface AnalyticsSummary {
@@ -241,7 +264,12 @@ export const api = {
 
   createKeywordRule: (
     token: string,
-    data: { keyword: string; dmMessage: string; isActive?: boolean },
+    data: {
+      keyword: string;
+      dmMessage: string;
+      isActive?: boolean;
+      instagramMediaId?: string | null;
+    },
   ) =>
     request<KeywordRule>("/api/keyword-rules", {
       method: "POST",
@@ -251,7 +279,12 @@ export const api = {
   updateKeywordRule: (
     token: string,
     id: string,
-    data: { keyword?: string; dmMessage?: string; isActive?: boolean },
+    data: {
+      keyword?: string;
+      dmMessage?: string;
+      isActive?: boolean;
+      instagramMediaId?: string | null;
+    },
   ) =>
     request<KeywordRule>(`/api/keyword-rules/${id}`, {
       method: "PUT",
@@ -260,6 +293,13 @@ export const api = {
 
   deleteKeywordRule: (token: string, id: string) =>
     request<void>(`/api/keyword-rules/${id}`, { method: "DELETE" }, token),
+
+  getInstagramMedia: (token: string, limit = 25) =>
+    request<InstagramMediaListResponse>(
+      `/api/integrations/instagram/media?limit=${limit}`,
+      {},
+      token,
+    ),
 
   getAnalyticsSummary: (token: string) =>
     request<AnalyticsSummary>("/api/analytics/summary", {}, token),

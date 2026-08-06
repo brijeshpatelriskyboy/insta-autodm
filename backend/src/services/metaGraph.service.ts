@@ -435,6 +435,140 @@ export const metaGraphService = {
   },
 
   /**
+   * List recent media for an Instagram professional account.
+   * GET https://graph.instagram.com/{VERSION}/{IG_USER_ID}/media
+   * Never logs or returns the access token.
+   */
+  async listInstagramMedia(params: {
+    igUserId: string;
+    accessToken: string;
+    limit?: number;
+  }): Promise<
+    Array<{
+      id: string;
+      caption: string | null;
+      mediaType: string | null;
+      thumbnailUrl: string | null;
+      permalink: string | null;
+      timestamp: string | null;
+    }>
+  > {
+    const version = getMetaGraphApiVersion();
+    const limit = Math.min(Math.max(params.limit ?? 25, 1), 50);
+    const url = new URL(
+      `https://graph.instagram.com/${version}/${encodeURIComponent(params.igUserId)}/media`,
+    );
+    url.searchParams.set(
+      "fields",
+      "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
+    );
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("access_token", params.accessToken);
+
+    const response = await fetch(url.toString(), { method: "GET" });
+    const body = (await response.json()) as {
+      data?: Array<{
+        id?: string;
+        caption?: string;
+        media_type?: string;
+        media_url?: string;
+        thumbnail_url?: string;
+        permalink?: string;
+        timestamp?: string;
+      }>;
+      error?: { message?: string; code?: number };
+    };
+
+    if (!response.ok || body.error) {
+      const message = body.error?.message ?? `Instagram media list failed (HTTP ${response.status})`;
+      console.error("[instagram-media] list failed:", {
+        status: response.status,
+        code: body.error?.code ?? null,
+        message,
+        igUserId: params.igUserId,
+      });
+      throw new AppError(502, message, body.error?.code ?? null, message);
+    }
+
+    const rows = Array.isArray(body.data) ? body.data : [];
+    return rows
+      .filter((row) => typeof row.id === "string" && row.id.trim())
+      .map((row) => {
+        const mediaType = row.media_type?.trim() || null;
+        const thumbnailUrl =
+          (row.thumbnail_url?.trim() ||
+            (mediaType === "IMAGE" || mediaType === "CAROUSEL_ALBUM"
+              ? row.media_url?.trim()
+              : null) ||
+            null) ?? null;
+        return {
+          id: row.id!.trim(),
+          caption: row.caption?.trim() || null,
+          mediaType,
+          thumbnailUrl,
+          permalink: row.permalink?.trim() || null,
+          timestamp: row.timestamp?.trim() || null,
+        };
+      });
+  },
+
+  /**
+   * Fetch a single media object by ID (for caching rule preview fields).
+   */
+  async getInstagramMediaById(params: {
+    mediaId: string;
+    accessToken: string;
+  }): Promise<{
+    id: string;
+    caption: string | null;
+    mediaType: string | null;
+    thumbnailUrl: string | null;
+    permalink: string | null;
+  }> {
+    const version = getMetaGraphApiVersion();
+    const url = new URL(
+      `https://graph.instagram.com/${version}/${encodeURIComponent(params.mediaId)}`,
+    );
+    url.searchParams.set(
+      "fields",
+      "id,caption,media_type,media_url,thumbnail_url,permalink",
+    );
+    url.searchParams.set("access_token", params.accessToken);
+
+    const response = await fetch(url.toString(), { method: "GET" });
+    const body = (await response.json()) as {
+      id?: string;
+      caption?: string;
+      media_type?: string;
+      media_url?: string;
+      thumbnail_url?: string;
+      permalink?: string;
+      error?: { message?: string; code?: number };
+    };
+
+    if (!response.ok || body.error || typeof body.id !== "string") {
+      const message = body.error?.message ?? `Instagram media fetch failed (HTTP ${response.status})`;
+      throw new AppError(502, message, body.error?.code ?? null, message);
+    }
+
+    const mediaType = body.media_type?.trim() || null;
+    const thumbnailUrl =
+      body.thumbnail_url?.trim() ||
+      (mediaType === "IMAGE" || mediaType === "CAROUSEL_ALBUM"
+        ? body.media_url?.trim()
+        : null) ||
+      null;
+
+    return {
+      id: body.id.trim(),
+      caption: body.caption?.trim() || null,
+      mediaType,
+      thumbnailUrl,
+      permalink: body.permalink?.trim() || null,
+    };
+  },
+
+  /**
    * Send one private reply to an Instagram commenter via Messaging API.
    *
    * Limitations (Meta platform rules — still apply):

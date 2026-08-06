@@ -4,16 +4,28 @@ import { keywordRuleService } from "../services/keywordRule.service";
 import { AppError } from "../utils/errors";
 import { getRouteParam } from "../utils/params";
 
+const mediaIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .nullable()
+  .optional();
+
 const createSchema = z.object({
   keyword: z.string().min(1).max(50),
   dmMessage: z.string().min(1).max(1000),
   isActive: z.boolean().optional(),
+  /** null/omit = global (all posts); string = pin to that Instagram media ID */
+  instagramMediaId: mediaIdSchema,
 });
 
 const updateSchema = z.object({
   keyword: z.string().min(1).max(50).optional(),
   dmMessage: z.string().min(1).max(1000).optional(),
   isActive: z.boolean().optional(),
+  /** Explicit null clears to global; omit leaves unchanged */
+  instagramMediaId: mediaIdSchema,
 });
 
 export class KeywordRuleController {
@@ -45,7 +57,10 @@ export class KeywordRuleController {
       if (!req.user) throw new AppError(401, "Authentication required");
 
       const body = createSchema.parse(req.body);
-      const rule = await keywordRuleService.create(req.user.id, body);
+      const rule = await keywordRuleService.create(req.user.id, {
+        ...body,
+        instagramMediaId: body.instagramMediaId ?? null,
+      });
       res.status(201).json(rule);
     } catch (error) {
       next(error);
@@ -61,7 +76,10 @@ export class KeywordRuleController {
 
       console.log(`[KeywordRules] PUT /api/keyword-rules/${ruleId}`, {
         userId: req.user.id,
-        body,
+        body: {
+          ...body,
+          // Never log tokens; media id is safe.
+        },
       });
 
       const rule = await keywordRuleService.update(req.user.id, ruleId, body);

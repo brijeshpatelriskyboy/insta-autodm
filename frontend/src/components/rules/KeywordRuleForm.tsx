@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
-import type { KeywordRule } from "@/lib/api";
+import {
+  api,
+  type InstagramMediaItem,
+  type KeywordRule,
+} from "@/lib/api";
+import { getToken } from "@/lib/auth";
 
 interface KeywordRuleFormProps {
   initial?: KeywordRule;
@@ -12,6 +17,7 @@ interface KeywordRuleFormProps {
     keyword: string;
     dmMessage: string;
     isActive: boolean;
+    instagramMediaId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
 }
@@ -39,10 +45,65 @@ function validate(keyword: string, dmMessage: string): FormErrors {
   return errors;
 }
 
+function MediaPreview({
+  thumbnailUrl,
+  caption,
+  mediaType,
+  permalink,
+}: {
+  thumbnailUrl: string | null;
+  caption: string | null;
+  mediaType: string | null;
+  permalink?: string | null;
+}) {
+  return (
+    <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3">
+      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+        {thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
+            No image
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          {mediaType && (
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-600">
+              {mediaType}
+            </span>
+          )}
+          {permalink && (
+            <a
+              href={permalink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] font-medium text-brand-600 hover:underline"
+            >
+              Open
+            </a>
+          )}
+        </div>
+        <p className="mt-1 line-clamp-2 text-sm text-slate-600">
+          {caption?.trim() || "No caption"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleFormProps) {
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
   const [dmMessage, setDmMessage] = useState(initial?.dmMessage ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
+  const [instagramMediaId, setInstagramMediaId] = useState<string | null>(
+    initial?.instagramMediaId ?? null,
+  );
+  const [mediaItems, setMediaItems] = useState<InstagramMediaItem[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [mediaError, setMediaError] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState("");
@@ -51,9 +112,61 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setKeyword(initial?.keyword ?? "");
     setDmMessage(initial?.dmMessage ?? "");
     setIsActive(initial?.isActive ?? true);
+    setInstagramMediaId(initial?.instagramMediaId ?? null);
     setErrors({});
     setSubmitError("");
-  }, [initial?.id, initial?.keyword, initial?.dmMessage, initial?.isActive]);
+  }, [
+    initial?.id,
+    initial?.keyword,
+    initial?.dmMessage,
+    initial?.isActive,
+    initial?.instagramMediaId,
+  ]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+
+    let cancelled = false;
+    setMediaLoading(true);
+    setMediaError("");
+    api
+      .getInstagramMedia(token, 25)
+      .then((res) => {
+        if (!cancelled) setMediaItems(res.media);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setMediaError(
+            err instanceof Error
+              ? err.message
+              : "Could not load Instagram posts. You can still save a global rule.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setMediaLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectedMedia =
+    instagramMediaId == null
+      ? null
+      : mediaItems.find((m) => m.id === instagramMediaId) ??
+        (initial?.instagramMediaId === instagramMediaId
+          ? {
+              id: initial.instagramMediaId,
+              caption: initial.mediaCaption,
+              mediaType: initial.mediaType,
+              thumbnailUrl: initial.mediaThumbnailUrl,
+              permalink: initial.mediaPermalink,
+              timestamp: null,
+            }
+          : null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +182,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setLoading(true);
 
     try {
-      await onSubmit({ keyword, dmMessage, isActive });
+      await onSubmit({ keyword, dmMessage, isActive, instagramMediaId });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to save rule");
     } finally {
@@ -94,8 +207,46 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
           if (errors.keyword) setErrors((prev) => ({ ...prev, keyword: undefined }));
         }}
         error={errors.keyword}
-        hint="Commenters must type this exact keyword to trigger the DM."
+        hint="Commenters must type this keyword to trigger the DM."
       />
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-slate-700">Instagram post</label>
+        <p className="text-xs text-slate-500">
+          Attach this keyword to one post/Reel, or keep it global for all posts. The same keyword
+          can be used on different posts.
+        </p>
+        <select
+          value={instagramMediaId ?? ""}
+          onChange={(e) => setInstagramMediaId(e.target.value ? e.target.value : null)}
+          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          disabled={mediaLoading}
+        >
+          <option value="">All posts (global)</option>
+          {mediaItems.map((item) => (
+            <option key={item.id} value={item.id}>
+              {(item.mediaType ?? "POST") +
+                " — " +
+                (item.caption?.trim() || item.id).slice(0, 60)}
+            </option>
+          ))}
+        </select>
+        {mediaLoading && <p className="text-xs text-slate-500">Loading recent posts…</p>}
+        {mediaError && <p className="text-xs text-amber-700">{mediaError}</p>}
+        {selectedMedia && (
+          <MediaPreview
+            thumbnailUrl={selectedMedia.thumbnailUrl}
+            caption={selectedMedia.caption}
+            mediaType={selectedMedia.mediaType}
+            permalink={selectedMedia.permalink}
+          />
+        )}
+        {!selectedMedia && instagramMediaId == null && (
+          <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+            Global rule — matches this keyword on any post.
+          </p>
+        )}
+      </div>
 
       <Textarea
         label="DM Message"

@@ -65,6 +65,36 @@ export function commentMatchesKeyword(commentText: string, keyword: string): boo
   return commentText.trim().toUpperCase().includes(keyword.toUpperCase());
 }
 
+/**
+ * Prefer an exact post-scoped keyword rule; fall back to a global rule.
+ * Cached thumbnail/caption are never used for matching.
+ */
+export function selectMatchingKeywordRule<
+  T extends { keyword: string; instagramMediaId: string | null },
+>(
+  rules: T[],
+  commentText: string,
+  commentMediaId: string | null | undefined,
+): T | null {
+  const keywordMatches = rules.filter((rule) =>
+    commentMatchesKeyword(commentText, rule.keyword),
+  );
+  if (keywordMatches.length === 0) {
+    return null;
+  }
+
+  const mediaId = commentMediaId?.trim() || null;
+  if (mediaId) {
+    const postScoped = keywordMatches.find((rule) => rule.instagramMediaId === mediaId);
+    if (postScoped) {
+      return postScoped;
+    }
+  }
+
+  const global = keywordMatches.find((rule) => rule.instagramMediaId == null);
+  return global ?? null;
+}
+
 /** Sanitize and length-limit error text for DB/logs — never store tokens or raw payloads. */
 export function sanitizeErrorSummary(input: unknown): string {
   let text =
@@ -441,7 +471,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     where: { userId: account.userId, isActive: true },
   });
 
-  const matchedRule = rules.find((rule) => commentMatchesKeyword(comment.text, rule.keyword));
+  const matchedRule = selectMatchingKeywordRule(rules, comment.text, comment.mediaId);
   if (!matchedRule) {
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
@@ -664,6 +694,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 export const instagramWebhookService = {
   parseInstagramCommentWebhook,
   commentMatchesKeyword,
+  selectMatchingKeywordRule,
   claimCommentForSend,
   sanitizeErrorSummary,
   formatDmErrorSummary,
