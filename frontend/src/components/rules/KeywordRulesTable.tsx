@@ -14,6 +14,45 @@ interface KeywordRulesTableProps {
   onCreate?: () => void;
 }
 
+function PostCell({ rule }: { rule: KeywordRule }) {
+  if (!rule.instagramMediaId) {
+    return (
+      <span className="inline-flex rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+        All posts
+      </span>
+    );
+  }
+
+  return (
+    <div className="flex max-w-xs items-center gap-3">
+      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+        {rule.mediaThumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={rule.mediaThumbnailUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[9px] text-slate-400">
+            Post
+          </div>
+        )}
+      </div>
+      <div className="min-w-0">
+        {rule.mediaType && (
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+            {rule.mediaType}
+          </p>
+        )}
+        <p className="line-clamp-2 text-sm text-slate-600">
+          {rule.mediaCaption?.trim() || "No caption"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function KeywordRulesTable({
   rules,
   deletingId,
@@ -42,6 +81,9 @@ export function KeywordRulesTable({
                 Keyword
               </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Post
+              </th>
+              <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                 DM Message
               </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
@@ -54,14 +96,14 @@ export function KeywordRulesTable({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rules.map((rule) => (
-              <tr
-                key={rule.id}
-                className="transition-colors hover:bg-slate-50/80"
-              >
+              <tr key={rule.id} className="transition-colors hover:bg-slate-50/80">
                 <td className="whitespace-nowrap px-5 py-4">
                   <span className="inline-flex rounded-lg bg-brand-50 px-2.5 py-1 text-sm font-semibold text-brand-700">
                     {rule.keyword}
                   </span>
+                </td>
+                <td className="px-5 py-4">
+                  <PostCell rule={rule} />
                 </td>
                 <td className="max-w-xs px-5 py-4 text-sm text-slate-600 lg:max-w-md">
                   <p className="line-clamp-2">{rule.dmMessage}</p>

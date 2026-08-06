@@ -35,17 +35,33 @@ model User {
 }
 
 model KeywordRule {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  keyword   String
-  dmMessage String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  dmEvents  DmEvent[]
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword             String
+  dmMessage           String
+  isActive            Boolean  @default(true)
+  /**
+   * Instagram media ID this rule is scoped to.
+   * Null = global (all posts). Matching uses this field, not cached preview metadata.
+   */
+  instagramMediaId    String?
+  /**
+   * Non-null uniqueness helper: "__GLOBAL__" when instagramMediaId is null,
+   * otherwise the Instagram media ID. Enforces one rule per (user, keyword, scope).
+   */
+  mediaScopeKey       String   @default("__GLOBAL__")
+  /** Cached for Rules dashboard display only — not used for webhook matching. */
+  mediaType           String?
+  mediaThumbnailUrl   String?
+  mediaCaption        String?
+  mediaPermalink      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  dmEvents            DmEvent[]
 
-  @@unique([userId, keyword])
+  @@unique([userId, keyword, mediaScopeKey])
+  @@index([userId, keyword])
   @@map("keyword_rules")
 }
 

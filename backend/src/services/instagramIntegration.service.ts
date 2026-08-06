@@ -633,4 +633,40 @@ export const instagramIntegrationService = {
 
     return { disconnected: true };
   },
+
+  /**
+   * Recent Instagram media for the connected account (Rules post picker).
+   * Never returns the access token.
+   */
+  async listMedia(userId: string, limit = 25) {
+    const account = await prisma.instagramAccount.findUnique({ where: { userId } });
+    if (!account || account.connectionStatus !== "connected") {
+      throw new AppError(404, "No connected Instagram account found");
+    }
+    if (
+      !account.accessTokenEncrypted ||
+      account.accessTokenEncrypted === "mock_encrypted_token_placeholder"
+    ) {
+      throw new AppError(400, "Connected Instagram account has no usable access token");
+    }
+
+    let accessToken: string;
+    try {
+      accessToken = decryptToken(account.accessTokenEncrypted);
+    } catch {
+      throw new AppError(400, "Stored Instagram access token could not be decrypted");
+    }
+
+    const media = await metaGraphService.listInstagramMedia({
+      igUserId: account.instagramUserId,
+      accessToken,
+      limit,
+    });
+
+    return {
+      instagramUserId: account.instagramUserId,
+      username: account.username,
+      media,
+    };
+  },
 };

@@ -32,6 +32,9 @@ router.post("/instagram/subscribe-webhooks", (req, res, next) =>
 router.post("/instagram/sync-page-id", (req, res, next) =>
   instagramIntegrationController.syncFacebookPageId(req, res, next),
 );
+router.get("/instagram/media", (req, res, next) =>
+  instagramIntegrationController.listMedia(req, res, next),
+);
 router.delete("/instagram/disconnect", (req, res, next) =>
   instagramIntegrationController.disconnect(req, res, next),
 );

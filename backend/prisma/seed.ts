@@ -62,7 +62,11 @@ async function main() {
   for (const rule of rules) {
     await prisma.keywordRule.upsert({
       where: {
-        userId_keyword: { userId: user.id, keyword: rule.keyword },
+        userId_keyword_mediaScopeKey: {
+          userId: user.id,
+          keyword: rule.keyword,
+          mediaScopeKey: "__GLOBAL__",
+        },
       },
       update: {
         dmMessage: rule.dmMessage,
@@ -70,6 +74,7 @@ async function main() {
       },
       create: {
         userId: user.id,
+        mediaScopeKey: "__GLOBAL__",
         ...rule,
       },
     });

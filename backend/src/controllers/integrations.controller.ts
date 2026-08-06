@@ -145,6 +145,21 @@ export class InstagramIntegrationController {
       next(error);
     }
   }
+
+  async listMedia(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const rawLimit = readQueryParamOnce(req.query.limit);
+      const limit = rawLimit ? Number.parseInt(rawLimit, 10) : 25;
+      const result = await instagramIntegrationService.listMedia(
+        req.user.id,
+        Number.isFinite(limit) ? limit : 25,
+      );
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export class ActivityController {
