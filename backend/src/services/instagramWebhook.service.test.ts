@@ -181,12 +181,29 @@ describe("processWebhookPayload private reply flow", () => {
     expect(result.matched).toBe(1);
     expect(result.sent).toBe(1);
     expect(result.failed).toBe(0);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
     expect(mockSendPrivateReply).toHaveBeenCalledWith(
       expect.objectContaining({
         igUserId: "ig-business-123",
         commentId: "comment-abc",
         messageText: "Thanks! Here is our price list.",
         accessToken: "decrypted-access-token",
+      }),
+    );
+    // Claim happens before keyword matching (create with no ruleId yet).
+    expect(mockDmCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          commentId: "comment-abc",
+          ruleId: null,
+          status: DmEventStatus.sending,
+        }),
+      }),
+    );
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-1" },
+        data: { ruleId: "rule-1" },
       }),
     );
 
@@ -203,22 +220,49 @@ describe("processWebhookPayload private reply flow", () => {
     expect(JSON.stringify(dmSentMeta)).not.toMatch(/decrypted-access-token/);
   });
 
-  it("skips send when no keyword matches", async () => {
+  it("claims then marks skipped when no keyword matches", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([{ ...activeRule, keyword: "SHIPPING" }]);
+    mockDmFindUnique.mockResolvedValue(null);
+    mockDmCreate.mockResolvedValue({
+      id: "dm-skip",
+      attemptCount: 1,
+      status: DmEventStatus.sending,
+    });
 
     const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
 
     expect(result.matched).toBe(0);
     expect(result.skipped).toBe(1);
     expect(mockSendPrivateReply).not.toHaveBeenCalled();
-    expect(mockDmCreate).not.toHaveBeenCalled();
+    expect(mockDmCreate).toHaveBeenCalled();
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-skip" },
+        data: expect.objectContaining({ status: DmEventStatus.skipped }),
+      }),
+    );
     expect(mockActivityLog).not.toHaveBeenCalled();
   });
 
-  it("treats duplicate comment delivery as skip (sent/sending guard)", async () => {
+  it("first delivery sends one DM", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([activeRule]);
+    mockDmFindUnique.mockResolvedValue(null);
+    mockDmCreate.mockResolvedValue({ id: "dm-1", attemptCount: 1, status: DmEventStatus.sending });
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r", messageId: "m" });
+
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+
+    expect(result.sent).toBe(1);
+    expect(result.duplicates).toBe(0);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
+  });
+
+  it("replay of the same comment ID sends no second DM and logs duplicate event ignored", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockDmFindUnique.mockResolvedValue({
       id: "dm-1",
       status: DmEventStatus.sent,
@@ -227,11 +271,84 @@ describe("processWebhookPayload private reply flow", () => {
 
     const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
 
-    expect(result.matched).toBe(1);
     expect(result.duplicates).toBe(1);
     expect(result.sent).toBe(0);
+    expect(mockFindManyRules).not.toHaveBeenCalled();
     expect(mockSendPrivateReply).not.toHaveBeenCalled();
     expect(mockActivityLog).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith(
+      "duplicate event ignored",
+      expect.objectContaining({ commentId: "comment-abc" }),
+    );
+    logSpy.mockRestore();
+  });
+
+  it("new comment ID from the same person and same keyword sends normally", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    mockDmFindUnique.mockResolvedValue(null);
+    mockDmCreate.mockResolvedValue({ id: "dm-1", attemptCount: 1, status: DmEventStatus.sending });
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r1", messageId: "m1" });
+
+    const first = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    expect(first.sent).toBe(1);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
+
+    const secondWebhook = {
+      object: "instagram",
+      entry: [
+        {
+          id: "ig-business-123",
+          time: 2,
+          changes: [
+            {
+              field: "comments",
+              value: {
+                id: "comment-xyz-new",
+                text: "I want the PRICE please",
+                from: { id: "user-1", username: "buyer_jane" },
+                media: { id: "media-99" },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    mockDmCreate.mockResolvedValue({ id: "dm-2", attemptCount: 1, status: DmEventStatus.sending });
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
+
+    const second = await instagramWebhookService.processWebhookPayload(secondWebhook);
+
+    expect(second.sent).toBe(1);
+    expect(second.duplicates).toBe(0);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(2);
+    expect(mockSendPrivateReply).toHaveBeenLastCalledWith(
+      expect.objectContaining({ commentId: "comment-xyz-new" }),
+    );
+    expect(mockDmCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ commentId: "comment-xyz-new" }),
+      }),
+    );
+  });
+
+  it("treats skipped comment replay as duplicate event ignored", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockDmFindUnique.mockResolvedValue({
+      id: "dm-skip",
+      status: DmEventStatus.skipped,
+      attemptCount: 1,
+    });
+
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+
+    expect(result.duplicates).toBe(1);
+    expect(mockSendPrivateReply).not.toHaveBeenCalled();
+    expect(logSpy).toHaveBeenCalledWith("duplicate event ignored", expect.any(Object));
+    logSpy.mockRestore();
   });
 
   it("logs dm_failed when token decrypt fails", async () => {

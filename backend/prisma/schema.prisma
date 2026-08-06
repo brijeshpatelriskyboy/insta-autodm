@@ -11,6 +11,8 @@ enum DmEventStatus {
   sending
   sent
   failed
+  /** Claimed for processing but no active keyword rule matched. */
+  skipped
 }
 
 model User {
