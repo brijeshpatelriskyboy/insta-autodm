@@ -144,20 +144,20 @@ async function findAccountByInstagramId(instagramAccountId: string) {
 }
 
 /**
- * Atomically claim a comment for private-reply sending.
- * - New row → create status=sending
- * - sent / sending → duplicate (skip)
+ * Atomically claim a comment ID before keyword matching or private-reply send.
+ * - New row → create status=sending (ruleId set later after a match)
+ * - sent / sending / skipped → duplicate (skip)
  * - failed with attempts remaining → conditional update failed→sending
  * Concurrent webhooks cannot both claim the same comment.
  */
 export async function claimCommentForSend(params: {
   userId: string;
-  ruleId: string;
   instagramAccountId: string;
   commentId: string;
   mediaId?: string | null;
+  ruleId?: string | null;
 }): Promise<{ dmEventId: string; attemptCount: number; isRetry: boolean } | null> {
-  const { userId, ruleId, instagramAccountId, commentId, mediaId } = params;
+  const { userId, instagramAccountId, commentId, mediaId, ruleId } = params;
 
   try {
     return await prisma.$transaction(async (tx) => {
@@ -171,7 +171,7 @@ export async function claimCommentForSend(params: {
         const created = await tx.dmEvent.create({
           data: {
             userId,
-            ruleId,
+            ruleId: ruleId ?? null,
             instagramAccountId,
             commentId,
             mediaId: mediaId ?? null,
@@ -183,7 +183,11 @@ export async function claimCommentForSend(params: {
         return { dmEventId: created.id, attemptCount: created.attemptCount, isRetry: false };
       }
 
-      if (existing.status === DmEventStatus.sent || existing.status === DmEventStatus.sending) {
+      if (
+        existing.status === DmEventStatus.sent ||
+        existing.status === DmEventStatus.sending ||
+        existing.status === DmEventStatus.skipped
+      ) {
         return null;
       }
 
@@ -203,8 +207,8 @@ export async function claimCommentForSend(params: {
             attemptCount: { increment: 1 },
             lastAttemptAt: new Date(),
             errorSummary: null,
-            ruleId,
             mediaId: mediaId ?? existing.mediaId,
+            ...(ruleId ? { ruleId } : {}),
           },
         });
 
@@ -232,10 +236,10 @@ export async function claimCommentForSend(params: {
 
 async function claimCommentForSendAfterConflict(params: {
   userId: string;
-  ruleId: string;
   instagramAccountId: string;
   commentId: string;
   mediaId?: string | null;
+  ruleId?: string | null;
 }): Promise<{ dmEventId: string; attemptCount: number; isRetry: boolean } | null> {
   const existing = await prisma.dmEvent.findUnique({
     where: {
@@ -249,7 +253,11 @@ async function claimCommentForSendAfterConflict(params: {
   if (!existing) {
     return null;
   }
-  if (existing.status === DmEventStatus.sent || existing.status === DmEventStatus.sending) {
+  if (
+    existing.status === DmEventStatus.sent ||
+    existing.status === DmEventStatus.sending ||
+    existing.status === DmEventStatus.skipped
+  ) {
     return null;
   }
   if (existing.status !== DmEventStatus.failed || existing.attemptCount >= MAX_DM_ATTEMPTS) {
@@ -267,8 +275,8 @@ async function claimCommentForSendAfterConflict(params: {
       attemptCount: { increment: 1 },
       lastAttemptAt: new Date(),
       errorSummary: null,
-      ruleId: params.ruleId,
       mediaId: params.mediaId ?? existing.mediaId,
+      ...(params.ruleId ? { ruleId: params.ruleId } : {}),
     },
   });
 
@@ -328,12 +336,37 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     return empty;
   }
 
+  // Claim before keyword matching / private reply so concurrent and replayed
+  // deliveries of the same Instagram comment ID cannot double-send.
+  const claim = await claimCommentForSend({
+    userId: account.userId,
+    instagramAccountId: account.id,
+    commentId: comment.commentId,
+    mediaId: comment.mediaId,
+  });
+
+  if (!claim) {
+    console.log("duplicate event ignored", {
+      eventType: comment.eventField ?? "comments",
+      accountId: comment.instagramAccountId,
+      commentId: comment.commentId,
+      mediaId: comment.mediaId ?? null,
+      sendResult: "duplicate_event_ignored",
+    });
+    return { matched: false, sent: false, failed: false, duplicate: true, eventsCreated: 0 };
+  }
+
   const rules = await prisma.keywordRule.findMany({
     where: { userId: account.userId, isActive: true },
   });
 
   const matchedRule = rules.find((rule) => commentMatchesKeyword(comment.text, rule.keyword));
   if (!matchedRule) {
+    await prisma.dmEvent.update({
+      where: { id: claim.dmEventId },
+      data: { status: DmEventStatus.skipped, errorSummary: null },
+    });
+
     console.log("[webhook] comment received, no keyword match:", {
       eventType: comment.eventField ?? "comments",
       accountId: comment.instagramAccountId,
@@ -346,27 +379,12 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     return empty;
   }
 
-  const commenter = comment.commenterUsername ? `@${comment.commenterUsername}` : "A user";
-
-  const claim = await claimCommentForSend({
-    userId: account.userId,
-    ruleId: matchedRule.id,
-    instagramAccountId: account.id,
-    commentId: comment.commentId,
-    mediaId: comment.mediaId,
+  await prisma.dmEvent.update({
+    where: { id: claim.dmEventId },
+    data: { ruleId: matchedRule.id },
   });
 
-  if (!claim) {
-    console.log("[webhook] duplicate or non-retriable comment:", {
-      eventType: comment.eventField ?? "comments",
-      accountId: comment.instagramAccountId,
-      commentId: comment.commentId,
-      mediaId: comment.mediaId ?? null,
-      matched: true,
-      sendResult: "skipped_duplicate",
-    });
-    return { matched: true, sent: false, failed: false, duplicate: true, eventsCreated: 0 };
-  }
+  const commenter = comment.commenterUsername ? `@${comment.commenterUsername}` : "A user";
 
   // Log match activity only for newly claimed attempts (not duplicate deliveries).
   // Retries of failed sends skip re-logging comment_received / keyword_matched.
