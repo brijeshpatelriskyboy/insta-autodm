@@ -83,6 +83,7 @@ describe("keywordRuleService media scope CRUD", () => {
       mediaType: "VIDEO",
       thumbnailUrl: `https://cdn.example/${mediaId}.jpg`,
       permalink: `https://instagram.com/p/${mediaId}`,
+      timestamp: "2026-08-07T15:42:00.000Z",
     }));
   });
 
@@ -121,6 +122,7 @@ describe("keywordRuleService media scope CRUD", () => {
         instagramMediaId: "media-a",
         mediaScopeKey: "media-a",
         mediaType: "VIDEO",
+        mediaTimestamp: new Date("2026-08-07T15:42:00.000Z"),
       }),
     );
     expect(mockCreate.mock.calls[1]?.[0].data).toEqual(
@@ -171,6 +173,7 @@ describe("keywordRuleService media scope CRUD", () => {
         mediaThumbnailUrl: null,
         mediaCaption: null,
         mediaPermalink: null,
+        mediaTimestamp: null,
       }),
     );
 
@@ -215,9 +218,46 @@ describe("keywordRuleService media scope CRUD", () => {
           mediaThumbnailUrl: null,
           mediaCaption: null,
           mediaPermalink: null,
+          mediaTimestamp: null,
         }),
       }),
     );
     expect(mockGetMediaById).not.toHaveBeenCalled();
+  });
+
+  it("caches mediaTimestamp from Graph when creating a post-scoped rule", async () => {
+    mockCreate.mockResolvedValue({ id: "r-ts", keyword: "PRICE" });
+    await keywordRuleService.create("user-1", {
+      keyword: "price",
+      dmMessage: "Hi",
+      instagramMediaId: "media-ts",
+    });
+    expect(mockCreate.mock.calls[0]?.[0].data.mediaTimestamp).toEqual(
+      new Date("2026-08-07T15:42:00.000Z"),
+    );
+  });
+
+  it("stores null mediaTimestamp when Graph omits timestamp", async () => {
+    mockGetMediaById.mockResolvedValueOnce({
+      id: "media-old",
+      caption: null,
+      mediaType: "IMAGE",
+      thumbnailUrl: null,
+      permalink: null,
+      timestamp: null,
+    });
+    mockCreate.mockResolvedValue({ id: "r-old" });
+    await keywordRuleService.create("user-1", {
+      keyword: "OLD",
+      dmMessage: "Hi",
+      instagramMediaId: "media-old",
+    });
+    expect(mockCreate.mock.calls[0]?.[0].data).toEqual(
+      expect.objectContaining({
+        mediaType: "IMAGE",
+        mediaTimestamp: null,
+        mediaCaption: null,
+      }),
+    );
   });
 });

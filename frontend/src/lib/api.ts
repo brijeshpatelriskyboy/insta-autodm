@@ -119,6 +119,8 @@ export interface KeywordRule {
   mediaThumbnailUrl: string | null;
   mediaCaption: string | null;
   mediaPermalink: string | null;
+  /** Instagram media publish time (ISO). Display-only cache. */
+  mediaTimestamp: string | null;
   createdAt: string;
   updatedAt: string;
 }

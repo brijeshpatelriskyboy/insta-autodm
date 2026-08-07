@@ -524,6 +524,7 @@ export const metaGraphService = {
     mediaType: string | null;
     thumbnailUrl: string | null;
     permalink: string | null;
+    timestamp: string | null;
   }> {
     const version = getMetaGraphApiVersion();
     const url = new URL(
@@ -531,7 +532,7 @@ export const metaGraphService = {
     );
     url.searchParams.set(
       "fields",
-      "id,caption,media_type,media_url,thumbnail_url,permalink",
+      "id,caption,media_type,media_url,thumbnail_url,permalink,timestamp",
     );
     url.searchParams.set("access_token", params.accessToken);
 
@@ -543,6 +544,7 @@ export const metaGraphService = {
       media_url?: string;
       thumbnail_url?: string;
       permalink?: string;
+      timestamp?: string;
       error?: { message?: string; code?: number };
     };
 
@@ -565,6 +567,7 @@ export const metaGraphService = {
       mediaType,
       thumbnailUrl,
       permalink: body.permalink?.trim() || null,
+      timestamp: body.timestamp?.trim() || null,
     };
   },
 
