@@ -48,6 +48,7 @@ async function resolveMediaCache(
   mediaThumbnailUrl: string | null;
   mediaCaption: string | null;
   mediaPermalink: string | null;
+  mediaTimestamp: Date | null;
 }> {
   if (!instagramMediaId) {
     return {
@@ -57,6 +58,7 @@ async function resolveMediaCache(
       mediaThumbnailUrl: null,
       mediaCaption: null,
       mediaPermalink: null,
+      mediaTimestamp: null,
     };
   }
 
@@ -83,6 +85,14 @@ async function resolveMediaCache(
     accessToken,
   });
 
+  let mediaTimestamp: Date | null = null;
+  if (media.timestamp) {
+    const parsed = new Date(media.timestamp);
+    if (!Number.isNaN(parsed.getTime())) {
+      mediaTimestamp = parsed;
+    }
+  }
+
   return {
     instagramMediaId: media.id,
     mediaScopeKey: media.id,
@@ -90,6 +100,7 @@ async function resolveMediaCache(
     mediaThumbnailUrl: media.thumbnailUrl,
     mediaCaption: truncateCaption(media.caption),
     mediaPermalink: media.permalink,
+    mediaTimestamp,
   };
 }
 
@@ -174,6 +185,7 @@ export class KeywordRuleService {
                 mediaThumbnailUrl: mediaCache.mediaThumbnailUrl,
                 mediaCaption: mediaCache.mediaCaption,
                 mediaPermalink: mediaCache.mediaPermalink,
+                mediaTimestamp: mediaCache.mediaTimestamp,
               }
             : {}),
         },

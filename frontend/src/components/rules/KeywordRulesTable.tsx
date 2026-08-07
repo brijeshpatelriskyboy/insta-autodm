@@ -4,6 +4,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { InstagramMediaDisplay } from "@/components/rules/InstagramMediaDisplay";
 import type { KeywordRule } from "@/lib/api";
 
 interface KeywordRulesTableProps {
@@ -24,32 +25,14 @@ function PostCell({ rule }: { rule: KeywordRule }) {
   }
 
   return (
-    <div className="flex max-w-xs items-center gap-3">
-      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-        {rule.mediaThumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={rule.mediaThumbnailUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[9px] text-slate-400">
-            Post
-          </div>
-        )}
-      </div>
-      <div className="min-w-0">
-        {rule.mediaType && (
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-            {rule.mediaType}
-          </p>
-        )}
-        <p className="line-clamp-2 text-sm text-slate-600">
-          {rule.mediaCaption?.trim() || "No caption"}
-        </p>
-      </div>
-    </div>
+    <InstagramMediaDisplay
+      compact
+      thumbnailUrl={rule.mediaThumbnailUrl}
+      mediaType={rule.mediaType}
+      caption={rule.mediaCaption}
+      timestamp={rule.mediaTimestamp}
+      permalink={rule.mediaPermalink}
+    />
   );
 }
 

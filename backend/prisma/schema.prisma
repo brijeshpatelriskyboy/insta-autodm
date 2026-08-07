@@ -56,6 +56,8 @@ model KeywordRule {
   mediaThumbnailUrl   String?
   mediaCaption        String?
   mediaPermalink      String?
+  /** Instagram media publish time (UTC). Display-only; never used for matching. */
+  mediaTimestamp      DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   dmEvents            DmEvent[]

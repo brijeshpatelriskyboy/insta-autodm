@@ -4,12 +4,14 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
+import { InstagramMediaDisplay } from "@/components/rules/InstagramMediaDisplay";
 import {
   api,
   type InstagramMediaItem,
   type KeywordRule,
 } from "@/lib/api";
 import { getToken } from "@/lib/auth";
+import { formatMediaOptionLabel } from "@/lib/instagram-media-display";
 
 interface KeywordRuleFormProps {
   initial?: KeywordRule;
@@ -43,55 +45,6 @@ function validate(keyword: string, dmMessage: string): FormErrors {
   }
 
   return errors;
-}
-
-function MediaPreview({
-  thumbnailUrl,
-  caption,
-  mediaType,
-  permalink,
-}: {
-  thumbnailUrl: string | null;
-  caption: string | null;
-  mediaType: string | null;
-  permalink?: string | null;
-}) {
-  return (
-    <div className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3">
-      <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-        {thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumbnailUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-[10px] text-slate-400">
-            No image
-          </div>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          {mediaType && (
-            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-600">
-              {mediaType}
-            </span>
-          )}
-          {permalink && (
-            <a
-              href={permalink}
-              target="_blank"
-              rel="noreferrer"
-              className="text-[11px] font-medium text-brand-600 hover:underline"
-            >
-              Open
-            </a>
-          )}
-        </div>
-        <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-          {caption?.trim() || "No caption"}
-        </p>
-      </div>
-    </div>
-  );
 }
 
 export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleFormProps) {
@@ -164,7 +117,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
               mediaType: initial.mediaType,
               thumbnailUrl: initial.mediaThumbnailUrl,
               permalink: initial.mediaPermalink,
-              timestamp: null,
+              timestamp: initial.mediaTimestamp,
             }
           : null);
 
@@ -225,19 +178,18 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
           <option value="">All posts (global)</option>
           {mediaItems.map((item) => (
             <option key={item.id} value={item.id}>
-              {(item.mediaType ?? "POST") +
-                " — " +
-                (item.caption?.trim() || item.id).slice(0, 60)}
+              {formatMediaOptionLabel(item.mediaType, item.caption, item.id)}
             </option>
           ))}
         </select>
         {mediaLoading && <p className="text-xs text-slate-500">Loading recent posts…</p>}
         {mediaError && <p className="text-xs text-amber-700">{mediaError}</p>}
         {selectedMedia && (
-          <MediaPreview
+          <InstagramMediaDisplay
             thumbnailUrl={selectedMedia.thumbnailUrl}
             caption={selectedMedia.caption}
             mediaType={selectedMedia.mediaType}
+            timestamp={selectedMedia.timestamp}
             permalink={selectedMedia.permalink}
           />
         )}
