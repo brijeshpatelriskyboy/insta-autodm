@@ -21,11 +21,9 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import {
-  mockActivityEvents,
   filterEventsByDate,
   formatActivityTime,
   getActivityTypeLabel,
@@ -87,7 +85,6 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
           <span className="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
             {getActivityTypeLabel(event.type)}
           </span>
-          {event.isSample && <SampleDataLabel />}
           {event.keyword && (
             <span className="rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
               {event.keyword}
@@ -102,10 +99,14 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
 export default function ActivityPage() {
   const [dateFilter, setDateFilter] = useState("");
   const [apiEvents, setApiEvents] = useState<ActivityEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = getToken();
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
     api
       .getActivityEvents(token)
@@ -122,18 +123,21 @@ export default function ActivityPage() {
           })),
         );
       })
-      .catch(() => {});
+      .catch(() => {
+        setApiEvents([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
-  const allEvents = useMemo(() => {
-    if (apiEvents.length > 0) {
-      return [...apiEvents].sort(
+  const allEvents = useMemo(
+    () =>
+      [...apiEvents].sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-      );
-    }
-
-    return mockActivityEvents;
-  }, [apiEvents]);
+      ),
+    [apiEvents],
+  );
 
   const filteredEvents = useMemo(
     () => filterEventsByDate(allEvents, dateFilter),
@@ -144,11 +148,7 @@ export default function ActivityPage() {
     <div className="space-y-6">
       <PageHeader
         title="Activity Log"
-        description={
-          apiEvents.length > 0
-            ? "Live automation events from your connected Instagram account."
-            : "Sample preview events until Instagram webhooks start firing."
-        }
+        description="Live automation events from your connected Instagram account."
       />
 
       <Card padding="sm">
@@ -179,7 +179,21 @@ export default function ActivityPage() {
       </Card>
 
       <div className="space-y-3">
-        {filteredEvents.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />
+            ))}
+          </div>
+        ) : allEvents.length === 0 ? (
+          <EmptyState
+            title="No activity yet"
+            description="Test comments will show up here. When someone comments a keyword on your post, you’ll see comment received, keyword matched, then DM sent."
+            actionLabel="Create a keyword rule"
+            actionHref="/dashboard/rules"
+            icon={<MessageCircle className="h-9 w-9 text-brand-600" />}
+          />
+        ) : filteredEvents.length === 0 ? (
           <EmptyState
             title="No events for this date"
             description="Try selecting a different date or clear the filter to see all activity."
@@ -201,9 +215,7 @@ export default function ActivityPage() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        {apiEvents.length > 0
-          ? "Webhook matches appear here as comment received, keyword matched, and DM pending."
-          : "Events marked Sample Data are preview examples. Real events appear after webhooks are configured."}
+        Webhook matches appear here as comment received, keyword matched, and DM sent.
       </p>
     </div>
   );

@@ -1,52 +1,61 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Card } from "@/components/ui/Card";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { KpiCard } from "@/components/ui/KpiCard";
-import { ChartSkeleton, KpiCardSkeleton } from "@/components/ui/Skeleton";
+import { KpiCardSkeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
-import {
-  DmActivityChart,
-  LeadsChart,
-  ConversionChart,
-  TopKeywords,
-} from "@/components/analytics/Charts";
-import {
-  demoMetrics,
-  demoTrends,
-  demoTopKeywords,
-  formatNumber,
-  getDemoDmChart30Day,
-  getDemoLeadsChart30Day,
-  getDemoConversionChart30Day,
-} from "@/lib/demo-data";
-import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
+import { api, type AnalyticsSummary } from "@/lib/api";
+import { getToken } from "@/lib/auth";
+import { formatNumber } from "@/lib/demo-data";
 import { MessageSquare, Users, Percent, Zap, BarChart3 } from "lucide-react";
 
 export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(timer);
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .getAnalyticsSummary(token)
+      .then((value) => {
+        if (!cancelled) setSummary(value);
+      })
+      .catch(() => {
+        if (!cancelled) setSummary(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const dmData = useMemo(() => getDemoDmChart30Day(), []);
-  const leadsData = useMemo(() => getDemoLeadsChart30Day(), []);
-  const conversionData = useMemo(() => getDemoConversionChart30Day(), []);
+  const hasData =
+    !!summary &&
+    (summary.totalKeywordRules > 0 ||
+      summary.totalDmEvents > 0 ||
+      summary.totalLeads > 0);
+
+  const conversion =
+    summary && summary.totalDmEvents > 0
+      ? `${Math.round((summary.totalLeads / summary.totalDmEvents) * 1000) / 10}%`
+      : "—";
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Analytics"
-        description="Preview charts and KPIs with sample data until Instagram is connected."
+        description="Performance from your live Instagram automations."
       />
-
-      <div className="flex items-center gap-2">
-        <SampleDataLabel />
-        <p className="text-sm text-slate-500">All metrics on this page are for demonstration.</p>
-      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading ? (
@@ -59,34 +68,30 @@ export default function AnalyticsPage() {
         ) : (
           <>
             <KpiCard
-              label="Active Automations"
-              value={demoMetrics.activeAutomations}
+              label="Keyword Rules"
+              value={summary?.totalKeywordRules ?? 0}
               icon={Zap}
-              trend={demoTrends.activeAutomations}
               accent="violet"
               delay={0}
             />
             <KpiCard
-              label="Total DMs Sent"
-              value={formatNumber(demoMetrics.totalDmsSent)}
+              label="Total DMs"
+              value={formatNumber(summary?.totalDmEvents ?? 0)}
               icon={MessageSquare}
-              trend={demoTrends.totalDmsSent}
               accent="pink"
               delay={80}
             />
             <KpiCard
               label="Leads Generated"
-              value={formatNumber(demoMetrics.leadsGenerated)}
+              value={formatNumber(summary?.totalLeads ?? 0)}
               icon={Users}
-              trend={demoTrends.leadsGenerated}
               accent="emerald"
               delay={160}
             />
             <KpiCard
               label="Conversion Rate"
-              value={`${demoMetrics.conversionRate}%`}
+              value={conversion}
               icon={Percent}
-              trend={demoTrends.conversionRate}
               accent="blue"
               delay={240}
             />
@@ -94,51 +99,12 @@ export default function AnalyticsPage() {
         )}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        {loading ? (
-          <>
-            <ChartSkeleton />
-            <ChartSkeleton />
-          </>
-        ) : (
-          <>
-            <Card title="DM Activity" description="DMs sent over the last 30 days">
-              <DmActivityChart data={dmData} />
-            </Card>
-            <Card title="Leads Generated" description="Daily leads captured over 30 days">
-              <LeadsChart data={leadsData} />
-            </Card>
-          </>
-        )}
-      </div>
-
-      <Card
-        title="Conversion Rate Trend"
-        description="How effectively DMs convert into leads over 30 days"
-      >
-        {loading ? (
-          <ChartSkeleton />
-        ) : (
-          <ConversionChart data={conversionData} />
-        )}
-      </Card>
-
-      <Card title="Top Keywords" description="Best-performing keyword triggers">
-        {loading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100" />
-            ))}
-          </div>
-        ) : (
-          <TopKeywords keywords={demoTopKeywords} />
-        )}
-      </Card>
-
-      {!loading && demoTopKeywords.length === 0 && (
+      {!loading && !hasData && (
         <EmptyState
           title="No analytics data yet"
-          description="Once your automations go live, you'll see detailed performance metrics here."
+          description="Once your automations send DMs, you’ll see performance metrics here."
+          actionLabel="Create a keyword rule"
+          actionHref="/dashboard/rules"
           icon={<BarChart3 className="h-9 w-9 text-brand-600" />}
         />
       )}
