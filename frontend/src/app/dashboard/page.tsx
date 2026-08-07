@@ -10,31 +10,56 @@ import { InstagramConnectionCard } from "@/components/dashboard/InstagramConnect
 import { KeywordLeaderboard } from "@/components/dashboard/KeywordLeaderboard";
 import { QuickStartChecklist } from "@/components/dashboard/QuickStartChecklist";
 import { BetaBadge } from "@/components/trust/BetaBadge";
-import { SampleDataLabel } from "@/components/trust/SampleDataLabel";
-import {
-  demoMetrics,
-  demoTrends,
-  formatNumber,
-} from "@/lib/demo-data";
-import { getStoredUser } from "@/lib/auth";
-import type { User } from "@/lib/api";
+import { api, type AnalyticsSummary, type User } from "@/lib/api";
+import { getStoredUser, getToken } from "@/lib/auth";
+import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
+import { formatNumber } from "@/lib/demo-data";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
+  const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const progress = useOnboardingProgress();
 
   useEffect(() => {
     setUser(getStoredUser());
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    api
+      .getAnalyticsSummary(token)
+      .then((value) => {
+        if (!cancelled) setSummary(value);
+      })
+      .catch(() => {
+        if (!cancelled) setSummary(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const greeting = progress.loading
+    ? "Welcome"
+    : progress.isReturning
+      ? "Welcome back"
+      : "Welcome";
 
   return (
     <div className="space-y-8">
       <PageHeader
         title={
           <span className="inline-flex flex-wrap items-center gap-2">
-            Welcome back{user?.name ? `, ${user.name}` : ""}
+            {greeting}
+            {user?.name ? `, ${user.name}` : ""}
             <BetaBadge />
           </span>
         }
@@ -42,60 +67,58 @@ export default function DashboardPage() {
       />
 
       <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-        <span className="font-semibold">Beta disclaimer:</span> Overview metrics may include
-        sample preview data. Live Instagram automation for Business and Creator accounts is
-        available after you connect a test account and enable comment webhooks.
+        <span className="font-semibold">Beta:</span> Live Instagram connect and DMs work.
+        Overview numbers reflect your account only — not sample data.
       </div>
 
       <div>
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-sm font-semibold text-slate-700">Performance overview</h2>
-          <SampleDataLabel />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {loading ? (
-          <>
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-            <KpiCardSkeleton />
-          </>
-        ) : (
-          <>
-            <KpiCard
-              label="Active Automations"
-              value={demoMetrics.activeAutomations}
-              icon={Zap}
-              trend={demoTrends.activeAutomations}
-              accent="violet"
-              delay={0}
-            />
-            <KpiCard
-              label="Total DMs Sent"
-              value={formatNumber(demoMetrics.totalDmsSent)}
-              icon={Send}
-              trend={demoTrends.totalDmsSent}
-              accent="pink"
-              delay={80}
-            />
-            <KpiCard
-              label="Leads Generated"
-              value={formatNumber(demoMetrics.leadsGenerated)}
-              icon={Users}
-              trend={demoTrends.leadsGenerated}
-              accent="emerald"
-              delay={160}
-            />
-            <KpiCard
-              label="Conversion Rate"
-              value={`${demoMetrics.conversionRate}%`}
-              icon={Percent}
-              trend={demoTrends.conversionRate}
-              accent="blue"
-              delay={240}
-            />
-          </>
-        )}
+          {loading ? (
+            <>
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+              <KpiCardSkeleton />
+            </>
+          ) : (
+            <>
+              <KpiCard
+                label="Keyword Rules"
+                value={summary?.totalKeywordRules ?? 0}
+                icon={Zap}
+                accent="violet"
+                delay={0}
+              />
+              <KpiCard
+                label="Total DMs"
+                value={formatNumber(summary?.totalDmEvents ?? 0)}
+                icon={Send}
+                accent="pink"
+                delay={80}
+              />
+              <KpiCard
+                label="Leads Generated"
+                value={formatNumber(summary?.totalLeads ?? 0)}
+                icon={Users}
+                accent="emerald"
+                delay={160}
+              />
+              <KpiCard
+                label="Conversion Rate"
+                value={
+                  summary && summary.totalDmEvents > 0
+                    ? `${Math.round((summary.totalLeads / summary.totalDmEvents) * 1000) / 10}%`
+                    : "—"
+                }
+                icon={Percent}
+                accent="blue"
+                delay={240}
+              />
+            </>
+          )}
         </div>
       </div>
 
