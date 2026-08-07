@@ -31,7 +31,8 @@ export function InstagramMediaDisplay({
 }: InstagramMediaDisplayProps) {
   const typeLabel = formatMediaTypeLabel(mediaType);
   const title = formatMediaCaption(caption, mediaType);
-  const when = formatMediaTimestamp(timestamp ?? null);
+  // Always show a date line so missing cache never looks like a load failure.
+  const when = formatMediaTimestamp(timestamp ?? null) ?? "Date unavailable";
   const thumbSize = compact ? "h-12 w-12" : "h-16 w-16";
 
   return (
@@ -51,7 +52,7 @@ export function InstagramMediaDisplay({
         <p className={`line-clamp-2 font-medium text-slate-900 ${compact ? "text-sm" : "text-sm"}`}>
           {title}
         </p>
-        {when && <p className="text-xs text-slate-500">{when}</p>}
+        <p className="text-xs text-slate-500">{when}</p>
         {permalink && (
           <a
             href={permalink}

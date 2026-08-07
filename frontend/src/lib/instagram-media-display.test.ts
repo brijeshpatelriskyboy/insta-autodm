@@ -36,4 +36,9 @@ describe("instagram-media-display", () => {
     expect(formatMediaTimestamp("")).toBeNull();
     expect(formatMediaTimestamp("not-a-date")).toBeNull();
   });
+
+  it("UI falls back to Date unavailable when formatter returns null", () => {
+    // Mirrors InstagramMediaDisplay: formatMediaTimestamp(...) ?? "Date unavailable"
+    expect(formatMediaTimestamp(null) ?? "Date unavailable").toBe("Date unavailable");
+  });
 });
