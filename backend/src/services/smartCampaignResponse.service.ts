@@ -1,8 +1,9 @@
 /**
- * Isolated V2 Smart Campaign response lifecycle.
+ * V2 Smart Campaign response lifecycle.
  * Allocator → message → private reply → claim/code/DmEvent/Activity updates.
  *
- * NOT wired to ResponseRouter or InstagramWebhook in this milestone.
+ * Invoked by ResponseRouter when SMART_CAMPAIGNS_ENABLED=true and a dispatch
+ * campaign (ACTIVE or PAUSED) exists for the matched KeywordRule.
  */
 
 import type { Campaign, CampaignClaim, CampaignCode, PrismaClient } from "@prisma/client";
