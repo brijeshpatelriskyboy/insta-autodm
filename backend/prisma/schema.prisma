@@ -30,6 +30,7 @@ model User {
   activityEvents             ActivityEvent[]
   subscription               Subscription?
   billingEvents              BillingEvent[]
+  campaigns                  Campaign[]
 
   @@map("users")
 }
@@ -61,6 +62,7 @@ model KeywordRule {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   dmEvents            DmEvent[]
+  campaigns           Campaign[]
 
   @@unique([userId, keyword, mediaScopeKey])
   @@index([userId, keyword])
@@ -87,6 +89,7 @@ model DmEvent {
   attemptCount       Int              @default(1)
   lastAttemptAt      DateTime?
   createdAt          DateTime         @default(now())
+  campaignClaims     CampaignClaim[]
 
   @@unique([instagramAccountId, commentId])
   @@index([userId, createdAt])
@@ -180,4 +183,103 @@ model BillingEvent {
   createdAt       DateTime @default(now())
 
   @@map("billing_events")
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+  ARCHIVED
+}
+
+enum CampaignCodeStatus {
+  AVAILABLE
+  RESERVED
+  CLAIMED
+  REDEEMED
+  DISABLED
+}
+
+enum CampaignClaimDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  EXHAUSTED
+}
+
+/**
+ * V2 Smart Campaign aggregate. Additive only — unused while SMART_CAMPAIGNS_ENABLED=false.
+ * One ACTIVE campaign per KeywordRule is enforced by a partial unique index in SQL.
+ */
+model Campaign {
+  id                    String         @id @default(cuid())
+  userId                String
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keywordRuleId         String
+  keywordRule           KeywordRule    @relation(fields: [keywordRuleId], references: [id], onDelete: Restrict)
+  name                  String
+  status                CampaignStatus @default(DRAFT)
+  startsAt              DateTime
+  endsAt                DateTime
+  maxClaims             Int
+  claimedCount          Int            @default(0)
+  dmTemplate            String
+  soldOutMessage        String
+  alreadyClaimedMessage String
+  notStartedMessage     String?
+  endedMessage          String?
+  redemptionEnabled     Boolean        @default(false)
+  archivedAt            DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  codes                 CampaignCode[]
+  claims                CampaignClaim[]
+
+  @@index([userId, status])
+  @@index([keywordRuleId, status])
+  @@map("campaigns")
+}
+
+model CampaignCode {
+  id           String             @id @default(cuid())
+  campaignId   String
+  campaign     Campaign           @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  code         String
+  status       CampaignCodeStatus @default(AVAILABLE)
+  reservedAt   DateTime?
+  claimedAt    DateTime?
+  redeemedAt   DateTime?
+  qrPayload    String?
+  barcodeValue String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  claim        CampaignClaim?
+
+  @@unique([campaignId, code])
+  @@index([campaignId, status])
+  @@map("campaign_codes")
+}
+
+model CampaignClaim {
+  id                   String                       @id @default(cuid())
+  campaignId           String
+  campaign             Campaign                     @relation(fields: [campaignId], references: [id], onDelete: Restrict)
+  campaignCodeId       String                       @unique
+  campaignCode         CampaignCode                 @relation(fields: [campaignCodeId], references: [id], onDelete: Restrict)
+  sourceCommentId      String
+  /** Webhook from.id — required for one-claim-per-user; null allowed by schema, fail-closed in app logic later. */
+  instagramCommenterId String?
+  /** Display only — never used for uniqueness. */
+  instagramUsername    String?
+  dmEventId            String?
+  dmEvent              DmEvent?                     @relation(fields: [dmEventId], references: [id], onDelete: SetNull)
+  deliveryStatus       CampaignClaimDeliveryStatus  @default(PENDING)
+  claimedAt            DateTime                     @default(now())
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  @@unique([campaignId, sourceCommentId])
+  @@index([campaignId, claimedAt])
+  @@map("campaign_claims")
 }
