@@ -2,6 +2,10 @@
 
 Isolated staging for Smart Campaigns. **Production remains untouched.**
 
+> **Hosted Railway/Vercel:** agent environment has no provider tokens.  
+> Founder must provision hosted resources using  
+> [`V2-STAGING-FOUNDER-PROVISION.md`](./V2-STAGING-FOUNDER-PROVISION.md).
+
 ## Resources (create once)
 
 | Resource | Name | Notes |
@@ -35,6 +39,14 @@ export JWT_SECRET=<same-as-staging>
 export INSTAGRAM_APP_SECRET=<same-as-staging>
 cd backend && npm run staging:level1-e2e
 ```
+
+## Agent-validated (local isolated staging)
+
+Without Railway/Vercel tokens, Level 1 was validated against:
+
+- DB: `comment2dm_v2_staging` @ `127.0.0.1` (migrate deploy via safety wrapper)
+- API: staging-shaped process with Meta stub enabled
+- Full suite: Standard DM + Campaign A–I + failure/retry + concurrency 150→100 + security smoke
 
 ## V1 safety
 
