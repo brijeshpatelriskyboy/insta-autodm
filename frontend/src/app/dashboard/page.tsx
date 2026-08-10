@@ -17,6 +17,7 @@ import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
 import {
   dismissTestAutomationPanel,
   isTestAutomationPanelDismissed,
+  shouldShowTestAutomationPanel,
 } from "@/lib/onboarding";
 import { formatNumber } from "@/lib/demo-data";
 
@@ -60,10 +61,11 @@ export default function DashboardPage() {
       return;
     }
 
-    const shouldShow =
-      progress.hasKeywordRule &&
-      !progress.hasSuccessfulDm &&
-      !isTestAutomationPanelDismissed(user.id);
+    const shouldShow = shouldShowTestAutomationPanel({
+      hasKeywordRule: progress.hasKeywordRule,
+      hasSuccessfulDm: progress.hasSuccessfulDm,
+      dismissed: isTestAutomationPanelDismissed(user.id),
+    });
 
     setShowTestPanel(shouldShow);
   }, [progress, user?.id]);

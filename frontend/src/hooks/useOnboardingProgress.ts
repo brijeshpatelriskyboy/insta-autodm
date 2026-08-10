@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 
@@ -24,11 +24,11 @@ const emptyProgress: OnboardingProgress = {
 export function useOnboardingProgress(): OnboardingProgress {
   const [progress, setProgress] = useState<OnboardingProgress>(emptyProgress);
 
-  useEffect(() => {
+  const loadProgress = useCallback(() => {
     const token = getToken();
     if (!token) {
       setProgress({ ...emptyProgress, loading: false });
-      return;
+      return () => {};
     }
 
     let cancelled = false;
@@ -44,6 +44,7 @@ export function useOnboardingProgress(): OnboardingProgress {
         statusResult.status === "fulfilled" && statusResult.value.connected;
       const hasKeywordRule =
         rulesResult.status === "fulfilled" && rulesResult.value.length > 0;
+      // Only real successes hide the test panel — dm_failed must not count.
       const hasSuccessfulDm =
         activityResult.status === "fulfilled" &&
         activityResult.value.some((event) => event.type === "dm_sent");
@@ -61,6 +62,20 @@ export function useOnboardingProgress(): OnboardingProgress {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const cancel = loadProgress();
+    return cancel;
+  }, [loadProgress]);
+
+  // Refetch when the user returns to the tab (e.g. after checking Activity for dm_sent).
+  useEffect(() => {
+    function onFocus() {
+      loadProgress();
+    }
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [loadProgress]);
 
   return progress;
 }

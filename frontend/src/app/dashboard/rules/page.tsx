@@ -18,6 +18,7 @@ import {
   clearTestAutomationPanelDismiss,
   dismissTestAutomationPanel,
   isTestAutomationPanelDismissed,
+  shouldShowTestAutomationPanel,
 } from "@/lib/onboarding";
 import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
 
@@ -62,10 +63,11 @@ export default function RulesPage() {
   useEffect(() => {
     if (loading || progress.loading || !userId) return;
 
-    const shouldShow =
-      rules.length > 0 &&
-      !progress.hasSuccessfulDm &&
-      !isTestAutomationPanelDismissed(userId);
+    const shouldShow = shouldShowTestAutomationPanel({
+      hasKeywordRule: rules.length > 0,
+      hasSuccessfulDm: progress.hasSuccessfulDm,
+      dismissed: isTestAutomationPanelDismissed(userId),
+    });
 
     setShowTestPanel(shouldShow);
   }, [loading, progress.loading, progress.hasSuccessfulDm, rules.length, userId]);

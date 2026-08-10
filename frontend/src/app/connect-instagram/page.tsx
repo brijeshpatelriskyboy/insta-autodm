@@ -13,7 +13,8 @@ import { Logo } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api, ApiError } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { getStoredUser, getToken } from "@/lib/auth";
+import { isOnboardingComplete } from "@/lib/onboarding";
 
 /**
  * Production Instagram connect entry for onboarding.
@@ -39,7 +40,13 @@ export default function ConnectInstagramPage() {
       .then((status) => {
         if (cancelled) return;
         if (status.connected) {
-          router.replace("/dashboard/integrations?oauth=success");
+          // Avoid fake oauth=success toast; resume onboarding when incomplete.
+          const user = getStoredUser();
+          if (user?.id && !isOnboardingComplete(user.id)) {
+            router.replace("/onboarding");
+          } else {
+            router.replace("/dashboard/integrations");
+          }
         }
       })
       .catch(() => {

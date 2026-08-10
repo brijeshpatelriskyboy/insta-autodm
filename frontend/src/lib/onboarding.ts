@@ -72,6 +72,17 @@ export function clearTestAutomationPanelDismiss(userId: string): void {
   localStorage.removeItem(testPanelDismissKey(userId));
 }
 
+/** Pure visibility rule for the post-first-rule test panel. */
+export function shouldShowTestAutomationPanel(options: {
+  hasKeywordRule: boolean;
+  hasSuccessfulDm: boolean;
+  dismissed: boolean;
+}): boolean {
+  return (
+    options.hasKeywordRule && !options.hasSuccessfulDm && !options.dismissed
+  );
+}
+
 export const ONBOARDING_STEPS = [
   { id: "welcome", label: "Welcome" },
   { id: "keyword", label: "Keyword" },

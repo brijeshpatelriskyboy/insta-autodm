@@ -88,7 +88,7 @@ export function OnboardingWizard() {
   }, [router]);
 
   useEffect(() => {
-    if (!userId || (step !== 3 && step !== 4)) return;
+    if (!userId) return;
     const token = getToken();
     if (!token) return;
 
@@ -97,23 +97,35 @@ export function OnboardingWizard() {
       .getInstagramIntegrationStatus(token)
       .then((s) => {
         if (cancelled) return;
-        if (s.connected) {
-          setInstagramConnected(true);
-          persist({ instagramConnected: true });
-        }
+        // Backend connection status always wins over localStorage.
+        setInstagramConnected(s.connected);
+        persist({ instagramConnected: s.connected });
       })
       .catch(() => {});
 
     return () => {
       cancelled = true;
     };
-  }, [userId, step, persist]);
+  }, [userId, persist]);
 
   async function handleConnectInstagram() {
     const token = getToken();
     if (!token) {
       router.replace("/login");
       return;
+    }
+
+    // Re-check before starting OAuth so already-connected users are not prompted again.
+    try {
+      const status = await api.getInstagramIntegrationStatus(token);
+      if (status.connected) {
+        setInstagramConnected(true);
+        persist({ instagramConnected: true });
+        toast.success("Instagram is already connected");
+        return;
+      }
+    } catch {
+      /* continue to OAuth start */
     }
 
     setConnectingInstagram(true);
@@ -128,7 +140,7 @@ export function OnboardingWizard() {
 
       if (!oauth.url) {
         toast.error(oauth.message || "Meta setup required");
-        router.push("/connect-instagram");
+        router.push("/dashboard/integrations");
         return;
       }
 
@@ -138,7 +150,7 @@ export function OnboardingWizard() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start Meta OAuth";
       toast.error(message);
-      router.push("/connect-instagram");
+      router.push("/dashboard/integrations");
     } finally {
       setConnectingInstagram(false);
     }
@@ -169,11 +181,19 @@ export function OnboardingWizard() {
 
     setActivating(true);
     try {
-      await api.createKeywordRule(token, {
-        keyword: keyword.trim().toUpperCase(),
-        dmMessage: dmMessage.trim(),
-        isActive: true,
-      });
+      try {
+        await api.createKeywordRule(token, {
+          keyword: keyword.trim().toUpperCase(),
+          dmMessage: dmMessage.trim(),
+          isActive: true,
+        });
+      } catch (err) {
+        // Cleared-localStorage replay: rule may already exist. Complete safely if any rules exist.
+        const existing = await api.getKeywordRules(token).catch(() => []);
+        if (existing.length === 0) {
+          throw err;
+        }
+      }
       clearTestAutomationPanelDismiss(userId);
       markOnboardingComplete(userId);
       setStep(5);
