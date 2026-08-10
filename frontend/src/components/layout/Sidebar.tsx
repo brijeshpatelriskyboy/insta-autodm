@@ -15,18 +15,26 @@ import {
   HelpCircle,
   CreditCard,
   Circle,
+  Gift,
 } from "lucide-react";
-import { clearAuth, getStoredUser } from "@/lib/auth";
-import type { User } from "@/lib/api";
+import { clearAuth, getStoredUser, getToken } from "@/lib/auth";
+import { api, type User } from "@/lib/api";
+import { parseFeatureFlags, shouldShowCampaignsNav } from "@/lib/features";
 import { Logo } from "@/components/brand/Logo";
 import { BetaBadge } from "@/components/trust/BetaBadge";
 
-const mainNav = [
+const mainNavBase = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/rules", label: "Keyword Rules", icon: MessageSquareText },
   { href: "/dashboard/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dashboard/activity", label: "Activity Log", icon: Activity },
 ];
+
+const campaignsNavItem = {
+  href: "/dashboard/campaigns",
+  label: "Campaigns",
+  icon: Gift,
+};
 
 const platformNav = [
   { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
@@ -76,17 +84,29 @@ function NavLink({
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  // Stable SSR/first-paint values; load localStorage user after mount only.
   const [user, setUser] = useState<User | null>(null);
+  const [showCampaigns, setShowCampaigns] = useState(false);
 
   useEffect(() => {
     setUser(getStoredUser());
+    const token = getToken();
+    if (!token) return;
+    api
+      .getFeatures(token)
+      .then((payload) => {
+        setShowCampaigns(shouldShowCampaignsNav(parseFeatureFlags(payload)));
+      })
+      .catch(() => setShowCampaigns(false));
   }, []);
 
   function handleLogout() {
     clearAuth();
     router.push("/login");
   }
+
+  const mainNav = showCampaigns
+    ? [mainNavBase[0]!, mainNavBase[1]!, campaignsNavItem, ...mainNavBase.slice(2)]
+    : mainNavBase;
 
   const content = (
     <>

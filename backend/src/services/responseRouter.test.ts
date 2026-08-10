@@ -105,11 +105,11 @@ describe("ResponseRouter feature-flag isolation", () => {
     expect(result).toEqual(standardResult);
   });
 
-  it("default webhook router has no campaign module imports", () => {
+  it("default webhook router has no campaign response wiring", () => {
     const servicesDir = path.join(__dirname);
+    // Creator-side campaign.service.ts (CRUD) may exist; webhook claim/response modules must not.
     for (const file of [
       "smartCampaignResponse.service.ts",
-      "campaign.service.ts",
       "campaignClaim.service.ts",
       "campaignCode.service.ts",
     ]) {
