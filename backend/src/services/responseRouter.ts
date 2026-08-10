@@ -6,21 +6,49 @@ import {
 } from "./standardDmResponse.service";
 
 /**
- * Post-match / pre-send response router (V2 foundation seam).
- *
- * This task: ALWAYS StandardDmResponseService.
- * - flag missing/false → Standard DM
- * - flag true → still Standard DM (no alternate response module yet)
- *
- * Must not import or invoke any smart-campaign response module.
+ * Optional future alternate response (e.g. smart campaigns).
+ * Not wired in production for this milestone — DI exists for isolation tests only.
  */
-export const responseRouter = {
-  async dispatch(params: StandardDmExecuteParams): Promise<StandardDmResponseResult> {
-    // Read flag for future branching; foundation seam does not diverge yet.
-    void isSmartCampaignsEnabled();
-
-    // Future (not in this task): optional alternate response when flag is on.
-
-    return standardDmResponseService.execute(params);
-  },
+export type CampaignResponseResolver = {
+  tryResolve: (
+    params: StandardDmExecuteParams,
+  ) => Promise<StandardDmResponseResult | null>;
 };
+
+export type ResponseRouterDeps = {
+  campaignResolver?: CampaignResponseResolver;
+  standardDmExecute?: (
+    params: StandardDmExecuteParams,
+  ) => Promise<StandardDmResponseResult>;
+};
+
+/**
+ * Post-match / pre-send response router.
+ *
+ * This milestone: always ends at Standard DM.
+ * When the flag is off/missing/invalid, campaignResolver must never be invoked.
+ * When the flag is on and a resolver is injected, it may be consulted; null → Standard DM.
+ */
+export function createResponseRouter(deps: ResponseRouterDeps = {}) {
+  const runStandard =
+    deps.standardDmExecute ??
+    ((params: StandardDmExecuteParams) => standardDmResponseService.execute(params));
+
+  return {
+    async dispatch(params: StandardDmExecuteParams): Promise<StandardDmResponseResult> {
+      if (isSmartCampaignsEnabled()) {
+        if (deps.campaignResolver) {
+          const alternate = await deps.campaignResolver.tryResolve(params);
+          if (alternate) {
+            return alternate;
+          }
+        }
+      }
+
+      return runStandard(params);
+    },
+  };
+}
+
+/** Default router used by the webhook hot path (no campaign resolver). */
+export const responseRouter = createResponseRouter();

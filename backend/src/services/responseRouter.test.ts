@@ -1,27 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createResponseRouter } from "./responseRouter";
+import type { StandardDmExecuteParams } from "./standardDmResponse.service";
 
-const { mockExecute } = vi.hoisted(() => ({
-  mockExecute: vi.fn(),
-}));
-
-vi.mock("./standardDmResponse.service", async () => {
-  const actual = await vi.importActual<typeof import("./standardDmResponse.service")>(
-    "./standardDmResponse.service",
-  );
-  return {
-    ...actual,
-    standardDmResponseService: {
-      execute: mockExecute,
-    },
-  };
-});
-
-import { isSmartCampaignsEnabled } from "../config/smartCampaigns";
-import { responseRouter } from "./responseRouter";
-
-const baseParams = {
+const baseParams: StandardDmExecuteParams = {
   account: {
     id: "acct-1",
     userId: "user-1",
@@ -46,91 +29,96 @@ const baseParams = {
   priorEventsCreated: 2,
 };
 
-describe("smart campaigns foundation seam", () => {
+const standardResult = {
+  matched: true as const,
+  sent: true,
+  failed: false,
+  duplicate: false as const,
+  eventsCreated: 3,
+};
+
+describe("ResponseRouter feature-flag isolation", () => {
   afterEach(() => {
     delete process.env.SMART_CAMPAIGNS_ENABLED;
-    vi.clearAllMocks();
   });
 
-  it("treats missing SMART_CAMPAIGNS_ENABLED as disabled", () => {
+  it("flag missing → Standard DM; campaign resolver never called", async () => {
     delete process.env.SMART_CAMPAIGNS_ENABLED;
-    expect(isSmartCampaignsEnabled()).toBe(false);
+    const tryResolve = vi.fn();
+    const standardDmExecute = vi.fn().mockResolvedValue(standardResult);
+    const router = createResponseRouter({
+      campaignResolver: { tryResolve },
+      standardDmExecute,
+    });
+
+    const result = await router.dispatch(baseParams);
+
+    expect(tryResolve).not.toHaveBeenCalled();
+    expect(standardDmExecute).toHaveBeenCalledTimes(1);
+    expect(standardDmExecute).toHaveBeenCalledWith(baseParams);
+    expect(result).toEqual(standardResult);
   });
 
-  it("treats SMART_CAMPAIGNS_ENABLED=false as disabled", () => {
+  it("flag false → Standard DM; campaign resolver never called", async () => {
     process.env.SMART_CAMPAIGNS_ENABLED = "false";
-    expect(isSmartCampaignsEnabled()).toBe(false);
+    const tryResolve = vi.fn();
+    const standardDmExecute = vi.fn().mockResolvedValue(standardResult);
+    const router = createResponseRouter({
+      campaignResolver: { tryResolve },
+      standardDmExecute,
+    });
+
+    await router.dispatch(baseParams);
+
+    expect(tryResolve).not.toHaveBeenCalled();
+    expect(standardDmExecute).toHaveBeenCalledTimes(1);
   });
 
-  it("treats SMART_CAMPAIGNS_ENABLED=true as enabled", () => {
+  it("invalid flag → Standard DM; campaign resolver never called", async () => {
+    process.env.SMART_CAMPAIGNS_ENABLED = "yes";
+    const tryResolve = vi.fn();
+    const standardDmExecute = vi.fn().mockResolvedValue(standardResult);
+    const router = createResponseRouter({
+      campaignResolver: { tryResolve },
+      standardDmExecute,
+    });
+
+    await router.dispatch(baseParams);
+
+    expect(tryResolve).not.toHaveBeenCalled();
+    expect(standardDmExecute).toHaveBeenCalledTimes(1);
+  });
+
+  it("flag true (this milestone) → still Standard DM when resolver returns null", async () => {
     process.env.SMART_CAMPAIGNS_ENABLED = "true";
-    expect(isSmartCampaignsEnabled()).toBe(true);
-  });
-
-  it("flag missing → Standard DM via ResponseRouter", async () => {
-    delete process.env.SMART_CAMPAIGNS_ENABLED;
-    mockExecute.mockResolvedValue({
-      matched: true,
-      sent: true,
-      failed: false,
-      duplicate: false,
-      eventsCreated: 3,
+    const tryResolve = vi.fn().mockResolvedValue(null);
+    const standardDmExecute = vi.fn().mockResolvedValue(standardResult);
+    const router = createResponseRouter({
+      campaignResolver: { tryResolve },
+      standardDmExecute,
     });
 
-    const result = await responseRouter.dispatch(baseParams);
+    const result = await router.dispatch(baseParams);
 
-    expect(mockExecute).toHaveBeenCalledTimes(1);
-    expect(mockExecute).toHaveBeenCalledWith(baseParams);
-    expect(result.sent).toBe(true);
+    expect(tryResolve).toHaveBeenCalledTimes(1);
+    expect(standardDmExecute).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(standardResult);
   });
 
-  it("flag false → Standard DM via ResponseRouter", async () => {
-    process.env.SMART_CAMPAIGNS_ENABLED = "false";
-    mockExecute.mockResolvedValue({
-      matched: true,
-      sent: true,
-      failed: false,
-      duplicate: false,
-      eventsCreated: 3,
-    });
-
-    await responseRouter.dispatch(baseParams);
-
-    expect(mockExecute).toHaveBeenCalledTimes(1);
-  });
-
-  it("flag true (foundation seam) → still Standard DM", async () => {
-    process.env.SMART_CAMPAIGNS_ENABLED = "true";
-    mockExecute.mockResolvedValue({
-      matched: true,
-      sent: true,
-      failed: false,
-      duplicate: false,
-      eventsCreated: 3,
-    });
-
-    await responseRouter.dispatch(baseParams);
-
-    expect(mockExecute).toHaveBeenCalledTimes(1);
-    expect(mockExecute).toHaveBeenCalledWith(baseParams);
-  });
-
-  it("does not ship or import Campaign / SmartCampaign modules in this seam", () => {
+  it("default webhook router has no campaign module imports", () => {
     const servicesDir = path.join(__dirname);
-    const forbidden = [
+    for (const file of [
       "smartCampaignResponse.service.ts",
       "campaign.service.ts",
       "campaignClaim.service.ts",
       "campaignCode.service.ts",
-    ];
-    for (const file of forbidden) {
+    ]) {
       expect(fs.existsSync(path.join(servicesDir, file))).toBe(false);
     }
 
     const routerSource = fs.readFileSync(path.join(servicesDir, "responseRouter.ts"), "utf8");
-    expect(routerSource).not.toMatch(/smartCampaignResponse/i);
     expect(routerSource).not.toMatch(/from\s+["']\.\/campaign/i);
+    expect(routerSource).not.toMatch(/smartCampaignResponse/i);
     expect(routerSource).toContain("standardDmResponseService.execute");
-    expect(routerSource).toContain('from "../config/smartCampaigns"');
   });
 });

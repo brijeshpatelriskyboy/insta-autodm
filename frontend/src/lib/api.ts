@@ -244,6 +244,10 @@ export interface BillingHistoryItem {
   createdAt: string;
 }
 
+export interface FeatureFlags {
+  smartCampaigns: boolean;
+}
+
 export const api = {
   health: () => request<{ status: string; service?: string }>("/api/health"),
 
@@ -362,6 +366,9 @@ export const api = {
 
   getActivityEvents: (token: string) =>
     request<ActivityEventRecord[]>("/api/activity/events", {}, token),
+
+  getFeatures: (token: string) =>
+    request<FeatureFlags>("/api/features", {}, token),
 
   getSubscription: (token: string) =>
     request<SubscriptionInfo>("/api/billing/subscription", {}, token),
