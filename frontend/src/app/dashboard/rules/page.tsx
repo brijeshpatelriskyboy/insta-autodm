@@ -11,11 +11,20 @@ import { TableSkeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/providers/ToastProvider";
 import { KeywordRuleForm } from "@/components/rules/KeywordRuleForm";
 import { KeywordRulesTable } from "@/components/rules/KeywordRulesTable";
+import { TestFirstAutomationPanel } from "@/components/dashboard/TestFirstAutomationPanel";
 import { api, ApiError, type KeywordRule } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { getStoredUser, getToken } from "@/lib/auth";
+import {
+  clearTestAutomationPanelDismiss,
+  dismissTestAutomationPanel,
+  isTestAutomationPanelDismissed,
+  shouldShowTestAutomationPanel,
+} from "@/lib/onboarding";
+import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
 
 export default function RulesPage() {
   const toast = useToast();
+  const progress = useOnboardingProgress();
   const [rules, setRules] = useState<KeywordRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -23,6 +32,10 @@ export default function RulesPage() {
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [ruleToDelete, setRuleToDelete] = useState<KeywordRule | null>(null);
+  const [showTestPanel, setShowTestPanel] = useState(false);
+  const [focusRuleId, setFocusRuleId] = useState<string | null>(null);
+
+  const userId = getStoredUser()?.id ?? "";
 
   const loadRules = useCallback(async () => {
     const token = getToken();
@@ -47,6 +60,18 @@ export default function RulesPage() {
     loadRules();
   }, [loadRules]);
 
+  useEffect(() => {
+    if (loading || progress.loading || !userId) return;
+
+    const shouldShow = shouldShowTestAutomationPanel({
+      hasKeywordRule: rules.length > 0,
+      hasSuccessfulDm: progress.hasSuccessfulDm,
+      dismissed: isTestAutomationPanelDismissed(userId),
+    });
+
+    setShowTestPanel(shouldShow);
+  }, [loading, progress.loading, progress.hasSuccessfulDm, rules.length, userId]);
+
   const filteredRules = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rules;
@@ -66,9 +91,17 @@ export default function RulesPage() {
     const token = getToken();
     if (!token) return;
 
-    await api.createKeywordRule(token, data);
+    const wasEmpty = rules.length === 0;
+    const created = await api.createKeywordRule(token, data);
     setShowForm(false);
     toast.success(`Created rule "${data.keyword.toUpperCase()}"`);
+
+    if (wasEmpty && userId) {
+      clearTestAutomationPanelDismiss(userId);
+      setFocusRuleId(created.id);
+      setShowTestPanel(true);
+    }
+
     await loadRules();
   }
 
@@ -122,6 +155,22 @@ export default function RulesPage() {
     setShowForm(true);
   }
 
+  function handleEditFromTestPanel() {
+    const target =
+      (focusRuleId && rules.find((r) => r.id === focusRuleId)) || rules[0];
+    if (!target) {
+      openCreateForm();
+      return;
+    }
+    setShowForm(false);
+    setEditingRule(target);
+  }
+
+  function handleDismissTestPanel() {
+    if (userId) dismissTestAutomationPanel(userId);
+    setShowTestPanel(false);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -140,6 +189,13 @@ export default function RulesPage() {
       <div className="rounded-xl border border-brand-200/80 bg-brand-50/50 px-4 py-3 text-sm text-brand-900">
         Rules are ready and will become active once Instagram is connected.
       </div>
+
+      {showTestPanel && !showForm && !editingRule && (
+        <TestFirstAutomationPanel
+          onEditRule={handleEditFromTestPanel}
+          onDismiss={handleDismissTestPanel}
+        />
+      )}
 
       {(showForm || editingRule) && (
         <Card title={editingRule ? "Edit Rule" : "New Rule"}>

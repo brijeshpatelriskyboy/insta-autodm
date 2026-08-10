@@ -27,6 +27,7 @@ import {
   getOnboardingData,
   markOnboardingComplete,
   markOnboardingSkipped,
+  clearTestAutomationPanelDismiss,
   ONBOARDING_STEPS,
   saveOnboardingData,
   TOTAL_STEPS,
@@ -44,8 +45,22 @@ export function OnboardingWizard() {
     "Hey! Here's your free guide:\nhttps://example.com",
   );
   const [instagramConnected, setInstagramConnected] = useState(false);
+  const [connectingInstagram, setConnectingInstagram] = useState(false);
   const [activating, setActivating] = useState(false);
   const [ready, setReady] = useState(false);
+
+  const persist = useCallback(
+    (updates: {
+      currentStep?: number;
+      keyword?: string;
+      dmMessage?: string;
+      instagramConnected?: boolean;
+    }) => {
+      if (!userId) return;
+      saveOnboardingData(userId, updates);
+    },
+    [userId],
+  );
 
   useEffect(() => {
     if (!getToken()) {
@@ -73,26 +88,73 @@ export function OnboardingWizard() {
   }, [router]);
 
   useEffect(() => {
-    if (!userId || step !== 3) return;
+    if (!userId) return;
     const token = getToken();
     if (!token) return;
-    api.getInstagramStatus(token).then((s) => {
-      if (s.joinedWaitlist) setInstagramConnected(true);
-    }).catch(() => {});
-  }, [userId, step]);
 
-  const persist = useCallback(
-    (updates: {
-      currentStep?: number;
-      keyword?: string;
-      dmMessage?: string;
-      instagramConnected?: boolean;
-    }) => {
-      if (!userId) return;
-      saveOnboardingData(userId, updates);
-    },
-    [userId],
-  );
+    let cancelled = false;
+    api
+      .getInstagramIntegrationStatus(token)
+      .then((s) => {
+        if (cancelled) return;
+        // Backend connection status always wins over localStorage.
+        setInstagramConnected(s.connected);
+        persist({ instagramConnected: s.connected });
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, persist]);
+
+  async function handleConnectInstagram() {
+    const token = getToken();
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    // Re-check before starting OAuth so already-connected users are not prompted again.
+    try {
+      const status = await api.getInstagramIntegrationStatus(token);
+      if (status.connected) {
+        setInstagramConnected(true);
+        persist({ instagramConnected: true });
+        toast.success("Instagram is already connected");
+        return;
+      }
+    } catch {
+      /* continue to OAuth start */
+    }
+
+    setConnectingInstagram(true);
+    try {
+      const oauth = await api.getInstagramOAuthUrl(token);
+
+      if (oauth.setupError) {
+        toast.error(oauth.setupError.message);
+        router.push("/dashboard/integrations/instagram-setup");
+        return;
+      }
+
+      if (!oauth.url) {
+        toast.error(oauth.message || "Meta setup required");
+        router.push("/dashboard/integrations");
+        return;
+      }
+
+      // Persist progress so users return to Connect step after Meta callback.
+      persist({ currentStep: 3, keyword, dmMessage, instagramConnected });
+      window.location.href = oauth.url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to start Meta OAuth";
+      toast.error(message);
+      router.push("/dashboard/integrations");
+    } finally {
+      setConnectingInstagram(false);
+    }
+  }
 
   function handleSkip() {
     if (!userId) return;
@@ -119,11 +181,20 @@ export function OnboardingWizard() {
 
     setActivating(true);
     try {
-      await api.createKeywordRule(token, {
-        keyword: keyword.trim().toUpperCase(),
-        dmMessage: dmMessage.trim(),
-        isActive: true,
-      });
+      try {
+        await api.createKeywordRule(token, {
+          keyword: keyword.trim().toUpperCase(),
+          dmMessage: dmMessage.trim(),
+          isActive: true,
+        });
+      } catch (err) {
+        // Cleared-localStorage replay: rule may already exist. Complete safely if any rules exist.
+        const existing = await api.getKeywordRules(token).catch(() => []);
+        if (existing.length === 0) {
+          throw err;
+        }
+      }
+      clearTestAutomationPanelDismiss(userId);
       markOnboardingComplete(userId);
       setStep(5);
       persist({ currentStep: 5 });
@@ -343,20 +414,22 @@ export function OnboardingWizard() {
                 </p>
                 <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500">
                   Connect your Instagram Business or Creator account with Meta OAuth
-                  to enable comment monitoring and automated DMs for test accounts.
+                  to enable comment monitoring and automated DMs.
                 </p>
                 <Button
                   type="button"
                   className="mt-6"
                   variant={instagramConnected ? "secondary" : "primary"}
-                  disabled={instagramConnected}
-                  onClick={() => router.push("/connect-instagram")}
+                  disabled={instagramConnected || connectingInstagram}
+                  onClick={handleConnectInstagram}
                 >
                   {instagramConnected ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       Connected
                     </>
+                  ) : connectingInstagram ? (
+                    "Redirecting to Meta…"
                   ) : (
                     "Connect Instagram"
                   )}
@@ -406,7 +479,7 @@ export function OnboardingWizard() {
                     {instagramConnected ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        Connected (demo)
+                        Connected
                       </>
                     ) : (
                       <span className="text-slate-500">Not connected — you can add later</span>

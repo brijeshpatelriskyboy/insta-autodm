@@ -9,20 +9,28 @@ import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { InstagramConnectionCard } from "@/components/dashboard/InstagramConnectionCard";
 import { KeywordLeaderboard } from "@/components/dashboard/KeywordLeaderboard";
 import { QuickStartChecklist } from "@/components/dashboard/QuickStartChecklist";
+import { TestFirstAutomationPanel } from "@/components/dashboard/TestFirstAutomationPanel";
 import { BetaBadge } from "@/components/trust/BetaBadge";
 import { api, type AnalyticsSummary, type User } from "@/lib/api";
 import { getStoredUser, getToken } from "@/lib/auth";
 import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
+import {
+  dismissTestAutomationPanel,
+  isTestAutomationPanelDismissed,
+  shouldShowTestAutomationPanel,
+} from "@/lib/onboarding";
 import { formatNumber } from "@/lib/demo-data";
 
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showTestPanel, setShowTestPanel] = useState(false);
   const progress = useOnboardingProgress();
 
   useEffect(() => {
-    setUser(getStoredUser());
+    const stored = getStoredUser();
+    setUser(stored);
     const token = getToken();
     if (!token) {
       setLoading(false);
@@ -47,11 +55,31 @@ export default function DashboardPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (progress.loading || !user?.id) {
+      setShowTestPanel(false);
+      return;
+    }
+
+    const shouldShow = shouldShowTestAutomationPanel({
+      hasKeywordRule: progress.hasKeywordRule,
+      hasSuccessfulDm: progress.hasSuccessfulDm,
+      dismissed: isTestAutomationPanelDismissed(user.id),
+    });
+
+    setShowTestPanel(shouldShow);
+  }, [progress, user?.id]);
+
   const greeting = progress.loading
     ? "Welcome"
     : progress.isReturning
       ? "Welcome back"
       : "Welcome";
+
+  function handleDismissTestPanel() {
+    if (user?.id) dismissTestAutomationPanel(user.id);
+    setShowTestPanel(false);
+  }
 
   return (
     <div className="space-y-8">
@@ -70,6 +98,10 @@ export default function DashboardPage() {
         <span className="font-semibold">Beta:</span> Live Instagram connect and DMs work.
         Overview numbers reflect your account only — not sample data.
       </div>
+
+      {showTestPanel && (
+        <TestFirstAutomationPanel onDismiss={handleDismissTestPanel} />
+      )}
 
       <div>
         <div className="mb-3 flex items-center gap-2">

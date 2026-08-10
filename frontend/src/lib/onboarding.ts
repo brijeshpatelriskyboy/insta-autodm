@@ -53,6 +53,36 @@ export function markOnboardingComplete(userId: string): void {
   saveOnboardingData(userId, { completed: true, skipped: false });
 }
 
+function testPanelDismissKey(userId: string): string {
+  return `comment2dm_test_automation_dismissed_${userId}`;
+}
+
+export function isTestAutomationPanelDismissed(userId: string): boolean {
+  if (typeof window === "undefined" || !userId) return false;
+  return localStorage.getItem(testPanelDismissKey(userId)) === "1";
+}
+
+export function dismissTestAutomationPanel(userId: string): void {
+  if (typeof window === "undefined" || !userId) return;
+  localStorage.setItem(testPanelDismissKey(userId), "1");
+}
+
+export function clearTestAutomationPanelDismiss(userId: string): void {
+  if (typeof window === "undefined" || !userId) return;
+  localStorage.removeItem(testPanelDismissKey(userId));
+}
+
+/** Pure visibility rule for the post-first-rule test panel. */
+export function shouldShowTestAutomationPanel(options: {
+  hasKeywordRule: boolean;
+  hasSuccessfulDm: boolean;
+  dismissed: boolean;
+}): boolean {
+  return (
+    options.hasKeywordRule && !options.hasSuccessfulDm && !options.dismissed
+  );
+}
+
 export const ONBOARDING_STEPS = [
   { id: "welcome", label: "Welcome" },
   { id: "keyword", label: "Keyword" },
