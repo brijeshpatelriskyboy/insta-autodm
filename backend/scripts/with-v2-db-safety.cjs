@@ -5,6 +5,11 @@
  * Usage (from backend/):
  *   node scripts/with-v2-db-safety.cjs migrate deploy
  *   node scripts/with-v2-db-safety.cjs db seed
+ *
+ * Remote V2 staging is allowed only when:
+ *   COMMENT2DM_ALLOW_REMOTE_V2_DB=true
+ *   database name includes both "v2" and "staging"
+ *   hostname/database do not contain known production identifiers
  */
 "use strict";
 
@@ -17,6 +22,13 @@ try {
   require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 } catch {
   // dotenv optional
+}
+
+const KNOWN_PRODUCTION_IDENTIFIERS = ["insta-autodm-production"];
+
+function containsKnownProductionIdentifier(value) {
+  const hay = String(value).toLowerCase();
+  return KNOWN_PRODUCTION_IDENTIFIERS.some((id) => hay.includes(id.toLowerCase()));
 }
 
 function assertSafeV2DatabaseUrl(databaseUrl) {
@@ -35,24 +47,16 @@ function assertSafeV2DatabaseUrl(databaseUrl) {
 
   const hostname = url.hostname.toLowerCase();
   const database = decodeURIComponent(url.pathname.replace(/^\//, "").split("?")[0] || "");
-  const productionMarkers = [
-    "railway.app",
-    "rlwy.net",
-    "railway.internal",
-    "render.com",
-    "supabase.co",
-    "neon.tech",
-    "amazonaws.com",
-    "azure.com",
-    "cloud.google.com",
-  ];
 
-  if (
-    productionMarkers.some(
-      (marker) => hostname === marker || hostname.endsWith(`.${marker}`) || hostname.includes(marker),
-    )
-  ) {
-    throw new Error(`V2 DB safety: refusing operation against production-like host "${hostname}"`);
+  if (!database) {
+    throw new Error("V2 DB safety: DATABASE_URL is missing a database name");
+  }
+
+  if (containsKnownProductionIdentifier(hostname) || containsKnownProductionIdentifier(database)) {
+    throw new Error(
+      `V2 DB safety: refusing known production identifier in host/database ` +
+        `(host="${hostname}" database="${database}")`,
+    );
   }
 
   const local =
@@ -61,19 +65,29 @@ function assertSafeV2DatabaseUrl(databaseUrl) {
     hostname === "::1" ||
     hostname === "host.docker.internal";
 
-  if (!local && process.env.COMMENT2DM_ALLOW_REMOTE_V2_DB !== "true") {
+  if (local) {
+    if (!/v2/i.test(database)) {
+      throw new Error(
+        `V2 DB safety: database name "${database}" must include "v2" (e.g. comment2dm_v2_dev)`,
+      );
+    }
+    return { hostname, database, remoteStaging: false };
+  }
+
+  if (process.env.COMMENT2DM_ALLOW_REMOTE_V2_DB !== "true") {
     throw new Error(
-      `V2 DB safety: refusing non-local host "${hostname}" (set COMMENT2DM_ALLOW_REMOTE_V2_DB=true only for approved V2 staging)`,
+      `V2 DB safety: refusing non-local host "${hostname}" ` +
+        `(set COMMENT2DM_ALLOW_REMOTE_V2_DB=true only for approved V2 staging)`,
     );
   }
 
-  if (!/v2/i.test(database)) {
+  if (!(/v2/i.test(database) && /staging/i.test(database))) {
     throw new Error(
-      `V2 DB safety: database name "${database}" must include "v2" (e.g. comment2dm_v2_dev)`,
+      `V2 DB safety: remote database name "${database}" must include both "v2" and "staging"`,
     );
   }
 
-  return { hostname, database };
+  return { hostname, database, remoteStaging: true };
 }
 
 const args = process.argv.slice(2);
@@ -84,7 +98,10 @@ if (args.length === 0) {
 
 try {
   const parts = assertSafeV2DatabaseUrl(process.env.DATABASE_URL);
-  console.log(`[v2-db-safety] OK host=${parts.hostname} database=${parts.database}`);
+  console.log(
+    `[v2-db-safety] OK host=${parts.hostname} database=${parts.database}` +
+      (parts.remoteStaging ? " remoteStaging=true" : ""),
+  );
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

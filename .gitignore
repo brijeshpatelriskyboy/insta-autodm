@@ -16,6 +16,13 @@ build/
 .env.v2
 backend/.env.v2
 
+# Local agent tooling (CLI installs)
+.local-tools/
+
+# TypeScript incremental
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
+
 # Logs
 *.log
 npm-debug.log*

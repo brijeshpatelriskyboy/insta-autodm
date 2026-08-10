@@ -1,0 +1,19 @@
+# Railway staging service overrides for comment2dm-v2-staging ONLY.
+# Do NOT apply this file to the production Railway service.
+#
+# Set the staging Railway service start command to:
+#   npm run start:staging
+#
+# start:staging runs: prisma migrate deploy (via V2 DB safety wrapper) then node.
+# It never runs prisma db push --accept-data-loss.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "npm run start:staging"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
