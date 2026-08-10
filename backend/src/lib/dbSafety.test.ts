@@ -51,6 +51,6 @@ describe("dbSafety", () => {
   });
 
   it("rejects missing DATABASE_URL", () => {
-    expect(() => assertSafeV2DatabaseUrl(undefined)).toThrow(/DATABASE_URL is required/);
+    expect(() => assertSafeV2DatabaseUrl("")).toThrow(/DATABASE_URL is required/);
   });
 });
