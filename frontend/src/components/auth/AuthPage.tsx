@@ -16,9 +16,18 @@ import type { SelectedPlan } from "@/lib/plans";
 interface AuthPageProps {
   initialMode: "login" | "register";
   selectedPlan?: SelectedPlan | null;
+  /** Only set via internal paths (`/demo` or `/login?demo=1`). Hidden on normal login. */
+  showDemo?: boolean;
 }
 
-export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
+const DEMO_EMAIL = "demo@comment2dm.com";
+const DEMO_PASSWORD = "demo1234";
+
+export function AuthPage({
+  initialMode,
+  selectedPlan = null,
+  showDemo = false,
+}: AuthPageProps) {
   const router = useRouter();
   const toast = useToast();
   const [mode, setMode] = useState<"login" | "register">(initialMode);
@@ -27,9 +36,6 @@ export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const DEMO_EMAIL = "demo@comment2dm.com";
-  const DEMO_PASSWORD = "demo1234";
 
   async function authenticate(
     authEmail: string,
@@ -49,7 +55,10 @@ export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
       setAuth(result.token, result.user);
       toast.success(authMode === "login" ? "Welcome back!" : "Account created successfully");
 
-      if (authMode === "register" || !isOnboardingComplete(result.user.id)) {
+      const isDemoUser = result.user.email.toLowerCase() === DEMO_EMAIL;
+      if (isDemoUser) {
+        router.push("/dashboard");
+      } else if (authMode === "register" || !isOnboardingComplete(result.user.id)) {
         router.push("/onboarding");
       } else {
         router.push("/dashboard");
@@ -148,7 +157,7 @@ export function AuthPage({ initialMode, selectedPlan = null }: AuthPageProps) {
             )}
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {mode === "login" && (
+              {mode === "login" && showDemo && (
                 <div className="rounded-xl border border-brand-200 bg-brand-50/80 px-4 py-3 text-sm">
                   <p className="font-medium text-brand-800">Demo account</p>
                   <p className="mt-1 text-brand-700">

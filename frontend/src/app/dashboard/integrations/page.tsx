@@ -26,7 +26,8 @@ import {
   type InstagramIntegrationStatus,
   type MetaOAuthConfig,
 } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { getToken, getStoredUser } from "@/lib/auth";
+import { isOnboardingComplete } from "@/lib/onboarding";
 import { useMounted } from "@/hooks/useMounted";
 
 const SETUP_ITEMS = [
@@ -59,6 +60,7 @@ export default function IntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [connectLoading, setConnectLoading] = useState(false);
+  const [resumeOnboarding, setResumeOnboarding] = useState(false);
 
   const loadStatus = useCallback(async () => {
     const token = getToken();
@@ -108,6 +110,10 @@ export default function IntegrationsPage() {
     if (oauthStatus === "success") {
       toast.success(oauthMessage);
       loadStatus();
+      const user = getStoredUser();
+      if (user?.id && !isOnboardingComplete(user.id)) {
+        setResumeOnboarding(true);
+      }
     } else if (oauthStatus === "error") {
       toast.error(oauthMessage);
     }
@@ -319,6 +325,18 @@ export default function IntegrationsPage() {
         title="Integrations"
         description="Connect Instagram and Meta services to power your DM automations."
       />
+
+      {resumeOnboarding && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-900">
+          <span>Instagram connected. Continue setting up your first automation.</span>
+          <Link
+            href="/onboarding"
+            className="font-medium text-emerald-800 underline-offset-2 hover:underline"
+          >
+            Resume setup
+          </Link>
+        </div>
+      )}
 
       <Card title="Instagram Connection" padding="lg">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
