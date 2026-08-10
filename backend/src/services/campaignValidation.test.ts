@@ -49,6 +49,12 @@ describe("campaignValidation", () => {
     ).toContain("dmTemplate_missing_code_placeholder");
   });
 
+  it("rejects maxClaims above the safe cap", () => {
+    expect(
+      validateCampaignInvariants({ ...base, maxClaims: 10_001 }),
+    ).toContain("maxClaims_exceeds_cap");
+  });
+
   it("can skip code placeholder when requiresCodePlaceholder is false", () => {
     expect(
       validateCampaignInvariants({

@@ -13,6 +13,7 @@ import metaRoutes from "./routes/meta.routes";
 import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import featuresRoutes from "./routes/features.routes";
+import campaignRoutes from "./routes/campaign.routes";
 import { billingController } from "./controllers/billing.controller";
 import { webhookController } from "./controllers/webhook.controller";
 
@@ -57,6 +58,8 @@ export function createApp() {
   app.use("/api/activity", activityRoutes);
   app.use("/api/billing", billingRoutes);
   app.use("/api/features", featuresRoutes);
+  // Smart Campaigns CRUD — gated by authenticate + requireSmartCampaignsEnabled.
+  app.use("/api/campaigns", campaignRoutes);
 
   app.use(errorHandler);
 

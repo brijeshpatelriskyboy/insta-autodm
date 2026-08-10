@@ -248,6 +248,65 @@ export interface FeatureFlags {
   smartCampaigns: boolean;
 }
 
+export type CampaignStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "PAUSED"
+  | "ENDED"
+  | "ARCHIVED";
+
+export interface CampaignListItem {
+  id: string;
+  name: string;
+  status: CampaignStatus;
+  keywordRule: { id: string; keyword: string };
+  startsAt: string;
+  endsAt: string;
+  maxClaims: number;
+  claimedCount: number;
+  remainingCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignDetail extends CampaignListItem {
+  dmTemplate: string;
+  soldOutMessage: string;
+  alreadyClaimedMessage: string;
+  notStartedMessage: string | null;
+  endedMessage: string | null;
+  redemptionEnabled: boolean;
+  archivedAt: string | null;
+  codeCounts: Record<string, number>;
+  claimCount: number;
+}
+
+export interface CampaignClaimListItem {
+  id: string;
+  instagramUsername: string | null;
+  code: string;
+  claimedAt: string;
+  deliveryStatus: string;
+}
+
+export interface CreateCampaignPayload {
+  keywordRuleId: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  maxClaims: number;
+  dmTemplate: string;
+  soldOutMessage: string;
+  alreadyClaimedMessage: string;
+  notStartedMessage?: string | null;
+  endedMessage?: string | null;
+  codeGeneration: {
+    mode: "AUTO";
+    prefix: string;
+    length: number;
+  };
+}
+
 export const api = {
   health: () => request<{ status: string; service?: string }>("/api/health"),
 
@@ -369,6 +428,40 @@ export const api = {
 
   getFeatures: (token: string) =>
     request<FeatureFlags>("/api/features", {}, token),
+
+  getCampaigns: (token: string) =>
+    request<CampaignListItem[]>("/api/campaigns", {}, token),
+
+  getCampaign: (token: string, id: string) =>
+    request<CampaignDetail>(`/api/campaigns/${id}`, {}, token),
+
+  createCampaign: (token: string, data: CreateCampaignPayload) =>
+    request<CampaignDetail>("/api/campaigns", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }, token),
+
+  activateCampaign: (token: string, id: string) =>
+    request<CampaignDetail>(`/api/campaigns/${id}/activate`, {
+      method: "POST",
+    }, token),
+
+  pauseCampaign: (token: string, id: string) =>
+    request<CampaignDetail>(`/api/campaigns/${id}/pause`, {
+      method: "POST",
+    }, token),
+
+  archiveCampaign: (token: string, id: string) =>
+    request<CampaignDetail>(`/api/campaigns/${id}/archive`, {
+      method: "POST",
+    }, token),
+
+  getCampaignClaims: (token: string, id: string, limit = 100) =>
+    request<{ claims: CampaignClaimListItem[]; limit: number }>(
+      `/api/campaigns/${id}/claims?limit=${limit}`,
+      {},
+      token,
+    ),
 
   getSubscription: (token: string) =>
     request<SubscriptionInfo>("/api/billing/subscription", {}, token),

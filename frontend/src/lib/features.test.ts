@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseFeatureFlags } from "./features";
+import { parseFeatureFlags, shouldShowCampaignsNav } from "./features";
 
 describe("parseFeatureFlags", () => {
   it("defaults to smartCampaigns false for invalid payloads", () => {
@@ -19,5 +19,15 @@ describe("parseFeatureFlags", () => {
     assert.deepEqual(parseFeatureFlags({ smartCampaigns: "true" }), {
       smartCampaigns: false,
     });
+  });
+});
+
+describe("shouldShowCampaignsNav", () => {
+  it("hides campaigns when flag false", () => {
+    assert.equal(shouldShowCampaignsNav({ smartCampaigns: false }), false);
+  });
+
+  it("shows campaigns when flag true", () => {
+    assert.equal(shouldShowCampaignsNav({ smartCampaigns: true }), true);
   });
 });
