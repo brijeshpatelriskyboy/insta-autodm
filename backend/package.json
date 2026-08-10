@@ -13,6 +13,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev --name init",
     "db:migrate:deploy": "prisma migrate deploy",
+    "db:v2:migrate:deploy": "node scripts/with-v2-db-safety.cjs migrate deploy",
+    "db:v2:migrate:status": "node scripts/with-v2-db-safety.cjs migrate status",
     "db:apply-dm-event-private-reply": "node scripts/apply-dm-event-private-reply.cjs",
     "meta:probe-page-id": "node scripts/probe-instagram-page-id.cjs",
     "db:seed": "tsx prisma/seed.ts",
