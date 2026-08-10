@@ -107,18 +107,15 @@ describe("ResponseRouter feature-flag isolation", () => {
 
   it("default webhook router has no campaign response wiring", () => {
     const servicesDir = path.join(__dirname);
-    // Creator-side campaign.service.ts (CRUD) may exist; webhook claim/response modules must not.
-    for (const file of [
-      "smartCampaignResponse.service.ts",
-      "campaignClaim.service.ts",
-      "campaignCode.service.ts",
-    ]) {
+    // Isolated campaign response module may exist; must not be imported by the router yet.
+    for (const file of ["campaignClaim.service.ts", "campaignCode.service.ts"]) {
       expect(fs.existsSync(path.join(servicesDir, file))).toBe(false);
     }
 
     const routerSource = fs.readFileSync(path.join(servicesDir, "responseRouter.ts"), "utf8");
     expect(routerSource).not.toMatch(/from\s+["']\.\/campaign/i);
     expect(routerSource).not.toMatch(/smartCampaignResponse/i);
+    expect(routerSource).not.toMatch(/campaignClaimAllocator/i);
     expect(routerSource).toContain("standardDmResponseService.execute");
   });
 });
