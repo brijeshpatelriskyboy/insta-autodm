@@ -307,6 +307,18 @@ export interface CreateCampaignPayload {
   };
 }
 
+export interface PatchCampaignPayload {
+  name?: string;
+  startsAt?: string;
+  endsAt?: string;
+  dmTemplate?: string;
+  soldOutMessage?: string;
+  alreadyClaimedMessage?: string;
+  notStartedMessage?: string | null;
+  endedMessage?: string | null;
+  maxClaims?: number;
+}
+
 export const api = {
   health: () => request<{ status: string; service?: string }>("/api/health"),
 
@@ -438,6 +450,12 @@ export const api = {
   createCampaign: (token: string, data: CreateCampaignPayload) =>
     request<CampaignDetail>("/api/campaigns", {
       method: "POST",
+      body: JSON.stringify(data),
+    }, token),
+
+  patchCampaign: (token: string, id: string, data: PatchCampaignPayload) =>
+    request<CampaignDetail>(`/api/campaigns/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     }, token),
 

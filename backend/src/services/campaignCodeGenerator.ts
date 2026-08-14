@@ -31,6 +31,8 @@ export type CodeGeneratorOptions = {
   randomBytesFn?: (size: number) => Buffer;
   /** Max attempts to fill the unique set before failing. */
   maxAttempts?: number;
+  /** Existing codes that must not be re-emitted (e.g. DRAFT pool resize). */
+  exclude?: Iterable<string>;
 };
 
 export function normalizeCodePrefix(prefix: string): string {
@@ -74,7 +76,9 @@ export function generateUniqueCampaignCodes(options: CodeGeneratorOptions): stri
     throw new Error("count_invalid");
   }
   const randomBytesFn = options.randomBytesFn ?? randomBytes;
-  const maxAttempts = options.maxAttempts ?? Math.max(count * 25, count + 100);
+  const excluded = new Set(options.exclude ?? []);
+  const maxAttempts =
+    options.maxAttempts ?? Math.max(count * 25, count + 100 + excluded.size);
 
   const codes = new Set<string>();
   let attempts = 0;
@@ -84,7 +88,28 @@ export function generateUniqueCampaignCodes(options: CodeGeneratorOptions): stri
       throw new Error("code_generation_exhausted");
     }
     const code = `${prefix}-${randomSegment(length, randomBytesFn)}`;
+    if (excluded.has(code) || codes.has(code)) {
+      continue;
+    }
     codes.add(code);
   }
   return Array.from(codes);
+}
+
+/**
+ * Infer AUTO prefix + random-segment length from an existing code (PREFIX-SEGMENT).
+ * Does not accept or return secrets — codes are opaque pool values.
+ */
+export function inferAutoCodeFormatFromSample(sampleCode: string): {
+  prefix: string;
+  length: number;
+} {
+  const trimmed = sampleCode.trim();
+  const dash = trimmed.indexOf("-");
+  if (dash <= 0 || dash === trimmed.length - 1) {
+    throw new Error("code_format_invalid");
+  }
+  const prefix = trimmed.slice(0, dash);
+  const segment = trimmed.slice(dash + 1);
+  return assertValidCodeGenerationConfig({ prefix, length: segment.length });
 }

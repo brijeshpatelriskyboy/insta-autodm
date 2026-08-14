@@ -13,6 +13,7 @@ import { AppError } from "../utils/errors";
 import {
   assertValidCodeGenerationConfig,
   generateUniqueCampaignCodes,
+  inferAutoCodeFormatFromSample,
   MAX_CAMPAIGN_CLAIMS_CAP,
 } from "./campaignCodeGenerator";
 import { firstInvariantMessage } from "./campaignValidation";
@@ -30,6 +31,7 @@ export const CAMPAIGN_EDIT_MATRIX = {
     "alreadyClaimedMessage",
     "notStartedMessage",
     "endedMessage",
+    "maxClaims",
   ],
   PAUSED: [
     "name",
@@ -57,7 +59,8 @@ export type CampaignEditField =
   | "soldOutMessage"
   | "alreadyClaimedMessage"
   | "notStartedMessage"
-  | "endedMessage";
+  | "endedMessage"
+  | "maxClaims";
 
 export type CreateCampaignInput = {
   keywordRuleId: string;
@@ -86,6 +89,7 @@ export type PatchCampaignInput = Partial<{
   alreadyClaimedMessage: string;
   notStartedMessage: string | null;
   endedMessage: string | null;
+  maxClaims: number;
 }>;
 
 export type CampaignListItem = {
@@ -228,6 +232,107 @@ async function getOwnedCampaignOrThrow(
     throw new AppError(404, "Campaign not found");
   }
   return campaign;
+}
+
+type DbTx = Prisma.TransactionClient;
+
+/**
+ * DRAFT-only: grow or shrink AVAILABLE code pool so codeCount === nextMaxClaims.
+ * Never mutates non-AVAILABLE codes. Rolls back with the surrounding transaction.
+ */
+async function resizeDraftCodePool(
+  tx: DbTx,
+  campaign: Campaign,
+  nextMaxClaims: number,
+): Promise<void> {
+  if (campaign.status !== "DRAFT") {
+    throw new AppError(400, "maxClaims can only be changed on DRAFT campaigns");
+  }
+  if (campaign.claimedCount !== 0) {
+    throw new AppError(
+      409,
+      "Cannot resize code pool after claims have been recorded",
+    );
+  }
+
+  const existing = await tx.campaignCode.findMany({
+    where: { campaignId: campaign.id },
+    select: { id: true, code: true, status: true },
+    orderBy: { id: "asc" },
+  });
+
+  if (existing.length !== campaign.maxClaims) {
+    throw new AppError(
+      409,
+      "Campaign code pool is incomplete; create a new campaign",
+    );
+  }
+
+  const nonAvailable = existing.filter((row) => row.status !== "AVAILABLE");
+  if (nonAvailable.length > 0) {
+    throw new AppError(
+      409,
+      "Cannot resize code pool while any code is reserved, claimed, redeemed, or disabled",
+    );
+  }
+
+  if (nextMaxClaims === campaign.maxClaims) {
+    return;
+  }
+
+  if (nextMaxClaims > campaign.maxClaims) {
+    const delta = nextMaxClaims - campaign.maxClaims;
+    if (existing.length === 0) {
+      throw new AppError(409, "Campaign has no codes to infer AUTO format from");
+    }
+    const format = inferAutoCodeFormatFromSample(existing[0]!.code);
+    let newCodes: string[];
+    try {
+      newCodes = codeGenerator({
+        count: delta,
+        prefix: format.prefix,
+        length: format.length,
+        exclude: existing.map((row) => row.code),
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "";
+      if (msg === "code_generation_exhausted") {
+        throw new Error("code_generation_exhausted");
+      }
+      throw error;
+    }
+    if (newCodes.length !== delta || new Set(newCodes).size !== delta) {
+      throw new AppError(500, "Code generation produced an incomplete unique pool");
+    }
+
+    await tx.campaignCode.createMany({
+      data: newCodes.map((code) => ({
+        campaignId: campaign.id,
+        code,
+        status: "AVAILABLE" as const,
+      })),
+    });
+  } else {
+    const excess = campaign.maxClaims - nextMaxClaims;
+    const toDelete = existing.slice(0, excess);
+    if (toDelete.length !== excess) {
+      throw new AppError(409, "Not enough AVAILABLE codes to decrease maxClaims");
+    }
+    await tx.campaignCode.deleteMany({
+      where: {
+        campaignId: campaign.id,
+        status: "AVAILABLE",
+        id: { in: toDelete.map((row) => row.id) },
+      },
+    });
+  }
+
+  const codeCount = await tx.campaignCode.count({
+    where: { campaignId: campaign.id },
+  });
+  if (codeCount !== nextMaxClaims) {
+    throw new AppError(500, "Code pool resize failed invariant codeCount === maxClaims");
+  }
 }
 
 async function buildDetail(
@@ -395,26 +500,33 @@ export class CampaignService {
     const nextStartsAt = input.startsAt ?? campaign.startsAt;
     const nextEndsAt = input.endsAt ?? campaign.endsAt;
     const nextDmTemplate = input.dmTemplate ?? campaign.dmTemplate;
+    const nextMaxClaims =
+      input.maxClaims !== undefined ? input.maxClaims : campaign.maxClaims;
 
-    if (input.startsAt !== undefined || input.endsAt !== undefined) {
+    if (input.maxClaims !== undefined) {
+      if (!Number.isInteger(input.maxClaims) || input.maxClaims < 1) {
+        throw new AppError(400, "maxClaims must be an integer >= 1");
+      }
+      if (input.maxClaims > MAX_CAMPAIGN_CLAIMS_CAP) {
+        throw new AppError(
+          400,
+          `maxClaims cannot exceed ${MAX_CAMPAIGN_CLAIMS_CAP}`,
+        );
+      }
+    }
+
+    if (
+      input.startsAt !== undefined ||
+      input.endsAt !== undefined ||
+      input.dmTemplate !== undefined ||
+      input.maxClaims !== undefined
+    ) {
       const msg = firstInvariantMessage({
-        maxClaims: campaign.maxClaims,
+        maxClaims: nextMaxClaims,
         claimedCount: campaign.claimedCount,
         startsAt: nextStartsAt,
         endsAt: nextEndsAt,
         dmTemplate: nextDmTemplate,
-        enforceMaxClaimsCap: true,
-      });
-      if (msg) throw new AppError(400, msg);
-    }
-
-    if (input.dmTemplate !== undefined) {
-      const msg = firstInvariantMessage({
-        maxClaims: campaign.maxClaims,
-        claimedCount: campaign.claimedCount,
-        startsAt: nextStartsAt,
-        endsAt: nextEndsAt,
-        dmTemplate: input.dmTemplate,
         enforceMaxClaimsCap: true,
       });
       if (msg) throw new AppError(400, msg);
@@ -434,12 +546,57 @@ export class CampaignService {
     }
     if (input.endedMessage !== undefined) data.endedMessage = input.endedMessage;
 
-    const updated = await this.db.campaign.update({
-      where: { id: campaign.id },
-      data,
-      include: { keywordRule: { select: { id: true, keyword: true } } },
-    });
-    return buildDetail(this.db, updated);
+    const needsResize =
+      input.maxClaims !== undefined && input.maxClaims !== campaign.maxClaims;
+
+    if (!needsResize) {
+      if (Object.keys(data).length === 0) {
+        return buildDetail(this.db, campaign);
+      }
+      const updated = await this.db.campaign.update({
+        where: { id: campaign.id },
+        data,
+        include: { keywordRule: { select: { id: true, keyword: true } } },
+      });
+      return buildDetail(this.db, updated);
+    }
+
+    // DRAFT-only maxClaims resize (matrix already enforced).
+    try {
+      const updated = await this.db.$transaction(async (tx) => {
+        await resizeDraftCodePool(tx, campaign, input.maxClaims!);
+
+        return tx.campaign.update({
+          where: { id: campaign.id },
+          data: {
+            ...data,
+            maxClaims: input.maxClaims!,
+          },
+          include: { keywordRule: { select: { id: true, keyword: true } } },
+        });
+      });
+      return buildDetail(this.db, updated);
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      if (
+        error instanceof PrismaNamespace.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        throw new AppError(409, "Generated codes collided; please retry");
+      }
+      const msg = error instanceof Error ? error.message : "";
+      if (msg === "code_generation_exhausted") {
+        throw new AppError(500, "Could not generate a unique code pool; try again");
+      }
+      if (
+        msg === "code_format_invalid" ||
+        msg === "prefix_invalid" ||
+        msg === "length_invalid"
+      ) {
+        throw new AppError(400, "Existing campaign codes have an unsupported format");
+      }
+      throw error;
+    }
   }
 
   async activate(userId: string, campaignId: string): Promise<CampaignDetail> {

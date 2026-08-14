@@ -19,7 +19,7 @@ describe("validateCampaignCreateForm", () => {
     assert.equal(validateCampaignCreateForm(base), null);
   });
 
-  it("requires {{code}} and positive quantity under cap", () => {
+  it("requires {{code}} and positive number of codes under cap", () => {
     assert.match(
       validateCampaignCreateForm({ ...base, dmTemplate: "Thanks" }) ?? "",
       /\{\{code\}\}/,
@@ -32,5 +32,9 @@ describe("validateCampaignCreateForm", () => {
       validateCampaignCreateForm({ ...base, maxClaims: 10_001 }) ?? "",
       /cannot exceed/,
     );
+  });
+
+  it("accepts number of codes = 3", () => {
+    assert.equal(validateCampaignCreateForm({ ...base, maxClaims: 3 }), null);
   });
 });
