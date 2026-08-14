@@ -9,6 +9,11 @@ import {
   logOAuthClientDiagnostics,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
+import {
+  assertMetaPrivateReplyStubMayRun,
+  isMetaPrivateReplyStubActive,
+  sendStubPrivateReply,
+} from "./metaPrivateReplyStub";
 
 type MetaGraphError = {
   error?: {
@@ -590,6 +595,18 @@ export const metaGraphService = {
     messageText: string;
     timeoutMs?: number;
   }): Promise<{ recipientId: string | null; messageId: string }> {
+    // Staging-only stub: never calls Meta, never logs the access token.
+    // Misconfigured stub flags fail closed (throw) rather than falling through to real Meta.
+    if (
+      process.env.META_PRIVATE_REPLY_STUB === "true" ||
+      process.env.COMMENT2DM_ALLOW_META_STUB === "true"
+    ) {
+      assertMetaPrivateReplyStubMayRun();
+      if (isMetaPrivateReplyStubActive()) {
+        return sendStubPrivateReply(params);
+      }
+    }
+
     const version = getMetaGraphApiVersion();
     const url = `https://graph.instagram.com/${version}/${encodeURIComponent(params.igUserId)}/messages`;
     const timeoutMs = params.timeoutMs ?? 10_000;

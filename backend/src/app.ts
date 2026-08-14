@@ -14,6 +14,7 @@ import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import featuresRoutes from "./routes/features.routes";
 import campaignRoutes from "./routes/campaign.routes";
+import { createStagingRoutes } from "./routes/staging.routes";
 import { billingController } from "./controllers/billing.controller";
 import { webhookController } from "./controllers/webhook.controller";
 
@@ -22,7 +23,11 @@ export function createApp() {
 
   // Registered first so health checks succeed before any other middleware runs.
   app.get("/health", (_req, res) => {
-    res.status(200).json({ status: "ok", service: "insta-autodm-api" });
+    res.status(200).json({
+      status: "ok",
+      service: "insta-autodm-api",
+      deploymentEnv: process.env.COMMENT2DM_DEPLOYMENT_ENV ?? null,
+    });
   });
 
   app.use(cors(corsOptions));
@@ -60,6 +65,13 @@ export function createApp() {
   app.use("/api/features", featuresRoutes);
   // Smart Campaigns CRUD — gated by authenticate + requireSmartCampaignsEnabled.
   app.use("/api/campaigns", campaignRoutes);
+
+  // Staging-only Meta stub diagnostics — mounted only when stub is safely enabled.
+  const stagingRoutes = createStagingRoutes();
+  if (stagingRoutes) {
+    app.use("/api/staging/meta-stub", stagingRoutes);
+    console.log("[startup] staging Meta private-reply stub routes enabled");
+  }
 
   app.use(errorHandler);
 

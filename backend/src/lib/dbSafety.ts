@@ -1,9 +1,21 @@
 /**
  * Guards V2 schema/migrate/seed/integration-test operations so they never
- * target production (or any known hosted production-like) databases.
+ * target production (or any known hosted production) databases.
+ *
+ * Safe targets:
+ * - Local hosts with a database name containing "v2"
+ * - Approved remote V2 staging only when ALL of:
+ *   - COMMENT2DM_ALLOW_REMOTE_V2_DB=true
+ *   - database name contains both "v2" and "staging"
+ *   - hostname/database do not match known production identifiers
  */
 
-const PRODUCTION_HOST_MARKERS = [
+/** Host / name fragments that must never be targeted by V2 mutate tools. */
+export const KNOWN_PRODUCTION_IDENTIFIERS = [
+  "insta-autodm-production",
+] as const;
+
+const HOSTED_PLATFORM_MARKERS = [
   "railway.app",
   "rlwy.net",
   "railway.internal",
@@ -54,14 +66,23 @@ export function isLocalHostname(hostname: string): boolean {
 
 export function looksLikeProductionHost(hostname: string): boolean {
   const host = hostname.toLowerCase();
-  return PRODUCTION_HOST_MARKERS.some(
+  return HOSTED_PLATFORM_MARKERS.some(
     (marker) => host === marker || host.endsWith(`.${marker}`) || host.includes(marker),
   );
 }
 
+export function containsKnownProductionIdentifier(value: string): boolean {
+  const hay = value.toLowerCase();
+  return KNOWN_PRODUCTION_IDENTIFIERS.some((id) => hay.includes(id.toLowerCase()));
+}
+
+/** Remote V2 staging DB names must include both markers (case-insensitive). */
+export function isApprovedRemoteV2StagingDatabase(databaseName: string): boolean {
+  return /v2/i.test(databaseName) && /staging/i.test(databaseName);
+}
+
 /**
  * Throws if DATABASE_URL is missing or unsafe for V2 schema mutations.
- * Safe V2 targets: local hosts + database name containing "v2".
  */
 export function assertSafeV2DatabaseUrl(
   databaseUrl: string | undefined = process.env.DATABASE_URL,
@@ -74,21 +95,36 @@ export function assertSafeV2DatabaseUrl(
 
   const parts = parseDatabaseUrl(databaseUrl);
 
-  if (looksLikeProductionHost(parts.hostname)) {
+  if (
+    containsKnownProductionIdentifier(parts.hostname) ||
+    containsKnownProductionIdentifier(parts.database)
+  ) {
     throw new Error(
-      `V2 DB safety: refusing operation against production-like host "${parts.hostname}"`,
+      `V2 DB safety: refusing known production identifier in host/database ` +
+        `(host="${parts.hostname}" database="${parts.database}")`,
     );
   }
 
-  if (!isLocalHostname(parts.hostname) && process.env.COMMENT2DM_ALLOW_REMOTE_V2_DB !== "true") {
+  if (isLocalHostname(parts.hostname)) {
+    if (!/v2/i.test(parts.database)) {
+      throw new Error(
+        `V2 DB safety: database name "${parts.database}" must include "v2" (e.g. comment2dm_v2_dev)`,
+      );
+    }
+    return parts;
+  }
+
+  // Remote path — explicit override + staging+v2 markers required.
+  if (process.env.COMMENT2DM_ALLOW_REMOTE_V2_DB !== "true") {
     throw new Error(
-      `V2 DB safety: refusing non-local host "${parts.hostname}" (set COMMENT2DM_ALLOW_REMOTE_V2_DB=true only for approved V2 staging)`,
+      `V2 DB safety: refusing non-local host "${parts.hostname}" ` +
+        `(set COMMENT2DM_ALLOW_REMOTE_V2_DB=true only for approved V2 staging)`,
     );
   }
 
-  if (!/v2/i.test(parts.database)) {
+  if (!isApprovedRemoteV2StagingDatabase(parts.database)) {
     throw new Error(
-      `V2 DB safety: database name "${parts.database}" must include "v2" (e.g. comment2dm_v2_dev)`,
+      `V2 DB safety: remote database name "${parts.database}" must include both "v2" and "staging"`,
     );
   }
 
