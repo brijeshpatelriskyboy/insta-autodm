@@ -29,10 +29,10 @@ export function validateCampaignCreateForm(
     return "Start time must be before end time";
   }
   if (!Number.isInteger(values.maxClaims) || values.maxClaims <= 0) {
-    return "Quantity must be greater than 0";
+    return "Number of codes must be greater than 0";
   }
   if (values.maxClaims > FRONTEND_MAX_CAMPAIGN_CLAIMS_CAP) {
-    return `Quantity cannot exceed ${FRONTEND_MAX_CAMPAIGN_CLAIMS_CAP}`;
+    return `Number of codes cannot exceed ${FRONTEND_MAX_CAMPAIGN_CLAIMS_CAP}`;
   }
   if (!values.dmTemplate.includes("{{code}}")) {
     return "DM template must include {{code}}";

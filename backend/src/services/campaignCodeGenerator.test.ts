@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertValidCodeGenerationConfig,
   generateUniqueCampaignCodes,
+  inferAutoCodeFormatFromSample,
   MAX_CAMPAIGN_CLAIMS_CAP,
 } from "./campaignCodeGenerator";
 
@@ -21,6 +22,31 @@ describe("campaignCodeGenerator", () => {
     for (const code of codes) {
       expect(code).toMatch(/^SUNDAY-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{8}$/);
     }
+  });
+
+  it("excludes existing codes when generating a resize batch", () => {
+    const existing = generateUniqueCampaignCodes({
+      count: 5,
+      prefix: "EX",
+      length: 8,
+    });
+    const more = generateUniqueCampaignCodes({
+      count: 5,
+      prefix: "EX",
+      length: 8,
+      exclude: existing,
+    });
+    expect(more).toHaveLength(5);
+    for (const code of more) {
+      expect(existing).not.toContain(code);
+    }
+  });
+
+  it("infers AUTO format from a sample code", () => {
+    expect(inferAutoCodeFormatFromSample("SUNDAY-ABCDEFGH")).toEqual({
+      prefix: "SUNDAY",
+      length: 8,
+    });
   });
 
   it("supports deterministic generation via injected randomBytes", () => {

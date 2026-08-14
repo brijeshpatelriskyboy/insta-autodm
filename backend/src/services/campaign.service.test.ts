@@ -10,6 +10,8 @@ const {
   mockCampaignCodeCreateMany,
   mockCampaignCodeCount,
   mockCampaignCodeGroupBy,
+  mockCampaignCodeFindMany,
+  mockCampaignCodeDeleteMany,
   mockCampaignClaimCount,
   mockCampaignClaimFindMany,
   mockKeywordRuleFindFirst,
@@ -22,6 +24,8 @@ const {
   mockCampaignCodeCreateMany: vi.fn(),
   mockCampaignCodeCount: vi.fn(),
   mockCampaignCodeGroupBy: vi.fn(),
+  mockCampaignCodeFindMany: vi.fn(),
+  mockCampaignCodeDeleteMany: vi.fn(),
   mockCampaignClaimCount: vi.fn(),
   mockCampaignClaimFindMany: vi.fn(),
   mockKeywordRuleFindFirst: vi.fn(),
@@ -40,6 +44,8 @@ vi.mock("../lib/prisma", () => ({
       createMany: mockCampaignCodeCreateMany,
       count: mockCampaignCodeCount,
       groupBy: mockCampaignCodeGroupBy,
+      findMany: mockCampaignCodeFindMany,
+      deleteMany: mockCampaignCodeDeleteMany,
     },
     campaignClaim: {
       count: mockCampaignClaimCount,
@@ -308,6 +314,9 @@ describe("campaignService", () => {
 
   it("enforces edit matrix (ACTIVE cannot change keyword/maxClaims/dmTemplate)", async () => {
     expect(CAMPAIGN_EDIT_MATRIX.ACTIVE).not.toContain("dmTemplate");
+    expect(CAMPAIGN_EDIT_MATRIX.ACTIVE).not.toContain("maxClaims");
+    expect(CAMPAIGN_EDIT_MATRIX.PAUSED).not.toContain("maxClaims");
+    expect(CAMPAIGN_EDIT_MATRIX.DRAFT).toContain("maxClaims");
     expect(CAMPAIGN_EDIT_MATRIX.ARCHIVED).toEqual([]);
 
     mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, status: "ACTIVE" });
@@ -315,10 +324,147 @@ describe("campaignService", () => {
       campaignService.patch("user-1", "camp-1", { dmTemplate: "x {{code}}" }),
     ).rejects.toMatchObject({ statusCode: 400, message: /Cannot update fields/ });
 
+    mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, status: "ACTIVE" });
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 10 }),
+    ).rejects.toMatchObject({ statusCode: 400, message: /Cannot update fields/ });
+
+    mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, status: "PAUSED" });
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 10 }),
+    ).rejects.toMatchObject({ statusCode: 400, message: /Cannot update fields/ });
+
+    mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, status: "ENDED" });
+    await expect(
+      campaignService.patch("user-1", "camp-1", { name: "Nope" }),
+    ).rejects.toMatchObject({ statusCode: 400, message: /read-only/ });
+
     mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, status: "ARCHIVED" });
     await expect(
       campaignService.patch("user-1", "camp-1", { name: "Nope" }),
     ).rejects.toMatchObject({ statusCode: 400, message: /read-only/ });
+  });
+
+  it("rejects invalid DRAFT maxClaims values before resize", async () => {
+    mockCampaignFindFirst.mockResolvedValue(baseCampaign);
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 0 }),
+    ).rejects.toMatchObject({ statusCode: 400, message: /maxClaims must be an integer/ });
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 10_001 }),
+    ).rejects.toMatchObject({ statusCode: 400, message: /cannot exceed/ });
+    expect(mockTransaction).not.toHaveBeenCalled();
+  });
+
+  function mockResizeTx() {
+    const tx = {
+      campaignCode: {
+        findMany: mockCampaignCodeFindMany,
+        createMany: mockCampaignCodeCreateMany,
+        deleteMany: mockCampaignCodeDeleteMany,
+        count: mockCampaignCodeCount,
+      },
+      campaign: {
+        update: mockCampaignUpdate,
+      },
+    };
+    mockTransaction.mockImplementation(async (fn: (client: typeof tx) => unknown) =>
+      fn(tx),
+    );
+    return tx;
+  }
+
+  it("DRAFT increase appends AVAILABLE codes and updates maxClaims", async () => {
+    const draft = { ...baseCampaign, maxClaims: 3 };
+    mockCampaignFindFirst.mockResolvedValue(draft);
+    mockResizeTx();
+    mockCampaignCodeFindMany.mockResolvedValue([
+      { id: "c1", code: "SUN-AAAAAA", status: "AVAILABLE" },
+      { id: "c2", code: "SUN-BBBBBB", status: "AVAILABLE" },
+      { id: "c3", code: "SUN-CCCCCC", status: "AVAILABLE" },
+    ]);
+    setCampaignCodeGeneratorForTests(() => ["SUN-DDDDDD", "SUN-EEEEEE"]);
+    mockCampaignCodeCreateMany.mockResolvedValue({ count: 2 });
+    mockCampaignCodeCount.mockResolvedValue(5);
+    mockCampaignUpdate.mockResolvedValue({ ...draft, maxClaims: 5 });
+
+    const result = await campaignService.patch("user-1", "camp-1", { maxClaims: 5 });
+    expect(result.maxClaims).toBe(5);
+    expect(mockCampaignCodeCreateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [
+          expect.objectContaining({ code: "SUN-DDDDDD", status: "AVAILABLE" }),
+          expect.objectContaining({ code: "SUN-EEEEEE", status: "AVAILABLE" }),
+        ],
+      }),
+    );
+    expect(JSON.stringify(result)).not.toMatch(/SUN-/);
+    resetCampaignCodeGeneratorForTests();
+  });
+
+  it("DRAFT decrease deletes excess AVAILABLE codes only", async () => {
+    const draft = { ...baseCampaign, maxClaims: 3 };
+    mockCampaignFindFirst.mockResolvedValue(draft);
+    mockResizeTx();
+    mockCampaignCodeFindMany.mockResolvedValue([
+      { id: "c1", code: "SUN-AAAAAA", status: "AVAILABLE" },
+      { id: "c2", code: "SUN-BBBBBB", status: "AVAILABLE" },
+      { id: "c3", code: "SUN-CCCCCC", status: "AVAILABLE" },
+    ]);
+    mockCampaignCodeDeleteMany.mockResolvedValue({ count: 2 });
+    mockCampaignCodeCount.mockResolvedValue(1);
+    mockCampaignUpdate.mockResolvedValue({ ...draft, maxClaims: 1 });
+
+    const result = await campaignService.patch("user-1", "camp-1", { maxClaims: 1 });
+    expect(result.maxClaims).toBe(1);
+    expect(mockCampaignCodeDeleteMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: "AVAILABLE",
+          id: { in: ["c1", "c2"] },
+        }),
+      }),
+    );
+  });
+
+  it("rejects DRAFT decrease when any RESERVED code exists", async () => {
+    mockCampaignFindFirst.mockResolvedValue(baseCampaign);
+    mockResizeTx();
+    mockCampaignCodeFindMany.mockResolvedValue([
+      { id: "c1", code: "SUN-AAAAAA", status: "AVAILABLE" },
+      { id: "c2", code: "SUN-BBBBBB", status: "RESERVED" },
+      { id: "c3", code: "SUN-CCCCCC", status: "AVAILABLE" },
+    ]);
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 1 }),
+    ).rejects.toMatchObject({ statusCode: 409, message: /reserved/i });
+    expect(mockCampaignCodeDeleteMany).not.toHaveBeenCalled();
+  });
+
+  it("rejects DRAFT resize when claimedCount > 0", async () => {
+    mockCampaignFindFirst.mockResolvedValue({ ...baseCampaign, claimedCount: 1 });
+    mockResizeTx();
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 1 }),
+    ).rejects.toMatchObject({ statusCode: 409, message: /claims have been recorded/ });
+  });
+
+  it("rolls back DRAFT increase when generation fails", async () => {
+    mockCampaignFindFirst.mockResolvedValue(baseCampaign);
+    mockResizeTx();
+    mockCampaignCodeFindMany.mockResolvedValue([
+      { id: "c1", code: "SUN-AAAAAA", status: "AVAILABLE" },
+      { id: "c2", code: "SUN-BBBBBB", status: "AVAILABLE" },
+      { id: "c3", code: "SUN-CCCCCC", status: "AVAILABLE" },
+    ]);
+    setCampaignCodeGeneratorForTests(() => {
+      throw new Error("code_generation_exhausted");
+    });
+    await expect(
+      campaignService.patch("user-1", "camp-1", { maxClaims: 5 }),
+    ).rejects.toMatchObject({ statusCode: 500 });
+    expect(mockCampaignUpdate).not.toHaveBeenCalled();
+    resetCampaignCodeGeneratorForTests();
   });
 
   it("claims endpoint returns claimed codes only (joined from claim rows)", async () => {

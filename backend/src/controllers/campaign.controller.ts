@@ -34,6 +34,7 @@ const patchSchema = z
     alreadyClaimedMessage: z.string().min(1).max(2000).optional(),
     notStartedMessage: z.string().max(2000).nullable().optional(),
     endedMessage: z.string().max(2000).nullable().optional(),
+    maxClaims: z.number().int().min(1).max(10_000).optional(),
   })
   .strict();
 

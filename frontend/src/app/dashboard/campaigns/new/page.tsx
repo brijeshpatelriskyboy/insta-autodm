@@ -174,7 +174,7 @@ export default function NewCampaignPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-700">
-                Quantity (maxClaims)
+                Number of codes
               </span>
               <input
                 type="number"
@@ -185,6 +185,9 @@ export default function NewCampaignPage() {
                 onChange={(e) => setMaxClaims(Number(e.target.value))}
                 required
               />
+              <span className="mt-1 block text-xs text-slate-500">
+                How many unique codes can be claimed in this campaign.
+              </span>
             </label>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-700">
