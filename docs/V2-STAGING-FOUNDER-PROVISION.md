@@ -7,7 +7,7 @@ Agent environment has **no** Railway/Vercel tokens (user skipped). Hosted resour
 - Do **not** modify production Railway, Vercel, Postgres, Meta app, domains, env vars, or webhook.
 - Do **not** copy production `DATABASE_URL` / JWT / encryption secrets.
 - Backend start command must be `npm run start:staging` (migrate deploy via safety wrapper).
-- Never use `prisma db push --accept-data-loss` on staging.
+- Never use `prisma db push --accept-data-loss` on staging or production. Production `start:prod` is `prisma migrate deploy` only.
 - Source branch: `v2-smart-campaigns` (or merge PR #29 first so the Meta stub / safety harness is present).
 - Meta Level 1 only: stub private-reply; production-shaped signed webhook fixtures.
 

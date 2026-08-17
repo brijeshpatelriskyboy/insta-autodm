@@ -2,6 +2,10 @@
 
 Deploy the marketing site + app so anyone can sign up, log in, and subscribe via Stripe.
 
+Comment2DM is in **beta / early access**. Keep `SMART_CAMPAIGNS_ENABLED=false` in production until that feature is intentionally launched.
+
+**Database safety:** production start is `npm run start:prod` → `npx prisma migrate deploy && node dist/index.js`. Never use `prisma db push --accept-data-loss` on production or staging.
+
 | Component | Platform | URL example |
 |-----------|----------|-------------|
 | Frontend (Next.js) | **Vercel** | `https://your-app.vercel.app` |
@@ -64,12 +68,14 @@ git push -u origin main
 3. Railway detects the repo — click the new service → **Settings**:
    - **Root Directory:** `backend`
    - **Build Command:** `npm run build`
-   - **Start Command:** `npm run start:prod`
+   - **Start Command:** `npm run start:prod` (`prisma migrate deploy` then the compiled API — never `db push --accept-data-loss`)
 4. **Variables** — add from `backend/.env.production.example`:
 
 | Variable | Value |
 |----------|-------|
 | `NODE_ENV` | `production` |
+| `COMMENT2DM_DEPLOYMENT_ENV` | `production` |
+| `SMART_CAMPAIGNS_ENABLED` | `false` |
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (reference Railway Postgres) |
 | `JWT_SECRET` | random 32+ char string |
 | `CORS_ORIGIN` | `https://your-app.vercel.app` (set after Vercel deploy) |
@@ -88,7 +94,7 @@ git push -u origin main
 ### Render alternative
 
 1. **New** → **Blueprint** → connect repo (uses root `render.yaml`), or
-2. **New Web Service** → root dir `backend`, build `npm install && npm run build`, start `npm run start:prod`
+2. **New Web Service** → root dir `backend`, build `npm install && npm run build`, start `npm run start:prod` (`prisma migrate deploy && node dist/index.js`)
 3. Add the same environment variables as above
 4. Link the Render PostgreSQL database
 
@@ -239,7 +245,7 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 | Stripe checkout 503 | Add all `STRIPE_*` env vars on backend |
 | Webhook not firing | Verify endpoint URL, signing secret, and that events are selected |
 | DB connection failed | Check `DATABASE_URL`, ensure DB allows connections from Railway/Render |
-| Migrations failed | Check deploy logs — `start:prod` runs `prisma migrate deploy` |
+| Migrations failed | Check deploy logs — `start:prod` runs `npx prisma migrate deploy` then starts the API. Never use `prisma db push --accept-data-loss`. |
 | Blank page on Vercel | Check Vercel build logs; ensure root directory is `frontend` |
 
 ---
