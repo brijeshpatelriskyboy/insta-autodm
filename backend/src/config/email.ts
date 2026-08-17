@@ -4,6 +4,7 @@ export interface EmailRuntimeConfig {
   resendApiKey: string | undefined;
   emailFrom: string | undefined;
   frontendUrl: string;
+  supportEmail: string | undefined;
 }
 
 export function readEmailRuntimeConfig(
@@ -19,6 +20,7 @@ export function readEmailRuntimeConfig(
     resendApiKey: processEnv.RESEND_API_KEY?.trim() || undefined,
     emailFrom: processEnv.EMAIL_FROM?.trim() || undefined,
     frontendUrl,
+    supportEmail: processEnv.SUPPORT_EMAIL?.trim() || undefined,
   };
 }
 
@@ -59,6 +61,35 @@ export function isEmailDeliveryConfigured(
   return true;
 }
 
+export function isSupportEmailConfigured(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): boolean {
+  const value = readEmailRuntimeConfig(processEnv).supportEmail;
+  return Boolean(
+    value &&
+      value.includes("@") &&
+      !/[\r\n\0]/.test(value) &&
+      value.length <= 254,
+  );
+}
+
+/**
+ * Contact delivery needs a support inbox plus the same Resend/From setup as
+ * other transactional mail. Tests use the in-memory provider, so only
+ * SUPPORT_EMAIL is required there.
+ */
+export function isContactDeliveryConfigured(
+  processEnv: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (!isSupportEmailConfigured(processEnv)) {
+    return false;
+  }
+  if ((processEnv.NODE_ENV || env.NODE_ENV) === "test") {
+    return true;
+  }
+  return isEmailDeliveryConfigured(processEnv);
+}
+
 /** Safe for logs — never includes API keys, tokens, or reset URLs. */
 export function emailDeliveryStatusForLogs(
   processEnv: NodeJS.ProcessEnv = process.env,
@@ -67,6 +98,7 @@ export function emailDeliveryStatusForLogs(
   hasResendApiKey: boolean;
   hasEmailFrom: boolean;
   hasFrontendUrl: boolean;
+  hasSupportEmail: boolean;
 } {
   const config = readEmailRuntimeConfig(processEnv);
   return {
@@ -74,5 +106,6 @@ export function emailDeliveryStatusForLogs(
     hasResendApiKey: Boolean(config.resendApiKey),
     hasEmailFrom: Boolean(config.emailFrom),
     hasFrontendUrl: Boolean(config.frontendUrl),
+    hasSupportEmail: isSupportEmailConfigured(processEnv),
   };
 }

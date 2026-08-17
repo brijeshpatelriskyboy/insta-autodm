@@ -3,7 +3,9 @@ import cors from "cors";
 import { corsOptions } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
 import { metaWebhookSignatureMiddleware } from "./middleware/metaWebhookSignature";
+import accountRoutes from "./routes/account.routes";
 import authRoutes from "./routes/auth.routes";
+import contactRoutes from "./routes/contact.routes";
 import keywordRuleRoutes from "./routes/keywordRule.routes";
 import analyticsRoutes from "./routes/analytics.routes";
 import webhookRoutes from "./routes/webhook.routes";
@@ -48,12 +50,16 @@ export function createApp() {
   );
 
   app.use(express.json());
+  // Meta data-deletion / deauthorize callbacks POST application/x-www-form-urlencoded.
+  app.use(express.urlencoded({ extended: false }));
 
   // Public Instagram OAuth callback — no auth; must stay registered in all envs.
   // Final production path: GET /api/meta/callback
   app.use("/api/meta", metaRoutes);
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/account", accountRoutes);
+  app.use("/api/contact", contactRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
   app.use("/api/analytics", analyticsRoutes);
   // GET /api/webhooks/instagram verification challenge only (POST handled above).

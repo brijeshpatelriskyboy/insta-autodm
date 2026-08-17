@@ -302,3 +302,21 @@ model CampaignClaim {
   @@index([campaignId, claimedAt])
   @@map("campaign_claims")
 }
+
+/**
+ * Meta Platform data-deletion callback tracking.
+ * Confirmation codes are shown on a public status URL. No password or token secrets.
+ */
+model MetaDataDeletionRequest {
+  id                 String    @id @default(cuid())
+  confirmationCode   String    @unique
+  metaUserId         String
+  userId             String?
+  instagramAccountId String?
+  status             String    @default("received")
+  createdAt          DateTime  @default(now())
+  completedAt        DateTime?
+
+  @@index([metaUserId])
+  @@map("meta_data_deletion_requests")
+}

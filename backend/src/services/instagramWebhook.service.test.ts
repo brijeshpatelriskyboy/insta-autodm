@@ -592,4 +592,21 @@ describe("processWebhookPayload private reply flow", () => {
       }),
     );
   });
+
+  it("does not send when no connected Instagram account matches (disconnected integrations)", async () => {
+    mockFindFirstAccount.mockResolvedValue(null);
+
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+
+    expect(result.sent).toBe(0);
+    expect(result.matched).toBe(0);
+    expect(mockSendPrivateReply).not.toHaveBeenCalled();
+    expect(mockFindFirstAccount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          connectionStatus: "connected",
+        }),
+      }),
+    );
+  });
 });
