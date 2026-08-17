@@ -8,17 +8,20 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api } from "@/lib/api";
-import { validateResetPasswordForm } from "@/lib/auth-forms";
+import {
+  INVALID_OR_EXPIRED_RESET_MESSAGE,
+  friendlyResetPasswordError,
+  getResetTokenFromQuery,
+  validateResetPasswordForm,
+} from "@/lib/auth-forms";
 
 function ResetPasswordForm() {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const token = getResetTokenFromQuery(searchParams);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState(
-    token ? "" : "This reset link is missing or invalid.",
-  );
+  const [error, setError] = useState(token ? "" : INVALID_OR_EXPIRED_RESET_MESSAGE);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +33,7 @@ function ResetPasswordForm() {
       confirmPassword,
     });
     if (validationError) {
-      setError(validationError);
+      setError(friendlyResetPasswordError(validationError));
       return;
     }
 
@@ -41,7 +44,9 @@ function ResetPasswordForm() {
       setSuccess(true);
       toast.success("Password updated");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Reset failed";
+      const message = friendlyResetPasswordError(
+        err instanceof Error ? err.message : "Reset failed",
+      );
       setError(message);
       toast.error(message);
     } finally {
@@ -97,6 +102,11 @@ function ResetPasswordForm() {
           <Button type="submit" className="w-full" disabled={!token || loading} size="lg">
             {loading ? "Please wait..." : "Update password"}
           </Button>
+          <p className="text-center text-sm text-slate-500">
+            <Link href="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700">
+              Request a new reset link
+            </Link>
+          </p>
           <p className="text-center text-sm text-slate-500">
             <Link href="/login" className="font-medium text-brand-600 hover:text-brand-700">
               Back to sign in
