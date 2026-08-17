@@ -10,6 +10,7 @@
  *   COMMENT2DM_ALLOW_REMOTE_V2_DB=true  (for remote staging DB)
  *   JWT_SECRET                   — same as staging backend (for token encrypt)
  *   INSTAGRAM_APP_SECRET         — same as staging backend (for webhook HMAC)
+ *   STAGING_META_STUB_SECRET     — same as staging backend (stub diagnostic key)
  *
  * Optional:
  *   STAGING_SKIP_CONCURRENCY=1   — skip 150-event concurrency suite
@@ -20,7 +21,16 @@ import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
 import { assertSafeV2DatabaseUrl } from "../src/lib/dbSafety";
 import { encryptToken } from "../src/utils/tokenCrypto";
-import { computeMetaWebhookSignature } from "../src/utils/metaWebhookSignature";
+import {
+  assert,
+  buildCommentWebhookPayload,
+  fail,
+  postInstagramWebhook,
+  rejectProductionUrl,
+  requireStagingStubSecret,
+  stagingHttp,
+  type Json,
+} from "./staging-e2e-shared";
 
 const API = (process.env.STAGING_API_URL ?? "").replace(/\/$/, "");
 const APP_SECRET = process.env.INSTAGRAM_APP_SECRET?.trim() || "";
@@ -29,48 +39,15 @@ const PASSWORD = process.env.STAGING_E2E_PASSWORD ?? `stage_${randomBytes(8).toS
 const IG_USER_ID = process.env.STAGING_IG_USER_ID ?? "staging_ig_user_v2_001";
 const MEDIA_ID = "staging_media_v2_001";
 
-type Json = Record<string, unknown>;
-
-function fail(message: string): never {
-  console.error(`FAIL: ${message}`);
-  process.exit(1);
-}
-
-function assert(condition: unknown, message: string): asserts condition {
-  if (!condition) fail(message);
-}
-
-function rejectProductionUrl(label: string, value: string): void {
-  const lower = value.toLowerCase();
-  if (lower.includes("insta-autodm-production")) {
-    fail(`${label} points at production identifier — aborting`);
-  }
-}
-
 async function http(
   method: string,
   path: string,
   options: { token?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<{ status: number; json: Json }> {
-  const headers: Record<string, string> = {
-    ...(options.headers ?? {}),
-  };
-  if (options.token) headers.Authorization = `Bearer ${options.token}`;
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
-
-  const res = await fetch(`${API}${path}`, {
-    method,
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+  return stagingHttp(API, method, path, {
+    ...options,
+    stubSecret: requireStagingStubSecret(),
   });
-  const text = await res.text();
-  let json: Json = {};
-  try {
-    json = text ? (JSON.parse(text) as Json) : {};
-  } catch {
-    json = { raw: text };
-  }
-  return { status: res.status, json };
 }
 
 function buildCommentWebhook(params: {
@@ -79,46 +56,17 @@ function buildCommentWebhook(params: {
   commenterId?: string | null;
   commenterUsername?: string;
 }): Buffer {
-  const from: Record<string, string> = {};
-  if (params.commenterId) from.id = params.commenterId;
-  if (params.commenterUsername) from.username = params.commenterUsername;
-
-  const payload = {
-    object: "instagram",
-    entry: [
-      {
-        id: IG_USER_ID,
-        time: Date.now(),
-        changes: [
-          {
-            field: "comments",
-            value: {
-              id: params.commentId,
-              text: params.text,
-              media: { id: MEDIA_ID },
-              from: Object.keys(from).length ? from : undefined,
-            },
-          },
-        ],
-      },
-    ],
-  };
-  return Buffer.from(JSON.stringify(payload), "utf8");
+  return buildCommentWebhookPayload({
+    ...params,
+    igUserId: IG_USER_ID,
+    mediaId: MEDIA_ID,
+  });
 }
 
 async function postWebhook(raw: Buffer): Promise<Json> {
-  const sig = `sha256=${computeMetaWebhookSignature(raw, APP_SECRET)}`;
-  const res = await fetch(`${API}/api/webhooks/instagram`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Hub-Signature-256": sig,
-    },
-    body: new Uint8Array(raw),
-  });
-  const json = (await res.json()) as Json;
-  assert(res.status === 200, `webhook HTTP ${res.status}`);
-  return json;
+  const result = await postInstagramWebhook(API, APP_SECRET, raw);
+  assert(result.status === 200, `webhook HTTP ${result.status}`);
+  return result.json;
 }
 
 async function main(): Promise<void> {
@@ -129,6 +77,7 @@ async function main(): Promise<void> {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
     fail("JWT_SECRET must match staging backend (min 16 chars)");
   }
+  requireStagingStubSecret();
 
   rejectProductionUrl("STAGING_API_URL", API);
   const dbParts = assertSafeV2DatabaseUrl(process.env.DATABASE_URL);

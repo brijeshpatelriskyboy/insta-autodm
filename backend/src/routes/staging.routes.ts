@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { Router } from "express";
 import { AppError } from "../utils/errors";
+import { requireStagingStubDiagnosticAuth } from "../middleware/stagingStubAuth";
 import {
   assertMetaPrivateReplyStubMayRun,
   configureMetaPrivateReplyStub,
@@ -10,8 +11,9 @@ import {
 } from "../services/metaPrivateReplyStub";
 
 /**
- * Staging-only diagnostics for Level 1 Meta stub tests.
+ * Staging-only diagnostics for Level 1/2 Meta stub tests.
  * Mount only when the stub is actively enabled — never on production.
+ * Diagnostic routes additionally require STAGING_META_STUB_SECRET.
  */
 function requireMetaStub(req: Request, _res: Response, next: NextFunction): void {
   try {
@@ -33,6 +35,7 @@ function requireMetaStub(req: Request, _res: Response, next: NextFunction): void
 
 const router = Router();
 router.use(requireMetaStub);
+router.use(requireStagingStubDiagnosticAuth);
 
 router.get("/status", (_req, res) => {
   res.json({

@@ -28,6 +28,7 @@ Never use `start:prod` / `prisma db push --accept-data-loss` on staging.
 - Do not change production Meta app or webhook URL.
 - Enable staging stub (`META_PRIVATE_REPLY_STUB` + `COMMENT2DM_DEPLOYMENT_ENV=staging` + `COMMENT2DM_ALLOW_META_STUB`).
 - Use signed webhook fixtures; stub private-reply only.
+- Diagnostic stub routes (`/api/staging/meta-stub/*`) require `STAGING_META_STUB_SECRET` (header `X-Comment2DM-Stub-Key`).
 
 ## Level 1 E2E
 
@@ -37,6 +38,7 @@ export DATABASE_URL=<staging-postgres-url>
 export COMMENT2DM_ALLOW_REMOTE_V2_DB=true
 export JWT_SECRET=<same-as-staging>
 export INSTAGRAM_APP_SECRET=<same-as-staging>
+export STAGING_META_STUB_SECRET=<same-as-staging>
 cd backend && npm run staging:level1-e2e
 ```
 
