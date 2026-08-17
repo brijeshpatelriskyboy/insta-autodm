@@ -39,12 +39,13 @@ Agent environment has **no** Railway/Vercel tokens (user skipped). Hosted resour
 | `INSTAGRAM_APP_ID` | Staging fixture signing id (can reuse expected app id shape) |
 | `INSTAGRAM_APP_SECRET` | **Staging-only** HMAC secret for fixtures (not production webhook secret reuse required) |
 | `META_VERIFY_TOKEN` | Staging-only verify token |
+| `STAGING_META_STUB_SECRET` | Staging-only diagnostic stub key (min 16). Required for `/api/staging/meta-stub/*` |
 | `NODE_ENV` | `production` |
 | `PORT` | `4000` (or Railway default) |
 
 5. Confirm public URL is **not** `insta-autodm-production.up.railway.app`
 6. Confirm `/health` returns `"deploymentEnv":"staging"`
-7. Confirm `/api/staging/meta-stub/status` shows `stubActive: true`
+7. Confirm `/api/staging/meta-stub/status` with header `X-Comment2DM-Stub-Key` (value = `STAGING_META_STUB_SECRET`) shows `stubActive: true`. Unauthenticated calls must be 401.
 
 ## 2) Migrations
 
@@ -87,14 +88,23 @@ export DATABASE_URL='postgresql://…/comment2dm_v2_staging…'
 export COMMENT2DM_ALLOW_REMOTE_V2_DB=true
 export JWT_SECRET='<same as staging Railway>'
 export INSTAGRAM_APP_SECRET='<same as staging Railway>'
+export STAGING_META_STUB_SECRET='<same as staging Railway>'
 npm run staging:level1-e2e
 ```
+
+Level 2 (Meta-free operator/isolation/security) uses the same env:
+
+```bash
+npm run staging:level2-e2e
+```
+
+See [`V2-STAGING-LEVEL2.md`](./V2-STAGING-LEVEL2.md).
 
 ## 6) Meta
 
 - Do **not** change production Meta app or webhook URL.
-- Do **not** create Level 2 staging Meta app yet.
+- Do **not** create a staging Meta app for Level 2. Level 2 stays on the private-reply stub.
 
 ## 7) After hosted E2E passes
 
-Reassess Level 2. Default recommendation until hosted proof exists: **HOLD**.
+Level 2 can run against the same isolated staging stack. Do not deploy to production.

@@ -311,6 +311,76 @@ describeV2("SmartCampaignResponseService (V2 PG + mocked Meta)", () => {
     expect(dm2row.status).toBe("sent");
   });
 
+  it("failed send then NEW comment from same commenter → already-claimed, no second allocation", async () => {
+    const fixture = await seedCampaign({ maxClaims: 3, status: "ACTIVE" });
+    const campaign = await prisma.campaign.update({
+      where: { id: fixture.campaign.id },
+      data: { alreadyClaimedMessage: "You already claimed. Your code is {{code}}" },
+    });
+
+    const dmFail = await createDmEvent({
+      userId: fixture.user.id,
+      accountId: fixture.account.id,
+      commentId: "c-fail-first",
+      ruleId: fixture.rule.id,
+    });
+    const failSend = vi.fn().mockRejectedValue(new Error("Meta timeout"));
+    const failService = makeService(failSend);
+    await failService.execute(
+      baseParams(fixture, campaign, dmFail.id, {
+        commentId: "c-fail-first",
+        commenterId: "ig-fail-user",
+      }),
+    );
+
+    const failedClaim = await prisma.campaignClaim.findFirstOrThrow({
+      where: { sourceCommentId: "c-fail-first" },
+      include: { campaignCode: true },
+    });
+    expect(failedClaim.deliveryStatus).toBe("FAILED");
+    expect(failedClaim.campaignCode.status).toBe("RESERVED");
+    const reservedCode = failedClaim.campaignCode.code;
+    const claimedAfterFail = (
+      await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } })
+    ).claimedCount;
+
+    const dmNew = await createDmEvent({
+      userId: fixture.user.id,
+      accountId: fixture.account.id,
+      commentId: "c-fail-second",
+      ruleId: fixture.rule.id,
+    });
+    const okSend = vi.fn().mockResolvedValue({ messageId: "mid-reminder", recipientId: null });
+    const okService = makeService(okSend);
+    const reminder = await okService.execute(
+      baseParams(fixture, campaign, dmNew.id, {
+        commentId: "c-fail-second",
+        commenterId: "ig-fail-user",
+      }),
+    );
+
+    expect(reminder.campaignOutcome).toBe("ALREADY_CLAIMED");
+    expect(reminder.sent).toBe(true);
+    expect(okSend.mock.calls[0]?.[0]?.messageText).toContain(reservedCode);
+    expect(await prisma.campaignClaim.count({ where: { campaignId: campaign.id } })).toBe(1);
+    expect(
+      await prisma.campaignClaim.findFirst({
+        where: { campaignId: campaign.id, sourceCommentId: "c-fail-second" },
+      }),
+    ).toBeNull();
+
+    const original = await prisma.campaignClaim.findFirstOrThrow({
+      where: { sourceCommentId: "c-fail-first" },
+      include: { campaignCode: true },
+    });
+    expect(original.deliveryStatus).toBe("FAILED");
+    expect(original.campaignCode.status).toBe("RESERVED");
+    expect(original.campaignCode.status).not.toBe("AVAILABLE");
+    expect(
+      (await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } })).claimedCount,
+    ).toBe(claimedAfterFail);
+  });
+
   it("9-13. sold out / not started / ended / paused / missing identity messages; no code consumed", async () => {
     const sold = await seedCampaign({
       maxClaims: 2,
