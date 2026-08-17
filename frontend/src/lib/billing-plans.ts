@@ -3,7 +3,12 @@ export const BILLING_PLANS = [
     slug: "starter" as const,
     name: "Starter",
     price: 9.9,
-    features: ["1 Instagram account", "3 keyword rules", "500 DMs / month", "Basic analytics"],
+    features: [
+      "Keyword comment → DM automation",
+      "Keyword rules",
+      "1 Instagram professional account",
+      "Activity log and DM send counts",
+    ],
   },
   {
     slug: "creator" as const,
@@ -11,11 +16,10 @@ export const BILLING_PLANS = [
     price: 19,
     popular: true,
     features: [
-      "2 Instagram accounts",
-      "15 keyword rules",
-      "5,000 DMs / month",
-      "Advanced analytics",
-      "Activity tracking",
+      "Keyword comment → DM automation",
+      "Keyword rules",
+      "1 Instagram professional account",
+      "Activity log and DM send counts",
     ],
   },
   {
@@ -23,12 +27,10 @@ export const BILLING_PLANS = [
     name: "Pro",
     price: 49,
     features: [
-      "5 Instagram accounts",
-      "Unlimited keyword rules",
-      "25,000 DMs / month",
-      "Full analytics suite",
-      "Team seats",
-      "API access",
+      "Keyword comment → DM automation",
+      "Keyword rules",
+      "1 Instagram professional account",
+      "Activity log and DM send counts",
     ],
   },
 ];

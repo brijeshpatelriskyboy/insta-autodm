@@ -41,7 +41,7 @@ export function HeroSection() {
           >
             <Link href="/register">
               <Button size="lg">
-                Start Free Trial
+                Create account
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -79,7 +79,7 @@ export function HeroSection() {
                 <div className="h-3 w-3 rounded-full bg-emerald-400/80" />
               </div>
               <span className="ml-2 text-xs font-medium text-slate-500">
-                Comment2DM Dashboard
+                Product preview
               </span>
             </div>
             <div className="grid gap-0 sm:grid-cols-5">
@@ -102,36 +102,33 @@ export function HeroSection() {
               <div className="bg-surface-muted p-6 sm:col-span-4">
                 <div className="grid gap-4 sm:grid-cols-3">
                   {[
-                    { label: "DMs Sent", value: "2,847", trend: "+42%" },
-                    { label: "Leads", value: "634", trend: "+31%" },
-                    { label: "Conversion", value: "22.3%", trend: "+4.7%" },
+                    { label: "Keyword rules", value: "GUIDE, START" },
+                    { label: "DMs sent", value: "Your account" },
+                    { label: "Status", value: "Beta" },
                   ].map((kpi) => (
                     <div
                       key={kpi.label}
                       className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm"
                     >
                       <p className="text-xs font-medium text-slate-500">{kpi.label}</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-900">
+                      <p className="mt-1 text-lg font-semibold text-slate-900">
                         {kpi.value}
-                      </p>
-                      <p className="mt-1 text-xs font-medium text-emerald-600">
-                        {kpi.trend}
                       </p>
                     </div>
                   ))}
                 </div>
                 <div className="mt-4 rounded-xl border border-slate-200/80 bg-white p-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-slate-900">Live Activity</p>
-                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                      Live
+                    <p className="text-sm font-semibold text-slate-900">How a send looks</p>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                      Example
                     </span>
                   </div>
                   <div className="mt-3 space-y-2">
                     {[
-                      '@maya_k commented "GUIDE" → DM sent',
-                      '@coach_alex commented "START" → DM sent',
-                      '@priya.s commented "PDF" → Lead captured',
+                      'Follower comments "GUIDE"',
+                      "Keyword rule matches",
+                      "Comment2DM sends your DM",
                     ].map((line) => (
                       <div
                         key={line}

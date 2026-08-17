@@ -18,7 +18,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
           <SectionHeading
             eyebrow="Pricing"
             title="Simple, transparent pricing"
-            description="Start free for 14 days. Scale as your audience grows. No hidden fees."
+            description="Start in beta. Same product on every plan while we finish Meta App Review — plan names are billing labels, not enforced limits."
           />
         )}
 
@@ -27,7 +27,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
             showHeading ? "mt-6" : "mx-auto max-w-2xl px-4 sm:px-6 lg:px-8"
           }`}
         >
-          Early Access Pricing — Instagram automation launching soon.
+          Early access — Starter, Creator, and Pro are prices only. Feature limits, extra Instagram accounts, team seats, and API access are not available yet.
         </p>
 
         <div

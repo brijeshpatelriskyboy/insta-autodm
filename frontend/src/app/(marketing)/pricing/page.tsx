@@ -6,18 +6,17 @@ import { SectionHeading } from "@/components/marketing/SectionHeading";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing for Instagram DM automation. Starter, Creator, and Pro plans with a 14-day free trial.",
+    "Early-access pricing for Comment2DM Instagram comment-to-DM automation. Starter, Creator, and Pro are billing options — the same beta product on every plan.",
 };
 
 const comparison = [
-  { feature: "Instagram accounts", starter: "1", creator: "2", pro: "5" },
-  { feature: "Keyword rules", starter: "3", creator: "15", pro: "Unlimited" },
-  { feature: "DMs per month", starter: "500", creator: "5,000", pro: "25,000" },
-  { feature: "Analytics", starter: "Basic", creator: "Advanced", pro: "Full suite" },
-  { feature: "Activity tracking", starter: "—", creator: "✓", pro: "✓" },
-  { feature: "Team seats", starter: "1", creator: "1", pro: "3" },
-  { feature: "API access", starter: "—", creator: "—", pro: "✓" },
-  { feature: "Support", starter: "Email", creator: "Priority", pro: "Dedicated" },
+  { feature: "Keyword comment → DM", starter: "✓", creator: "✓", pro: "✓" },
+  { feature: "Keyword rules", starter: "Included", creator: "Included", pro: "Included" },
+  { feature: "Instagram accounts", starter: "1", creator: "1", pro: "1" },
+  { feature: "Activity log", starter: "✓", creator: "✓", pro: "✓" },
+  { feature: "DM send counts", starter: "✓", creator: "✓", pro: "✓" },
+  { feature: "Plan limits enforced", starter: "Not yet", creator: "Not yet", pro: "Not yet" },
+  { feature: "Smart Campaigns", starter: "Not GA", creator: "Not GA", pro: "Not GA" },
 ];
 
 export default function PricingPage() {
@@ -28,10 +27,10 @@ export default function PricingPage() {
           <SectionHeading
             eyebrow="Pricing"
             title="Choose the plan that fits your growth"
-            description="All plans include a 14-day free trial. Upgrade, downgrade, or cancel anytime."
+            description="Comment2DM is in beta. Starter, Creator, and Pro are prices — every account currently gets the same product. There is no 14-day free trial."
           />
           <p className="mx-auto mt-6 max-w-2xl text-center text-sm font-medium text-amber-800">
-            Early Access Pricing — Instagram automation launching soon.
+            Early access — plan names are billing labels. Feature limits, extra Instagram accounts, team seats, and API access are not available yet.
           </p>
         </div>
       </section>
@@ -42,7 +41,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             title="Compare plans"
-            description="See exactly what's included in each tier."
+            description="See what is actually included today versus what is still coming."
           />
           <div className="mt-12 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-left text-sm">

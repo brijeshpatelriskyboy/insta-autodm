@@ -22,7 +22,7 @@ const steps = [
   { label: "Comment posted", icon: MessageCircle },
   { label: "Keyword detected", icon: Search },
   { label: "DM sent", icon: Send },
-  { label: "Lead captured", icon: UserCheck },
+  { label: "Activity logged", icon: UserCheck },
 ];
 
 const STEP_DURATION_MS = 2200;
@@ -234,13 +234,9 @@ export function InteractiveDemoSection() {
                     <p className="text-sm leading-relaxed text-slate-700">
                       Hey Maya! Here&apos;s your free guide as promised
                     </p>
-                    <a
-                      href="#"
-                      className="mt-2 block text-sm font-medium text-brand-600 hover:text-brand-700"
-                      onClick={(e) => e.preventDefault()}
-                    >
+                    <span className="mt-2 block text-sm font-medium text-brand-600">
                       comment2dm.com/guide
-                    </a>
+                    </span>
                     <p className="mt-2 text-sm text-slate-600">
                       Let me know if you have any questions!
                     </p>
@@ -254,7 +250,7 @@ export function InteractiveDemoSection() {
             </div>
           </div>
 
-          {/* Lead captured notification */}
+          {/* Activity logged notification */}
           <div
             className={`mx-auto mt-6 max-w-md transition-all duration-700 ${
               step >= 4
@@ -267,10 +263,11 @@ export function InteractiveDemoSection() {
                 <UserCheck className="h-5 w-5" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-emerald-900">Lead captured</p>
+                <p className="text-sm font-semibold text-emerald-900">DM sent</p>
                 <p className="text-sm text-emerald-700">
-                  <span className="font-medium">@maya_k</span> · keyword{" "}
-                  <span className="font-mono font-semibold">GUIDE</span> · added to dashboard
+                  Keyword{" "}
+                  <span className="font-mono font-semibold">GUIDE</span> matched ·
+                  logged in activity
                 </p>
               </div>
               <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">

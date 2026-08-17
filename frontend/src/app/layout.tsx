@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | Comment2DM",
   },
   description:
-    "Automatically DM people who comment on your posts, capture leads, and grow your audience on autopilot.",
+    "Automatically DM people who comment a keyword on your Instagram posts. Comment2DM is in beta for professional accounts.",
   icons: {
     icon: "/favicon.svg",
     apple: "/icon.svg",

@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { Mail, MapPin, MessageSquare } from "lucide-react";
+import { Mail } from "lucide-react";
 import { AnimateIn } from "@/components/marketing/AnimateIn";
 import { ContactForm } from "@/components/marketing/ContactForm";
 import { SectionHeading } from "@/components/marketing/SectionHeading";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description:
-    "Get in touch with the Comment2DM Team. Questions about pricing, enterprise plans, or partnerships.",
+  description: "Email the Comment2DM team during beta.",
 };
 
 const contactInfo = [
@@ -16,18 +15,6 @@ const contactInfo = [
     title: "Email",
     value: "hello@comment2dm.com",
     href: "mailto:hello@comment2dm.com",
-  },
-  {
-    icon: MessageSquare,
-    title: "Live chat",
-    value: "Mon–Fri, 9am–6pm EST",
-    href: null,
-  },
-  {
-    icon: MapPin,
-    title: "Office",
-    value: "San Francisco, CA",
-    href: null,
   },
 ];
 
@@ -38,8 +25,8 @@ export default function ContactPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Contact"
-            title="We'd love to hear from you"
-            description="Questions about pricing, enterprise plans, or partnerships? Send us a message."
+            title="Email us during beta"
+            description="Questions about Comment2DM? Use email — we do not offer live chat, a 24-hour SLA, or a dedicated account manager yet."
           />
         </div>
       </section>
@@ -49,8 +36,8 @@ export default function ContactPage() {
           <div>
             <h2 className="text-xl font-semibold text-slate-900">Get in touch</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              Our team typically responds within 24 hours. For urgent issues,
-              Pro customers can reach their dedicated account manager directly.
+              This contact page does not submit a form to our servers. Opening
+              email is the supported path until we add a real inbox integration.
             </p>
 
             <div className="mt-8 space-y-6">
@@ -64,16 +51,12 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                        {item.href ? (
-                          <a
-                            href={item.href}
-                            className="text-sm text-brand-600 hover:text-brand-700"
-                          >
-                            {item.value}
-                          </a>
-                        ) : (
-                          <p className="text-sm text-slate-600">{item.value}</p>
-                        )}
+                        <a
+                          href={item.href}
+                          className="text-sm text-brand-600 hover:text-brand-700"
+                        >
+                          {item.value}
+                        </a>
                       </div>
                     </div>
                   </AnimateIn>
