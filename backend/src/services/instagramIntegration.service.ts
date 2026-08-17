@@ -1,5 +1,9 @@
 import { Prisma } from "@prisma/client";
 import { INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS } from "../config/meta";
+import {
+  isMockInstagramConnectAllowed,
+  MOCK_INSTAGRAM_PRODUCTION_REFUSED,
+} from "../config/mockInstagram";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { decryptToken, encryptToken } from "../utils/tokenCrypto";
@@ -272,6 +276,10 @@ export const instagramIntegrationService = {
   },
 
   async connectMock(userId: string) {
+    if (!isMockInstagramConnectAllowed()) {
+      throw new AppError(403, MOCK_INSTAGRAM_PRODUCTION_REFUSED);
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, email: true, name: true },
