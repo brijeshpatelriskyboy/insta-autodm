@@ -2,7 +2,7 @@ export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_RESET_TTL_MS = 45 * 60 * 1000;
 
 export const GENERIC_FORGOT_PASSWORD_MESSAGE =
-  "If an account exists for that email, reset instructions can be sent.";
+  "If an account exists for that email, we've sent password reset instructions.";
 
 export const INVALID_RESET_TOKEN_MESSAGE = "Invalid or expired reset token";
 

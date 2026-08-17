@@ -41,6 +41,12 @@ vi.mock("../lib/prisma", () => ({
 }));
 
 import { authService, resetTokenInternalsForTests } from "./auth.service";
+import {
+  getMemoryEmailProvider,
+  resetEmailProviderForTests,
+  setEmailProviderForTests,
+} from "../email/emailService";
+import { EmailDeliveryError } from "../email/types";
 
 const userRow = {
   id: "user-1",
@@ -52,6 +58,8 @@ const userRow = {
 describe("authService", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetEmailProviderForTests();
+    process.env.FRONTEND_URL = "https://app.example.test";
     const bcrypt = await import("bcryptjs");
     userRow.passwordHash = await bcrypt.hash("old-password-9", 10);
     mockTransaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) =>
@@ -94,7 +102,7 @@ describe("authService", () => {
   });
 
   it("forgotPassword returns the same payload for known and unknown emails", async () => {
-    mockUserFindUnique.mockResolvedValueOnce({ id: "user-1" });
+    mockUserFindUnique.mockResolvedValueOnce({ id: "user-1", email: "ada@example.com" });
     mockTokenUpdateMany.mockResolvedValue({ count: 0 });
     mockTokenCreate.mockResolvedValue({ id: "tok-1" });
 
@@ -106,7 +114,97 @@ describe("authService", () => {
     expect(known).toEqual({ message: GENERIC_FORGOT_PASSWORD_MESSAGE });
     expect(unknown).toEqual(known);
     expect(JSON.stringify(known)).not.toMatch(/token/i);
+    expect(JSON.stringify(known)).not.toContain("reset-password");
     expect(mockTokenCreate).toHaveBeenCalledTimes(1);
+    expect(getMemoryEmailProvider().sent).toHaveLength(1);
+  });
+
+  it("sends one reset email for an existing account using FRONTEND_URL", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    mockUserFindUnique.mockResolvedValue({ id: "user-1", email: "ada@example.com" });
+    mockTokenUpdateMany.mockResolvedValue({ count: 0 });
+    mockTokenCreate.mockResolvedValue({ id: "tok-1" });
+
+    const result = await authService.forgotPassword("ada@example.com");
+    const sent = getMemoryEmailProvider().sent;
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.kind).toBe("password_reset");
+    expect(sent[0]?.to).toBe("ada@example.com");
+    expect(sent[0]?.text).toMatch(/https:\/\/app\.example\.test\/reset-password\?token=/);
+    expect(sent[0]?.text).toMatch(/45 minutes/);
+    const created = mockTokenCreate.mock.calls[0]?.[0]?.data;
+    expect(created.expiresAt.getTime()).toBeGreaterThan(Date.now() + 44 * 60 * 1000);
+    expect(created.expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + PASSWORD_RESET_TTL_MS + 1000);
+    expect(result).toEqual({ message: GENERIC_FORGOT_PASSWORD_MESSAGE });
+    expect(JSON.stringify(result)).not.toContain("reset-password");
+
+    const tokenMatch = sent[0]?.text.match(/token=([A-Za-z0-9_-]+)/);
+    const plaintext = tokenMatch?.[1] ?? "";
+    expect(plaintext.length).toBeGreaterThan(8);
+    const logged = info.mock.calls.map((call) => JSON.stringify(call)).join("\n");
+    expect(logged).not.toContain(plaintext);
+    expect(logged).not.toContain("/reset-password?");
+    expect(logged).not.toContain("re_");
+    info.mockRestore();
+  });
+
+  it("does not send email for an unknown address", async () => {
+    mockUserFindUnique.mockResolvedValue(null);
+    const result = await authService.forgotPassword("nobody@example.com");
+    expect(result).toEqual({ message: GENERIC_FORGOT_PASSWORD_MESSAGE });
+    expect(getMemoryEmailProvider().sent).toHaveLength(0);
+    expect(mockTokenCreate).not.toHaveBeenCalled();
+  });
+
+  it("invalidates the token and keeps the generic response when the provider fails", async () => {
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    setEmailProviderForTests({
+      name: "failing",
+      send: async () => {
+        throw new EmailDeliveryError("provider_failed", 403);
+      },
+    });
+    mockUserFindUnique.mockResolvedValue({ id: "user-1", email: "ada@example.com" });
+    mockTokenUpdateMany.mockResolvedValue({ count: 1 });
+    mockTokenCreate.mockResolvedValue({ id: "tok-1" });
+
+    const result = await authService.forgotPassword("ada@example.com");
+    expect(result).toEqual({ message: GENERIC_FORGOT_PASSWORD_MESSAGE });
+    expect(JSON.stringify(result)).not.toContain("403");
+    expect(JSON.stringify(result)).not.toContain("Resend");
+    expect(mockTokenUpdateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ usedAt: expect.any(Date) }),
+      }),
+    );
+    const logged = info.mock.calls.map((call) => JSON.stringify(call)).join("\n");
+    expect(logged).toMatch(/failed/);
+    expect(logged).not.toContain("/reset-password?");
+    info.mockRestore();
+  });
+
+  it("fails safely in production when email config is missing and invalidates the token", async () => {
+    const previous = process.env.NODE_ENV;
+    process.env.NODE_ENV = "production";
+    delete process.env.RESEND_API_KEY;
+    delete process.env.EMAIL_FROM;
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    mockUserFindUnique.mockResolvedValue({ id: "user-1", email: "ada@example.com" });
+    mockTokenUpdateMany.mockResolvedValue({ count: 1 });
+    mockTokenCreate.mockResolvedValue({ id: "tok-1" });
+
+    try {
+      const result = await authService.forgotPassword("ada@example.com");
+      expect(result).toEqual({ message: GENERIC_FORGOT_PASSWORD_MESSAGE });
+      expect(getMemoryEmailProvider().sent).toHaveLength(0);
+      expect(mockTokenUpdateMany).toHaveBeenCalled();
+      const logged = info.mock.calls.map((call) => JSON.stringify(call)).join("\n");
+      expect(logged).toMatch(/skipped/);
+      expect(logged).not.toContain("/reset-password?");
+    } finally {
+      process.env.NODE_ENV = previous;
+      info.mockRestore();
+    }
   });
 
   it("valid reset consumes the token and updates the password hash", async () => {
