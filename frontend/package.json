@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx --yes tsx --test src/lib/features.test.ts src/lib/campaignForm.test.ts src/lib/onboarding.test.ts src/lib/mockInstagramConnect.test.ts"
+    "test": "npx --yes tsx --test src/lib/features.test.ts src/lib/campaignForm.test.ts src/lib/onboarding.test.ts src/lib/mockInstagramConnect.test.ts src/lib/auth-forms.test.ts"
   },
   "dependencies": {
     "lucide-react": "^1.18.0",
