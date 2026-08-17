@@ -20,6 +20,10 @@ model User {
   email                      String                      @unique
   name                       String?
   passwordHash               String
+  /** Set when the user accepted Terms of Service at registration (or later). */
+  termsAcceptedAt            DateTime?
+  /** Set when the user accepted the Privacy Policy at registration (or later). */
+  privacyAcceptedAt          DateTime?
   createdAt                  DateTime                    @default(now())
   updatedAt                  DateTime                    @updatedAt
   keywordRules               KeywordRule[]
@@ -31,8 +35,23 @@ model User {
   subscription               Subscription?
   billingEvents              BillingEvent[]
   campaigns                  Campaign[]
+  passwordResetTokens        PasswordResetToken[]
 
   @@map("users")
+}
+
+/** One-time password reset token. Store SHA-256 hash only — never the plaintext. */
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("password_reset_tokens")
 }
 
 model KeywordRule {
