@@ -17,6 +17,7 @@
     "db:v2:migrate:deploy": "node scripts/with-v2-db-safety.cjs migrate deploy",
     "db:v2:migrate:status": "node scripts/with-v2-db-safety.cjs migrate status",
     "staging:level1-e2e": "tsx scripts/staging-level1-e2e.ts",
+    "staging:level2-e2e": "tsx scripts/staging-level2-e2e.ts",
     "db:apply-dm-event-private-reply": "node scripts/apply-dm-event-private-reply.cjs",
     "meta:probe-page-id": "node scripts/probe-instagram-page-id.cjs",
     "db:seed": "tsx prisma/seed.ts",
