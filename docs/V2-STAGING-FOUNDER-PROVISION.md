@@ -31,6 +31,8 @@ Agent environment has **no** Railway/Vercel tokens (user skipped). Hosted resour
 | `JWT_SECRET` | New staging secret (min 16) |
 | `FRONTEND_URL` | Staging Vercel URL only |
 | `CORS_ORIGIN` | Staging Vercel URL only |
+| `RESEND_API_KEY` | Staging Resend key (after domain verify; do not commit) |
+| `EMAIL_FROM` | Staging verified From address |
 | `COMMENT2DM_DEPLOYMENT_ENV` | `staging` |
 | `SMART_CAMPAIGNS_ENABLED` | `true` |
 | `COMMENT2DM_ALLOW_REMOTE_V2_DB` | `true` |
