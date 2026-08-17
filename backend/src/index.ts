@@ -1,4 +1,5 @@
 import { createApp } from "./app";
+import { emailDeliveryStatusForLogs } from "./config/email";
 import { logInstagramTableStatus } from "./lib/dbStartup";
 import {
   getCredentialDiagnostics,
@@ -24,6 +25,7 @@ async function bootstrap(): Promise<void> {
   );
   console.log(`[startup] NODE_ENV=${process.env.NODE_ENV ?? "unset"}`);
   console.log(`[startup] bind=${host}:${port}`);
+  console.log("[startup] email delivery:", emailDeliveryStatusForLogs());
 
   const redirectUri = getMetaRedirectUri();
   const rawRedirect = inspectRawMetaRedirectUri();

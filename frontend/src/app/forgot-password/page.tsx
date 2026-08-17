@@ -7,11 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api } from "@/lib/api";
-import {
-  EMAIL_DELIVERY_NOT_ENABLED_MESSAGE,
-  GENERIC_FORGOT_PASSWORD_MESSAGE,
-  validateForgotPasswordForm,
-} from "@/lib/auth-forms";
+import { GENERIC_FORGOT_PASSWORD_MESSAGE, validateForgotPasswordForm } from "@/lib/auth-forms";
 
 export default function ForgotPasswordPage() {
   const toast = useToast();
@@ -58,7 +54,6 @@ export default function ForgotPasswordPage() {
         <div className="mt-6 space-y-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
             <p>{GENERIC_FORGOT_PASSWORD_MESSAGE}</p>
-            <p className="mt-2 text-slate-500">{EMAIL_DELIVERY_NOT_ENABLED_MESSAGE}</p>
           </div>
           <p className="text-center text-sm text-slate-500">
             <Link href="/login" className="font-medium text-brand-600 hover:text-brand-700">

@@ -80,6 +80,8 @@ git push -u origin main
 | `JWT_SECRET` | random 32+ char string |
 | `CORS_ORIGIN` | `https://your-app.vercel.app` (set after Vercel deploy) |
 | `FRONTEND_URL` | `https://your-app.vercel.app` |
+| `RESEND_API_KEY` | Resend API key (set after the sending domain is verified; never commit) |
+| `EMAIL_FROM` | Verified From, e.g. `Comment2DM <noreply@your-domain.com>` |
 | `STRIPE_SECRET_KEY` | `sk_test_...` (test mode first) |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
 | `STRIPE_PRICE_STARTER` | Stripe Price ID |
@@ -159,6 +161,22 @@ Start with **test mode**. Switch to live only when ready for real customers.
 
 ---
 
+## Part 5b — Transactional email (Resend)
+
+Password-reset mail uses Resend. Details: `docs/TRANSACTIONAL-EMAIL.md`.
+
+Do **not** put API keys in git. After merge, set on Railway:
+
+| Variable | Notes |
+|----------|--------|
+| `RESEND_API_KEY` | From the Resend dashboard |
+| `EMAIL_FROM` | Must use a domain verified in Resend |
+| `FRONTEND_URL` | Public site origin used in the reset URL |
+
+Until these are set, forgot-password still returns the generic success message and **invalidates** any token it created so unused reset tokens do not accumulate.
+
+---
+
 ## Part 6 — Seed demo user (optional)
 
 After first deploy, seed the demo account once:
@@ -220,6 +238,8 @@ DATABASE_URL=postgresql://...
 JWT_SECRET=<32+ random chars>
 CORS_ORIGIN=https://your-app.vercel.app
 FRONTEND_URL=https://your-app.vercel.app
+RESEND_API_KEY=
+EMAIL_FROM=Comment2DM <noreply@your-domain.com>
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_STARTER=price_...
@@ -243,6 +263,7 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 | Login "Failed to fetch" | `NEXT_PUBLIC_API_URL` wrong, or backend down, or CORS mismatch |
 | CORS error in browser | Set `CORS_ORIGIN` to exact Vercel URL (include `https://`, no trailing slash) |
 | Stripe checkout 503 | Add all `STRIPE_*` env vars on backend |
+| Forgot-password mail not arriving | Set `RESEND_API_KEY`, `EMAIL_FROM`, and `FRONTEND_URL`. Verify the sending domain in Resend. Staging/production with missing config invalidates the token and still returns the generic HTTP message. |
 | Webhook not firing | Verify endpoint URL, signing secret, and that events are selected |
 | DB connection failed | Check `DATABASE_URL`, ensure DB allows connections from Railway/Render |
 | Migrations failed | Check deploy logs — `start:prod` runs `npx prisma migrate deploy` then starts the API. Never use `prisma db push --accept-data-loss`. |
@@ -258,7 +279,8 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 3. Vercel     → frontend/ + NEXT_PUBLIC_API_URL
 4. Railway    → update CORS_ORIGIN + FRONTEND_URL with Vercel URL
 5. Stripe     → products, prices, webhook → backend env vars
-6. Test       → signup, login, billing on public URL
+6. Resend     → verify sending domain, set RESEND_API_KEY + EMAIL_FROM, confirm FRONTEND_URL
+7. Test       → signup, login, billing, forgot-password on public URL
 ```
 
 **Your public URL:** `https://your-app.vercel.app` — share this for anyone to use Comment2DM.

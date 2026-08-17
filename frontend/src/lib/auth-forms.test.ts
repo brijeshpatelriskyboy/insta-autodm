@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 import {
   CONSENT_REQUIRED_MESSAGE,
   GENERIC_FORGOT_PASSWORD_MESSAGE,
-  EMAIL_DELIVERY_NOT_ENABLED_MESSAGE,
+  INVALID_OR_EXPIRED_RESET_MESSAGE,
+  friendlyResetPasswordError,
+  getResetTokenFromQuery,
   validateChangePasswordForm,
   validateForgotPasswordForm,
   validateRegistrationConsent,
@@ -17,14 +19,32 @@ describe("forgot password UI validation", () => {
     assert.equal(validateForgotPasswordForm("ada@example.com"), null);
   });
 
-  it("uses generic copy that does not claim an email was sent", () => {
-    assert.match(GENERIC_FORGOT_PASSWORD_MESSAGE, /if an account exists/i);
-    assert.doesNotMatch(GENERIC_FORGOT_PASSWORD_MESSAGE, /sent an email|email has been sent/i);
-    assert.match(EMAIL_DELIVERY_NOT_ENABLED_MESSAGE, /not enabled/i);
+  it("uses generic success copy that does not reveal account existence", () => {
+    assert.equal(
+      GENERIC_FORGOT_PASSWORD_MESSAGE,
+      "If an account exists for that email, we've sent password reset instructions.",
+    );
   });
 });
 
-describe("reset password UI validation", () => {
+describe("reset password UI", () => {
+  it("reads the token from the query string", () => {
+    const params = new URLSearchParams("token=abc_reset_token");
+    assert.equal(getResetTokenFromQuery(params), "abc_reset_token");
+    assert.equal(getResetTokenFromQuery(new URLSearchParams("")), "");
+  });
+
+  it("shows a clear invalid or expired error state", () => {
+    assert.equal(
+      friendlyResetPasswordError("Invalid or expired reset token"),
+      INVALID_OR_EXPIRED_RESET_MESSAGE,
+    );
+    assert.equal(
+      friendlyResetPasswordError("This reset link is missing or invalid."),
+      INVALID_OR_EXPIRED_RESET_MESSAGE,
+    );
+  });
+
   it("rejects a missing token and mismatched passwords", () => {
     assert.equal(
       validateResetPasswordForm({

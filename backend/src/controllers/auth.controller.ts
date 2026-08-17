@@ -40,6 +40,8 @@ function assertNoSecretLeakage(payload: unknown): void {
   if (
     serialized.includes("passwordHash") ||
     serialized.includes("tokenHash") ||
+    serialized.includes("RESEND_API_KEY") ||
+    serialized.includes("/reset-password?") ||
     /"password"\s*:/.test(serialized)
   ) {
     throw new AppError(500, "Internal server error");

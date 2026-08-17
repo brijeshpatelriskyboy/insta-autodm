@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { env } from "../config/env";
+import { isEmailDeliveryConfigured, readEmailRuntimeConfig } from "../config/email";
 import {
   GENERIC_FORGOT_PASSWORD_MESSAGE,
   INVALID_RESET_TOKEN_MESSAGE,
@@ -10,6 +11,9 @@ import {
   PASSWORD_RESET_TTL_MS,
   isResetTokenTestHelperEnabled,
 } from "../config/authSecurity";
+import { EmailDeliveryError } from "../email/types";
+import { logPasswordResetEmailOutcome, sendPasswordResetEmail } from "../email/emailService";
+import { buildPasswordResetUrl } from "../email/resetUrl";
 import { AppError } from "../utils/errors";
 
 interface AuthResult {
@@ -116,16 +120,38 @@ export class AuthService {
 
   /**
    * Always returns the same generic payload. Does not reveal whether the email exists.
-   * Never logs the plaintext token.
+   * Never logs the plaintext token or reset URL.
+   * If delivery fails or email is not configured, the newly issued token is invalidated.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true },
+      select: { id: true, email: true },
     });
 
-    if (user) {
-      await this.issueResetToken(user.id);
+    if (!user) {
+      return { ...GENERIC_FORGOT_RESPONSE };
+    }
+
+    const plaintext = await this.issueResetToken(user.id);
+    const tokenHash = hashResetToken(plaintext);
+
+    const allowTestProvider = process.env.NODE_ENV === "test";
+    if (!allowTestProvider && !isEmailDeliveryConfigured()) {
+      await this.invalidateResetToken(tokenHash);
+      logPasswordResetEmailOutcome({ outcome: "skipped", reason: "not_configured" });
+      return { ...GENERIC_FORGOT_RESPONSE };
+    }
+
+    try {
+      const resetUrl = buildPasswordResetUrl(readEmailRuntimeConfig().frontendUrl, plaintext);
+      await sendPasswordResetEmail({ to: user.email, resetUrl });
+      logPasswordResetEmailOutcome({ outcome: "sent" });
+    } catch (error) {
+      await this.invalidateResetToken(tokenHash);
+      const httpStatus = error instanceof EmailDeliveryError ? error.httpStatus : undefined;
+      const reason = error instanceof EmailDeliveryError ? error.code : "unexpected";
+      logPasswordResetEmailOutcome({ outcome: "failed", reason, httpStatus });
     }
 
     return { ...GENERIC_FORGOT_RESPONSE };
@@ -215,6 +241,13 @@ export class AuthService {
       throw new Error("createResetTokenForTests is not available in production");
     }
     return this.issueResetToken(userId, options);
+  }
+
+  private async invalidateResetToken(tokenHash: string): Promise<void> {
+    await prisma.passwordResetToken.updateMany({
+      where: { tokenHash, usedAt: null },
+      data: { usedAt: new Date() },
+    });
   }
 
   private async issueResetToken(
