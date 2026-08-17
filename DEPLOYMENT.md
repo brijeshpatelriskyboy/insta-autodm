@@ -82,6 +82,7 @@ git push -u origin main
 | `FRONTEND_URL` | `https://your-app.vercel.app` |
 | `RESEND_API_KEY` | Resend API key (set after the sending domain is verified; never commit) |
 | `EMAIL_FROM` | Verified From, e.g. `Comment2DM <noreply@your-domain.com>` |
+| `SUPPORT_EMAIL` | Inbox for public `/contact` form messages |
 | `STRIPE_SECRET_KEY` | `sk_test_...` (test mode first) |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
 | `STRIPE_PRICE_STARTER` | Stripe Price ID |
@@ -172,6 +173,7 @@ Do **not** put API keys in git. After merge, set on Railway:
 | `RESEND_API_KEY` | From the Resend dashboard |
 | `EMAIL_FROM` | Must use a domain verified in Resend |
 | `FRONTEND_URL` | Public site origin used in the reset URL |
+| `SUPPORT_EMAIL` | Inbox for public `/contact` form messages |
 
 Until these are set, forgot-password still returns the generic success message and **invalidates** any token it created so unused reset tokens do not accumulate.
 
@@ -240,6 +242,7 @@ CORS_ORIGIN=https://your-app.vercel.app
 FRONTEND_URL=https://your-app.vercel.app
 RESEND_API_KEY=
 EMAIL_FROM=Comment2DM <noreply@your-domain.com>
+SUPPORT_EMAIL=support@your-domain.com
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_STARTER=price_...
@@ -264,6 +267,7 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 | CORS error in browser | Set `CORS_ORIGIN` to exact Vercel URL (include `https://`, no trailing slash) |
 | Stripe checkout 503 | Add all `STRIPE_*` env vars on backend |
 | Forgot-password mail not arriving | Set `RESEND_API_KEY`, `EMAIL_FROM`, and `FRONTEND_URL`. Verify the sending domain in Resend. Staging/production with missing config invalidates the token and still returns the generic HTTP message. |
+| Contact form 503 | Set `SUPPORT_EMAIL` plus the Resend From/key used for transactional mail. The UI only shows success after the API confirms send. |
 | Webhook not firing | Verify endpoint URL, signing secret, and that events are selected |
 | DB connection failed | Check `DATABASE_URL`, ensure DB allows connections from Railway/Render |
 | Migrations failed | Check deploy logs — `start:prod` runs `npx prisma migrate deploy` then starts the API. Never use `prisma db push --accept-data-loss`. |

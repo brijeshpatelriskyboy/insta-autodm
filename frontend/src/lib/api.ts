@@ -366,6 +366,35 @@ export const api = {
       token,
     ),
 
+  deleteAccount: (token: string, currentPassword: string, confirmation: string) =>
+    request<{ deleted: true }>(
+      "/api/account",
+      {
+        method: "DELETE",
+        body: JSON.stringify({ currentPassword, confirmation }),
+      },
+      token,
+    ),
+
+  submitContact: (data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+  }) =>
+    request<{ sent: true }>("/api/contact", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
+  getMetaDataDeletionStatus: (code: string) =>
+    request<{
+      confirmationCode: string;
+      status: string;
+      createdAt: string;
+      completedAt: string | null;
+    }>(`/api/meta/data-deletion/status?code=${encodeURIComponent(code)}`),
+
   me: (token: string) => request<User>("/api/auth/me", {}, token),
 
   getKeywordRules: (token: string) =>
@@ -437,7 +466,7 @@ export const api = {
     ),
 
   disconnectInstagram: (token: string) =>
-    request<{ disconnected: boolean }>(
+    request<{ disconnected: boolean; alreadyDisconnected?: boolean }>(
       "/api/integrations/instagram/disconnect",
       { method: "DELETE" },
       token,

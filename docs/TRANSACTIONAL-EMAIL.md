@@ -1,6 +1,6 @@
 # Comment2DM transactional email
 
-Password-reset mail is sent through a small provider abstraction so auth is not coupled to Resend. The same `EmailProvider.send(message)` path can later carry support/contact mail and security notifications without rewriting the provider layer. The contact form is **not** implemented yet.
+Password-reset and support-contact mail share one `EmailProvider.send(message)` abstraction. Do not add a second email-provider stack.
 
 ## Provider architecture
 
@@ -10,7 +10,7 @@ Password-reset mail is sent through a small provider abstraction so auth is not 
 - **Memory** — Vitest only; inspect `.sent` without calling Resend
 - **Disabled** — used when delivery config is missing; `send` throws a generic `EmailDeliveryError`
 
-Auth never logs the reset token, the reset URL, or `RESEND_API_KEY`.
+Auth never logs the reset token, the reset URL, or `RESEND_API_KEY`. Contact logs never include the message body, Reply-To, or API key.
 
 ## Password-reset flow
 
@@ -21,9 +21,17 @@ Auth never logs the reset token, the reset URL, or `RESEND_API_KEY`.
 5. Send HTML + text mail via the email service.
 6. HTTP body never includes the token or reset URL.
 
+## Contact / support flow
+
+1. Public `POST /api/contact` with name, email, subject, and message.
+2. Validate length, email shape, and reject CR/LF header injection on name/email/subject.
+3. IP rate limit (5 / 15 minutes).
+4. Send to `SUPPORT_EMAIL` via the same provider, with `replyTo` set to the submitter email.
+5. HTTP success (`{ sent: true }`) only after the provider accepts the send. Missing `SUPPORT_EMAIL` or provider failure returns a generic 503.
+
 ## Failure behavior
 
-Security over convenience: **if delivery is skipped or Resend fails, the newly issued token is invalidated** (`usedAt` set). Unused valid reset tokens are not left sitting in the database.
+Security over convenience: **if password-reset delivery is skipped or Resend fails, the newly issued token is invalidated** (`usedAt` set). Unused valid reset tokens are not left sitting in the database.
 
 The HTTP response stays generic either way. Provider HTTP bodies are not returned to the client and are not logged (they can echo HTML/URLs).
 
@@ -40,6 +48,7 @@ Localhost `FRONTEND_URL` is rejected for delivery when `NODE_ENV=production`.
 | `RESEND_API_KEY` | Resend API key |
 | `EMAIL_FROM` | Verified From, e.g. `Comment2DM <noreply@your-domain.com>` |
 | `FRONTEND_URL` | Public site origin used in the reset link (no trailing slash) |
+| `SUPPORT_EMAIL` | Inbox that receives `/contact` form messages |
 
 Sending domain must be **verified in Resend** (SPF/DKIM, and DMARC as required by Resend) before public launch. Until then, Resend will reject From addresses on unverified domains.
 
@@ -47,4 +56,4 @@ Sending domain must be **verified in Resend** (SPF/DKIM, and DMARC as required b
 
 ## Staging vs production
 
-Configure the three variables on isolated staging first, confirm a real inbox receive, then configure production. Do not reuse production Resend keys on staging if you can avoid it.
+Configure the Resend variables on isolated staging first, confirm a real inbox receive, then configure production. Do not reuse production Resend keys on staging if you can avoid it.

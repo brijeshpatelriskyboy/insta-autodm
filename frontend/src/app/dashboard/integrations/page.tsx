@@ -63,6 +63,8 @@ export default function IntegrationsPage() {
   const [connectLoading, setConnectLoading] = useState(false);
   const [resumeOnboarding, setResumeOnboarding] = useState(false);
 
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+
   const loadStatus = useCallback(async () => {
     const token = getToken();
     if (!token) {
@@ -123,12 +125,21 @@ export default function IntegrationsPage() {
   async function handleDisconnect() {
     const token = getToken();
     if (!token) return;
+    if (!confirmDisconnect) {
+      setConfirmDisconnect(true);
+      return;
+    }
 
     setActionLoading(true);
     try {
-      await api.disconnectInstagram(token);
+      const result = await api.disconnectInstagram(token);
+      setConfirmDisconnect(false);
       await loadStatus();
-      toast.success("Instagram disconnected");
+      toast.success(
+        result.alreadyDisconnected
+          ? "Instagram was already disconnected"
+          : "Instagram disconnected",
+      );
     } catch (error) {
       toast.error(
         error instanceof ApiError ? error.message : "Failed to disconnect Instagram",
@@ -426,16 +437,36 @@ export default function IntegrationsPage() {
               </Button>
             )}
             {connected && (
-              <Button
-                variant="secondary"
-                onClick={handleDisconnect}
-                disabled={actionLoading || loading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
-                Disconnect
-              </Button>
+              <div className="flex flex-col items-stretch gap-2">
+                {confirmDisconnect && (
+                  <p className="max-w-xs text-xs leading-relaxed text-slate-500">
+                    This removes stored Instagram credentials and stops Comment2DM
+                    from processing this account. Your login, keyword rules, and
+                    campaigns are not deleted.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  {confirmDisconnect && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setConfirmDisconnect(false)}
+                      disabled={actionLoading}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    variant={confirmDisconnect ? "danger" : "secondary"}
+                    onClick={handleDisconnect}
+                    disabled={actionLoading || loading}
+                  >
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : null}
+                    {confirmDisconnect ? "Confirm disconnect" : "Disconnect"}
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>

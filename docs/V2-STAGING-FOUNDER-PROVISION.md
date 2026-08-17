@@ -33,6 +33,7 @@ Agent environment has **no** Railway/Vercel tokens (user skipped). Hosted resour
 | `CORS_ORIGIN` | Staging Vercel URL only |
 | `RESEND_API_KEY` | Staging Resend key (after domain verify; do not commit) |
 | `EMAIL_FROM` | Staging verified From address |
+| `SUPPORT_EMAIL` | Staging inbox for `/contact` (optional until contact is tested) |
 | `COMMENT2DM_DEPLOYMENT_ENV` | `staging` |
 | `SMART_CAMPAIGNS_ENABLED` | `true` |
 | `COMMENT2DM_ALLOW_REMOTE_V2_DB` | `true` |

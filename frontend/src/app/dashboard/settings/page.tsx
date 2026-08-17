@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, Lock, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, Lock, Trash2, User } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Tabs } from "@/components/ui/Tabs";
@@ -9,20 +10,26 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api } from "@/lib/api";
-import { getStoredUser, getToken } from "@/lib/auth";
+import { clearAuth, getStoredUser, getToken } from "@/lib/auth";
+import {
+  ACCOUNT_DELETE_CONFIRMATION,
+  accountDeletionClientOutcome,
+  validateDeleteAccountForm,
+} from "@/lib/account-forms";
 import { validateChangePasswordForm } from "@/lib/auth-forms";
 
 const tabs = [
   { id: "profile", label: "Profile" },
   { id: "password", label: "Password" },
+  { id: "account", label: "Account" },
   { id: "notifications", label: "Notifications" },
 ];
 
 export default function SettingsPage() {
   const toast = useToast();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("profile");
 
-  // Stable empty defaults for SSR/hydration; hydrate from localStorage after mount.
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
@@ -38,6 +45,11 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
   const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteSaving, setDeleteSaving] = useState(false);
 
   const [notifications, setNotifications] = useState({
     dmSent: true,
@@ -86,6 +98,43 @@ export default function SettingsPage() {
       toast.error(message);
     } finally {
       setPasswordSaving(false);
+    }
+  }
+
+  async function handleDeleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleteError("");
+
+    const validationError = validateDeleteAccountForm({
+      currentPassword: deletePassword,
+      confirmation: deleteConfirmation,
+    });
+    if (validationError) {
+      setDeleteError(validationError);
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      setDeleteError("You must be signed in to delete your account");
+      return;
+    }
+
+    setDeleteSaving(true);
+    try {
+      await api.deleteAccount(token, deletePassword, ACCOUNT_DELETE_CONFIRMATION);
+      const outcome = accountDeletionClientOutcome();
+      if (outcome.clearAuth) {
+        clearAuth();
+      }
+      toast.success("Account deleted");
+      router.replace(outcome.redirectTo);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete account";
+      setDeleteError(message);
+      toast.error(message);
+    } finally {
+      setDeleteSaving(false);
     }
   }
 
@@ -176,6 +225,48 @@ export default function SettingsPage() {
             <Button type="submit" disabled={passwordSaving}>
               <Lock className="h-4 w-4" />
               {passwordSaving ? "Updating..." : "Update Password"}
+            </Button>
+          </form>
+        </Card>
+      )}
+
+      {activeTab === "account" && (
+        <Card
+          title="Danger Zone"
+          description="Permanently delete your Comment2DM account and the application data we store for it."
+          className="border-red-200"
+        >
+          <form onSubmit={handleDeleteAccount} className="max-w-lg space-y-5">
+            {deleteError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {deleteError}
+              </div>
+            )}
+            <p className="text-sm leading-relaxed text-slate-600">
+              This signs you out and deletes your Comment2DM login, keyword rules,
+              campaigns, activity, and stored Instagram connection credentials.
+              Stripe may still hold billing records on Stripe&apos;s systems. Type{" "}
+              <span className="font-semibold text-slate-900">{ACCOUNT_DELETE_CONFIRMATION}</span>{" "}
+              and enter your current password to confirm.
+            </p>
+            <Input
+              label="Current password"
+              type="password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="••••••••"
+              required
+            />
+            <Input
+              label={`Type ${ACCOUNT_DELETE_CONFIRMATION} to confirm`}
+              value={deleteConfirmation}
+              onChange={(e) => setDeleteConfirmation(e.target.value)}
+              placeholder={ACCOUNT_DELETE_CONFIRMATION}
+              required
+            />
+            <Button type="submit" variant="danger" disabled={deleteSaving}>
+              <Trash2 className="h-4 w-4" />
+              {deleteSaving ? "Deleting..." : "Delete account"}
             </Button>
           </form>
         </Card>

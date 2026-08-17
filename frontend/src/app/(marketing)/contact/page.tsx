@@ -6,7 +6,7 @@ import { SectionHeading } from "@/components/marketing/SectionHeading";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Email the Comment2DM team during beta.",
+  description: "Contact the Comment2DM team.",
 };
 
 const contactInfo = [
@@ -25,8 +25,8 @@ export default function ContactPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Contact"
-            title="Email us during beta"
-            description="Questions about Comment2DM? Use email — we do not offer live chat, a 24-hour SLA, or a dedicated account manager yet."
+            title="Contact the Comment2DM team"
+            description="Use the form to send a support message. We do not offer live chat, a 24-hour SLA, or a dedicated account manager during beta."
           />
         </div>
       </section>
@@ -36,8 +36,13 @@ export default function ContactPage() {
           <div>
             <h2 className="text-xl font-semibold text-slate-900">Get in touch</h2>
             <p className="mt-3 text-sm leading-relaxed text-slate-600">
-              This contact page does not submit a form to our servers. Opening
-              email is the supported path until we add a real inbox integration.
+              The form submits to Comment2DM. We email the team at the configured
+              support address and set Reply-To to the address you enter so we can
+              respond. You can also email{" "}
+              <a href="mailto:hello@comment2dm.com" className="font-medium text-brand-600">
+                hello@comment2dm.com
+              </a>
+              .
             </p>
 
             <div className="mt-8 space-y-6">

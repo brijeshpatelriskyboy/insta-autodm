@@ -176,7 +176,7 @@ export const faqs = [
   {
     question: "How do I get support?",
     answer:
-      "Comment2DM is in beta. Email hello@comment2dm.com — we do not offer 24-hour SLA, live chat, or a dedicated account manager yet.",
+      "Comment2DM is in beta. Use the /contact form or email hello@comment2dm.com. We do not offer 24-hour SLA, live chat, or a dedicated account manager yet.",
   },
   {
     question: "What about Smart Campaigns?",

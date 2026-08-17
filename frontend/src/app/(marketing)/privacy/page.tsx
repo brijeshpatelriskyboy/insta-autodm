@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Privacy Policy
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: June 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: August 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
@@ -44,30 +44,45 @@ export default function PrivacyPage() {
 
           <h2 className="text-lg font-semibold text-slate-900">Data Retention</h2>
           <p>
-            We retain your data while your account is active. Upon account deletion,
-            personal data is removed within 30 days, except where retention is
-            required by law.
+            We retain your data while your account is active. When you delete your
+            account from Settings → Account, Comment2DM deletes the application
+            records described on the{" "}
+            <a href="/data-deletion" className="text-brand-600 hover:text-brand-700">
+              Data Deletion
+            </a>{" "}
+            page. Some records may remain outside Comment2DM (for example Stripe
+            billing objects) according to those providers&apos; policies.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Your Rights</h2>
           <p>
-            You may request access, correction, or deletion of your personal data
-            at any time by contacting{" "}
-            <a href="mailto:privacy@comment2dm.com" className="text-brand-600 hover:text-brand-700">
-              privacy@comment2dm.com
-            </a>
-            . You can also use our{" "}
+            You can delete your Comment2DM account while signed in (Settings →
+            Account / Danger Zone). Instagram-sourced data can also be removed
+            through Disconnect Instagram or Meta&apos;s data-deletion callback.
+            Details are on the{" "}
             <a href="/data-deletion" className="text-brand-600 hover:text-brand-700">
               Data Deletion
             </a>{" "}
-            instructions.
+            page. For other privacy questions, use the{" "}
+            <a href="/contact" className="text-brand-600 hover:text-brand-700">
+              contact form
+            </a>{" "}
+            or email{" "}
+            <a href="mailto:hello@comment2dm.com" className="text-brand-600 hover:text-brand-700">
+              hello@comment2dm.com
+            </a>
+            .
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Contact</h2>
           <p>
-            For privacy-related inquiries, email{" "}
-            <a href="mailto:privacy@comment2dm.com" className="text-brand-600 hover:text-brand-700">
-              privacy@comment2dm.com
+            For privacy-related inquiries, use the{" "}
+            <a href="/contact" className="text-brand-600 hover:text-brand-700">
+              contact form
+            </a>{" "}
+            or email{" "}
+            <a href="mailto:hello@comment2dm.com" className="text-brand-600 hover:text-brand-700">
+              hello@comment2dm.com
             </a>
             .
           </p>

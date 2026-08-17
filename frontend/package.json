@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "npx --yes tsx --test src/lib/features.test.ts src/lib/campaignForm.test.ts src/lib/onboarding.test.ts src/lib/mockInstagramConnect.test.ts src/lib/auth-forms.test.ts"
+    "test": "npx --yes tsx --test src/lib/features.test.ts src/lib/campaignForm.test.ts src/lib/onboarding.test.ts src/lib/mockInstagramConnect.test.ts src/lib/auth-forms.test.ts src/lib/account-forms.test.ts src/lib/contact-forms.test.ts src/lib/data-deletion-copy.test.ts"
   },
   "dependencies": {
     "lucide-react": "^1.18.0",
