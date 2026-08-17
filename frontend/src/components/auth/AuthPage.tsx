@@ -10,6 +10,7 @@ import { Logo } from "@/components/brand/Logo";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api } from "@/lib/api";
 import { setAuth } from "@/lib/auth";
+import { validateRegistrationConsent } from "@/lib/auth-forms";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import type { SelectedPlan } from "@/lib/plans";
 
@@ -36,6 +37,7 @@ export function AuthPage({
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   async function authenticate(
     authEmail: string,
@@ -50,7 +52,11 @@ export function AuthPage({
       const result =
         authMode === "login"
           ? await api.login(authEmail, authPassword)
-          : await api.register(authEmail, authPassword, authName);
+          : await api.register(authEmail, authPassword, {
+              name: authName,
+              acceptedTerms: acceptedLegal,
+              acceptedPrivacy: acceptedLegal,
+            });
 
       setAuth(result.token, result.user);
       toast.success(authMode === "login" ? "Welcome back!" : "Account created successfully");
@@ -74,7 +80,15 @@ export function AuthPage({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await authenticate(email, password);
+    if (mode === "register") {
+      const consentError = validateRegistrationConsent(acceptedLegal);
+      if (consentError) {
+        setError(consentError);
+        toast.error(consentError);
+        return;
+      }
+    }
+    await authenticate(email, password, mode, name);
   }
 
   async function handleDemoLogin() {
@@ -204,6 +218,35 @@ export function AuthPage({
                 minLength={8}
                 hint="Minimum 8 characters"
               />
+              {mode === "register" && (
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                  <input
+                    type="checkbox"
+                    checked={acceptedLegal}
+                    onChange={(e) => setAcceptedLegal(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    required
+                  />
+                  <span className="text-sm text-slate-600">
+                    I agree to the{" "}
+                    <Link href="/terms" className="font-medium text-brand-600 hover:text-brand-700" target="_blank">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="font-medium text-brand-600 hover:text-brand-700" target="_blank">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              )}
+              {mode === "login" && (
+                <p className="text-right text-sm">
+                  <Link href="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700">
+                    Forgot password?
+                  </Link>
+                </p>
+              )}
               <Button type="submit" className="w-full" disabled={loading} size="lg">
                 {loading ? (
                   "Please wait..."

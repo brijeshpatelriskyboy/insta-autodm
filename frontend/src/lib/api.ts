@@ -322,10 +322,20 @@ export interface PatchCampaignPayload {
 export const api = {
   health: () => request<{ status: string; service?: string }>("/api/health"),
 
-  register: (email: string, password: string, name?: string) =>
+  register: (
+    email: string,
+    password: string,
+    options: { name?: string; acceptedTerms: boolean; acceptedPrivacy: boolean },
+  ) =>
     request<AuthResponse>("/api/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({
+        email,
+        password,
+        name: options.name,
+        acceptedTerms: options.acceptedTerms,
+        acceptedPrivacy: options.acceptedPrivacy,
+      }),
     }),
 
   login: (email: string, password: string) =>
@@ -333,6 +343,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ message: string }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, newPassword }),
+    }),
+
+  changePassword: (token: string, currentPassword: string, newPassword: string) =>
+    request<{ message: string }>(
+      "/api/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      },
+      token,
+    ),
 
   me: (token: string) => request<User>("/api/auth/me", {}, token),
 
