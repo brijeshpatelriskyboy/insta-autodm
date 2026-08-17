@@ -12,7 +12,7 @@ export const faqItems = [
   {
     question: "Can I use multiple keywords?",
     answer:
-      "Absolutely. Create as many keyword rules as you need. Each rule can have its own DM message and active/inactive status.",
+      "Yes. Create as many keyword rules as you need. Each rule can have its own DM message, active/inactive status, and optional post scope.",
   },
   {
     question: "What happens if two keywords match?",
@@ -22,12 +22,17 @@ export const faqItems = [
   {
     question: "Is my data secure?",
     answer:
-      "Your credentials are encrypted and stored securely. We never share your data with third parties. Access tokens are encrypted at rest and never exposed in client-side code.",
+      "Access tokens are encrypted at rest and are not exposed in client-side code. We do not sell your data.",
   },
   {
     question: "Is Comment2DM in beta?",
     answer:
-      "Yes. Comment2DM is currently in beta. Instagram Business and Creator account automation is available for connected test accounts while we complete Meta App Review.",
+      "Yes. Comment2DM is in beta / early access. Instagram Business and Creator automation is available for connected approved and test accounts while we complete Meta App Review. Smart Campaigns are not generally available yet.",
+  },
+  {
+    question: "Does Instagram OAuth work today?",
+    answer:
+      "Yes. Connect Instagram from Integrations using Meta OAuth. Live comment-to-DM works for approved and test accounts. Public availability for every Instagram account still depends on Meta App Review.",
   },
 ];
 
@@ -35,26 +40,30 @@ export const gettingStartedSteps = [
   {
     step: 1,
     title: "Create your account",
-    description: "Sign up and access your Comment2DM dashboard.",
+    description: "Sign up and open your Comment2DM dashboard.",
   },
   {
     step: 2,
-    title: "Add keyword rules",
-    description: "Go to Keyword Rules and create triggers like GUIDE, START, or PDF with your DM message.",
+    title: "Connect Instagram",
+    description:
+      "Link your Business or Creator account via Meta OAuth from the Integrations page. This works for approved and test accounts during beta.",
   },
   {
     step: 3,
-    title: "Connect Instagram",
-    description: "Link your Business or Creator account via Meta OAuth from the Integrations page.",
+    title: "Add keyword rules",
+    description:
+      "Go to Keyword Rules and create triggers like GUIDE, START, or PDF with your DM message.",
   },
   {
     step: 4,
     title: "Publish your post",
-    description: "Tell followers to comment your keyword on your post or reel to receive the DM.",
+    description:
+      "Tell followers to comment your keyword on your post or reel to receive the DM.",
   },
   {
     step: 5,
     title: "Monitor results",
-    description: "Track DMs sent, leads captured, and top keywords in Analytics and Activity Log.",
+    description:
+      "Track DMs sent and event history in Analytics and the Activity log. Lead export is not part of this beta.",
   },
 ];

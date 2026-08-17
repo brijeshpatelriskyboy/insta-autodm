@@ -28,6 +28,7 @@ import {
 } from "@/lib/api";
 import { getToken, getStoredUser } from "@/lib/auth";
 import { isOnboardingComplete } from "@/lib/onboarding";
+import { shouldOfferMockInstagramConnect } from "@/lib/mockInstagramConnect";
 import { useMounted } from "@/hooks/useMounted";
 
 const SETUP_ITEMS = [
@@ -188,6 +189,11 @@ export default function IntegrationsPage() {
   }
 
   async function handleMockConnect() {
+    if (!shouldOfferMockInstagramConnect()) {
+      toast.error("Demo Instagram connect is not available in production. Use Meta OAuth.");
+      return;
+    }
+
     const token = getToken();
     if (!token) return;
 
@@ -240,6 +246,7 @@ export default function IntegrationsPage() {
 
   const connected = status?.connected ?? false;
   const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
+  const offerMockConnect = shouldOfferMockInstagramConnect();
   const webhookConfigured = status?.setupChecklist.webhookConfigured ?? false;
   const graphApiStatus =
     status?.graphApiStatus ?? (connected ? ("pending" as const) : ("disconnected" as const));
@@ -372,7 +379,7 @@ export default function IntegrationsPage() {
                   ) : null}
                   Connect Instagram
                 </Button>
-              ) : (
+              ) : offerMockConnect ? (
                 <Button
                   variant="secondary"
                   onClick={handleMockConnect}
@@ -383,7 +390,7 @@ export default function IntegrationsPage() {
                   ) : null}
                   Connect (Demo)
                 </Button>
-              ))}
+              ) : null)}
             <Link href="/dashboard/integrations/instagram-setup">
               <Button variant="secondary">
                 <BookOpen className="h-4 w-4" />

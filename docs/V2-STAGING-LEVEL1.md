@@ -21,7 +21,7 @@ npm run start:staging
 # → node scripts/with-v2-db-safety.cjs migrate deploy && node dist/index.js
 ```
 
-Never use `start:prod` / `prisma db push --accept-data-loss` on staging.
+Never use `start:prod` on staging — staging must use `start:staging` (migrate deploy via the V2 DB safety wrapper). Never use `prisma db push --accept-data-loss` anywhere. Production `start:prod` is `prisma migrate deploy` only.
 
 ## Meta Level 1
 

@@ -11,8 +11,8 @@ export function HowItWorksSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
           eyebrow="How it works"
-          title="From comment to conversion in seconds"
-          description="Four simple steps. Zero manual work. Your audience gets instant value, and you capture every lead."
+          title="From comment to DM in seconds"
+          description="Connect Instagram, add a keyword rule, and Comment2DM sends your message when someone comments that keyword."
         />
 
         <div className="relative mt-16">

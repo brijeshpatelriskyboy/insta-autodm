@@ -9,29 +9,29 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "Features",
   description:
-    "Keyword triggers, automated DMs, lead capture, analytics, activity tracking, and Instagram integration — everything you need to grow on autopilot.",
+    "Keyword triggers, automated DMs, activity tracking, DM analytics, and Instagram Meta OAuth — Comment2DM beta for professional accounts.",
 };
 
 const deepFeatures = [
   {
     title: "Smart keyword matching",
     description:
-      "Case-insensitive matching with support for multiple keywords per campaign. Run GUIDE on one post and START on another — each with its own DM.",
+      "Match comments to keyword rules, globally or scoped to a specific post. Each rule has its own DM message.",
   },
   {
     title: "Personalized DM templates",
     description:
-      "Craft messages that feel human. Include links, emojis, and dynamic placeholders. Preview exactly what your audience will receive.",
+      "Write the message Comment2DM sends when a keyword matches. Include links and the copy you want followers to receive.",
   },
   {
     title: "Real-time activity feed",
     description:
-      "Watch comments turn into DMs in real time. Filter by keyword, date, or status. Never wonder if your automation is working.",
+      "See comment and DM send attempts for your account. Filter by type and date in the activity log.",
   },
   {
-    title: "Conversion analytics",
+    title: "DM analytics",
     description:
-      "Track which keywords drive the most leads. Compare week-over-week performance. Make data-driven decisions about your content strategy.",
+      "See keyword-rule counts and DMs sent for your account. Lead export and conversion funnels are not in this beta.",
   },
 ];
 
@@ -43,13 +43,13 @@ export default function FeaturesPage() {
           <SectionHeading
             eyebrow="Features"
             title="Built for creators who mean business"
-            description="Every feature is designed to save you time, capture more leads, and help you grow your Instagram audience on autopilot."
+            description="Keyword rules, Instagram OAuth for approved and test accounts, and automatic DMs when someone comments your keyword."
             align="center"
           />
           <div className="mt-10 flex justify-center">
             <Link href="/register">
               <Button size="lg">
-                Start Free Trial
+                Create account
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>

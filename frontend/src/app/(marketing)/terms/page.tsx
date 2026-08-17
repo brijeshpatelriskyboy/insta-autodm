@@ -44,9 +44,10 @@ export default function TermsPage() {
 
           <h2 className="text-lg font-semibold text-slate-900">4. Billing</h2>
           <p>
-            Paid plans are billed monthly. Free trials last 14 days. You may cancel
-            at any time. Refunds are handled on a case-by-case basis within 30 days
-            of purchase.
+            Paid plans are billed monthly when Stripe checkout is configured.
+            There is no 14-day free trial in this beta. You may cancel a paid
+            subscription at the end of the current billing period. Refunds are
+            handled on a case-by-case basis within 30 days of purchase.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">5. Limitation of Liability</h2>

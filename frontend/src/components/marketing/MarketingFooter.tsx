@@ -76,13 +76,14 @@ export function MarketingFooter() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Get started</h3>
             <p className="mt-4 text-sm leading-relaxed text-slate-500">
-              14-day free trial. No credit card required.
+              Comment2DM is in beta. Create an account to try keyword comment-to-DM
+              automation.
             </p>
             <Link
               href="/register"
               className="mt-4 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700"
             >
-              Start free trial →
+              Create account →
             </Link>
           </div>
         </div>

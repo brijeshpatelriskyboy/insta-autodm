@@ -1,4 +1,8 @@
 import type { Request, Response, NextFunction } from "express";
+import {
+  isMockInstagramConnectAllowed,
+  MOCK_INSTAGRAM_PRODUCTION_REFUSED,
+} from "../config/mockInstagram";
 import { AppError } from "../utils/errors";
 import { instagramIntegrationService } from "../services/instagramIntegration.service";
 import { activityService } from "../services/activity.service";
@@ -109,6 +113,9 @@ export class InstagramIntegrationController {
   async connectMock(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) throw new AppError(401, "Authentication required");
+      if (!isMockInstagramConnectAllowed()) {
+        throw new AppError(403, MOCK_INSTAGRAM_PRODUCTION_REFUSED);
+      }
       const result = await instagramIntegrationService.connectMock(req.user.id);
       res.status(201).json(result);
     } catch (error) {

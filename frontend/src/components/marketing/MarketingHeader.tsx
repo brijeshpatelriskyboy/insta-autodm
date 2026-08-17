@@ -39,7 +39,7 @@ export function MarketingHeader() {
           </Link>
           <Link href="/register">
             <Button size="sm">
-              Start Free Trial
+              Create account
               <ArrowRight className="h-4 w-4" />
             </Button>
           </Link>
@@ -76,7 +76,7 @@ export function MarketingHeader() {
               </Link>
               <Link href="/register" onClick={() => setOpen(false)}>
                 <Button className="w-full">
-                  Start Free Trial
+                  Create account
                 </Button>
               </Link>
             </div>

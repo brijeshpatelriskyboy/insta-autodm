@@ -41,8 +41,8 @@ export function FeaturesGrid({ showHeading = true, columns = 3 }: FeaturesGridPr
         {showHeading && (
           <SectionHeading
             eyebrow="Features"
-            title="Everything you need to automate Instagram DMs"
-            description="Powerful tools built for creators who want to scale engagement without scaling their workload."
+            title="Keyword comment-to-DM automation"
+            description="Create keyword rules, connect Instagram, and send DMs when someone comments your keyword. Comment2DM is in beta."
           />
         )}
 

@@ -94,11 +94,11 @@ export function AuthPage({
             Instagram DM Automation
           </div>
           <h2 className="max-w-md text-3xl font-semibold leading-tight tracking-tight text-white">
-            Turn every comment into a conversation that converts.
+            Turn every keyword comment into an automatic DM.
           </h2>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-            Comment2DM sends personalized DMs the moment someone comments your
-            keyword — so you never miss a lead.
+            Comment2DM sends your message when someone comments your keyword.
+            The product is in beta.
           </p>
         </div>
         <p className="text-xs text-slate-500">© Comment2DM</p>
@@ -117,7 +117,7 @@ export function AuthPage({
             <p className="mt-2 text-sm text-slate-500">
               {mode === "login"
                 ? "Access your automation dashboard"
-                : "Start your 14-day free trial — no credit card required"}
+                : "Create a beta account — keyword comment-to-DM automation"}
             </p>
 
             {mode === "register" && selectedPlan && (
@@ -129,7 +129,7 @@ export function AuthPage({
                   <span className="font-mono">${selectedPlan.price}/month</span>
                 </p>
                 <p className="mt-1 text-xs text-brand-600">
-                  14-day free trial included
+                  Early-access price. Same product on every plan during beta — limits are not enforced yet.
                 </p>
               </div>
             )}
@@ -221,7 +221,7 @@ export function AuthPage({
                 <>
                   Don&apos;t have an account?{" "}
                   <Link href="/register" className="font-medium text-brand-600 hover:text-brand-700">
-                    Start free trial
+                    Create account
                   </Link>
                 </>
               ) : (
@@ -232,6 +232,15 @@ export function AuthPage({
                   </Link>
                 </>
               )}
+            </p>
+            <p className="mt-3 text-center text-xs text-slate-400">
+              <Link href="/terms" className="hover:text-slate-600">
+                Terms
+              </Link>
+              {" · "}
+              <Link href="/privacy" className="hover:text-slate-600">
+                Privacy
+              </Link>
             </p>
           </div>
 

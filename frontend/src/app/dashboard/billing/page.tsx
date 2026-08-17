@@ -182,7 +182,8 @@ export default function BillingPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a plan — billed monthly via Stripe Checkout.
+          Early access: Starter, Creator, and Pro are billing options. Every
+          account currently gets the same product — plan limits are not enforced.
         </p>
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => (

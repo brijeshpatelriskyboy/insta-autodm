@@ -77,7 +77,7 @@ docker compose up --build
 | Backend  | http://localhost:4000      |
 | Database | localhost:5432             |
 
-The backend runs `prisma db push` on startup to sync the schema.
+Production and hosted startup run `prisma migrate deploy` (never `prisma db push --accept-data-loss`). Local Docker/dev may still use `prisma db push` only for throwaway databases.
 
 ### 3. Seed demo data (optional)
 
@@ -200,20 +200,20 @@ App runs at **http://localhost:3000**
 1. Create a PostgreSQL service on Railway.
 2. Deploy `backend/` as a Node.js service.
 3. Set environment variables: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` (your Vercel URL).
-4. Run `npx prisma db push` or `prisma migrate deploy` on first deploy.
+4. Production start command is `npm run start:prod` (`prisma migrate deploy` then `node dist/index.js`). Never use `prisma db push --accept-data-loss`.
 
 ---
 
 ## MVP Features
 
-- [x] Email/password auth (placeholder for Meta OAuth)
+- [x] Email/password auth
 - [x] Dashboard after login
-- [x] Keyword rule CRUD (keyword, DM message, active/inactive)
+- [x] Keyword rule CRUD (keyword, DM message, active/inactive, media scope)
 - [x] PostgreSQL storage via Prisma
-- [x] Keyword rules table UI
-- [x] Analytics page (rules count live; DM events & leads are placeholders)
+- [x] Instagram Meta OAuth for professional accounts (approved / test accounts during Meta App Review)
+- [x] Comment → DM via Instagram webhooks
+- [x] Analytics page (rule count and DM events live; leads/conversion not implemented)
 - [x] REST API for keyword CRUD
-- [x] Meta Instagram webhook placeholder endpoint
 
 ---
 

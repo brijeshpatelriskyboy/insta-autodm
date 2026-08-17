@@ -8,7 +8,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node dist/index.js",
-    "start:prod": "npx prisma db push --accept-data-loss && node dist/index.js",
+    "start:prod": "npx prisma migrate deploy && node dist/index.js",
     "start:staging": "node scripts/with-v2-db-safety.cjs migrate deploy && node dist/index.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

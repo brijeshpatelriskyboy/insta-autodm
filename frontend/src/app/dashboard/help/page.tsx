@@ -110,19 +110,23 @@ export default function HelpPage() {
           </div>
           <h3 className="mt-4 text-lg font-semibold text-slate-900">Contact Support</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Need help? Our support team will be available once we launch live
-            Instagram integrations.
+            Comment2DM is in beta. Email hello@comment2dm.com — we do not offer live
+            chat or a 24-hour SLA yet.
           </p>
-          <Button variant="secondary" className="mt-4" disabled>
-            Contact us
-          </Button>
+          <Link href="/contact">
+            <Button variant="secondary" className="mt-4">
+              Contact
+            </Button>
+          </Link>
         </Card>
       </div>
 
       <div className="flex items-center justify-center gap-2 rounded-2xl border border-dashed border-brand-200 bg-brand-50/50 px-6 py-8 text-center">
         <Sparkles className="h-5 w-5 text-brand-500" />
         <p className="text-sm text-slate-600">
-          Meta OAuth and live automation support are coming in the next release.
+          Instagram Meta OAuth and comment-to-DM automation work today for approved
+          and test accounts. Public availability for every Instagram account still
+          depends on Meta App Review. Smart Campaigns are not generally available.
         </p>
       </div>
     </div>

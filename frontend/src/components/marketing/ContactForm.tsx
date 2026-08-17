@@ -1,50 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { Mail } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
-import { Textarea } from "@/components/ui/Textarea";
-import { useToast } from "@/components/providers/ToastProvider";
+
+const SUPPORT_EMAIL = "hello@comment2dm.com";
 
 export function ContactForm() {
-  const toast = useToast();
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    toast.success("Message sent! We'll get back to you within 24 hours.");
-    setLoading(false);
-    (e.target as HTMLFormElement).reset();
-  }
+  const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Comment2DM beta question")}`;
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-card"
-    >
-      <div className="space-y-4">
-        <Input label="Name" name="name" placeholder="Your name" required />
-        <Input
-          label="Email"
-          name="email"
-          type="email"
-          placeholder="you@example.com"
-          required
-        />
-        <Input label="Subject" name="subject" placeholder="How can we help?" required />
-        <Textarea
-          label="Message"
-          name="message"
-          placeholder="Tell us more..."
-          rows={5}
-          required
-        />
-      </div>
-      <Button type="submit" className="mt-6 w-full" disabled={loading} size="lg">
-        {loading ? "Sending..." : "Send Message"}
-      </Button>
-    </form>
+    <div className="rounded-2xl border border-slate-200/80 bg-white p-8 shadow-card">
+      <h3 className="text-lg font-semibold text-slate-900">Email us</h3>
+      <p className="mt-2 text-sm leading-relaxed text-slate-600">
+        Comment2DM is in beta. We do not have an in-app ticket system yet, so
+        this page does not send a message by itself. Open your email app and
+        write to{" "}
+        <a href={mailto} className="font-medium text-brand-600 hover:text-brand-700">
+          {SUPPORT_EMAIL}
+        </a>
+        .
+      </p>
+      <a href={mailto} className="mt-6 block">
+        <Button type="button" className="w-full" size="lg">
+          <Mail className="h-4 w-4" />
+          Open email to {SUPPORT_EMAIL}
+        </Button>
+      </a>
+    </div>
   );
 }
