@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   CONTACT_UNAVAILABLE_MESSAGE,
+  contactDeliveryConfirmed,
   contactRequestSucceeded,
   friendlyContactError,
   validateContactForm,
@@ -33,9 +34,12 @@ describe("contact form", () => {
     );
   });
 
-  it("treats only backend 2xx as success — provider failure is not success", () => {
+  it("treats only backend 2xx plus sent:true as success — provider failure is not success", () => {
     assert.equal(contactRequestSucceeded(200), true);
     assert.equal(contactRequestSucceeded(503), false);
+    assert.equal(contactDeliveryConfirmed({ sent: true }), true);
+    assert.equal(contactDeliveryConfirmed({}), false);
+    assert.equal(contactDeliveryConfirmed(undefined), false);
     assert.equal(friendlyContactError(503), CONTACT_UNAVAILABLE_MESSAGE);
     assert.equal(friendlyContactError(429), "Too many attempts. Try again later.");
   });

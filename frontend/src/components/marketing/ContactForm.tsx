@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/Input";
 import { api, ApiError } from "@/lib/api";
 import {
   CONTACT_UNAVAILABLE_MESSAGE,
-  contactRequestSucceeded,
+  contactDeliveryConfirmed,
   friendlyContactError,
   validateContactForm,
 } from "@/lib/contact-forms";
@@ -33,13 +33,13 @@ export function ContactForm() {
 
     setSubmitting(true);
     try {
-      await api.submitContact({
+      const result = await api.submitContact({
         name: name.trim(),
         email: email.trim(),
         subject: subject.trim(),
         message: message.trim(),
       });
-      if (!contactRequestSucceeded(200)) {
+      if (!contactDeliveryConfirmed(result)) {
         setError(CONTACT_UNAVAILABLE_MESSAGE);
         return;
       }

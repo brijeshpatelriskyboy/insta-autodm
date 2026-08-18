@@ -85,10 +85,19 @@ export default function DataDeletionPage() {
           <p>
             If you remove {siteConfig.name} from Instagram or Facebook Apps and
             websites and request data deletion, Meta can POST a signed request to
-            Comment2DM. Comment2DM verifies the signature with the Instagram app
-            secret, disconnects matching Instagram credentials, and deletes
-            Instagram-sourced DM event records for that integration. Your Comment2DM
-            email/password login is not deleted by that callback.
+            Comment2DM. Comment2DM verifies the HMAC-SHA256 signature with the
+            Instagram app secret, then matches Meta&apos;s <span className="font-medium text-slate-800">user_id</span>{" "}
+            against the Instagram user ID or Facebook Page ID stored for an
+            integration. On a match, Comment2DM deletes Instagram-sourced DM event
+            records for that integration and wipes stored credentials. Your
+            Comment2DM email/password login is not deleted by that callback.
+          </p>
+          <p>
+            If Meta sends an app-scoped ID Comment2DM does not store, the callback
+            still acknowledges the request with a confirmation code and status{" "}
+            <span className="font-medium text-slate-800">not_found</span>. No
+            Instagram-sourced rows are changed in that case — use in-app account
+            deletion or the contact form.
           </p>
           <p>
             Meta shows a confirmation code and a status URL. You can also open{" "}
@@ -99,7 +108,9 @@ export default function DataDeletionPage() {
           </p>
           <p>
             Removing data from {siteConfig.name} does not delete your Instagram or
-            Facebook account.
+            Facebook account. Disconnect and Meta callbacks wipe credentials stored
+            by Comment2DM; they do not call Meta to revoke the Graph token on
+            Meta&apos;s side.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Support</h2>

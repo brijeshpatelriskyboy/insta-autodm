@@ -284,7 +284,21 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 4. Railway    → update CORS_ORIGIN + FRONTEND_URL with Vercel URL
 5. Stripe     → products, prices, webhook → backend env vars
 6. Resend     → verify sending domain, set RESEND_API_KEY + EMAIL_FROM, confirm FRONTEND_URL
-7. Test       → signup, login, billing, forgot-password on public URL
+7. Test       → signup, login, billing, forgot-password, contact form on public URL
+8. Meta App Dashboard (after merge; do not set from this PR) → Data Deletion
+   Request URL, Data Deletion Instructions URL, Deauthorize Callback URL
 ```
+
+### Meta App Dashboard — data deletion (manual after merge)
+
+Do not change Meta settings from a code PR. After this code is on the API/site the founder is using for App Review, set:
+
+| Dashboard field | Value |
+|-----------------|-------|
+| Data Deletion Request URL | `https://<API_HOST>/api/meta/data-deletion` |
+| Data Deletion Instructions URL | `https://<SITE_HOST>/data-deletion` |
+| Deauthorize Callback URL | `https://<API_HOST>/api/meta/deauthorize` |
+
+The callback verifies Meta `signed_request` with `INSTAGRAM_APP_SECRET` and returns `{ url, confirmation_code }`. The instructions page is public `/data-deletion`.
 
 **Your public URL:** `https://your-app.vercel.app` — share this for anyone to use Comment2DM.

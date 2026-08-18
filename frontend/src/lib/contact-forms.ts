@@ -48,6 +48,11 @@ export function contactRequestSucceeded(status: number): boolean {
   return status >= 200 && status < 300;
 }
 
+/** Backend must confirm `{ sent: true }` — a 2xx without that flag is not success. */
+export function contactDeliveryConfirmed(result: { sent?: boolean } | null | undefined): boolean {
+  return result?.sent === true;
+}
+
 export function friendlyContactError(status: number, message?: string): string {
   if (status === 429) {
     return "Too many attempts. Try again later.";
