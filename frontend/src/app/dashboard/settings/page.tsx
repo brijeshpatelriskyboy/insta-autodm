@@ -245,7 +245,9 @@ export default function SettingsPage() {
             <p className="text-sm leading-relaxed text-slate-600">
               This signs you out and deletes your Comment2DM login, keyword rules,
               campaigns, activity, and stored Instagram connection credentials.
-              Stripe may still hold billing records on Stripe&apos;s systems. Type{" "}
+              If you have a billable Stripe subscription, Comment2DM cancels it in
+              Stripe before deleting the account. If Stripe cannot confirm that
+              cancellation, deletion is refused and your account stays. Type{" "}
               <span className="font-semibold text-slate-900">{ACCOUNT_DELETE_CONFIRMATION}</span>{" "}
               and enter your current password to confirm.
             </p>

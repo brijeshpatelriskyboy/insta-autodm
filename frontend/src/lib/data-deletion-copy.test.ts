@@ -12,6 +12,7 @@ describe("public data-deletion page copy", () => {
     assert.ok(DATA_DELETION_SECTIONS.includes("Meta data-deletion callback"));
     assert.ok(DATA_DELETION_SECTIONS.includes("what Comment2DM deletes"));
     assert.ok(DATA_DELETION_SECTIONS.includes("what may remain outside Comment2DM"));
+    assert.ok(DATA_DELETION_SECTIONS.includes("Stripe subscription cancellation before delete"));
     assert.ok(DATA_DELETION_SECTIONS.includes("support contact"));
   });
 

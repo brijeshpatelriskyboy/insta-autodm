@@ -64,8 +64,14 @@ export default function DataDeletionPage() {
               row is gone; Comment2DM does not keep a server session store to revoke.
             </li>
             <li>
-              Stripe may retain customer, subscription, or invoice objects on Stripe
-              systems. This deletion flow does not call Stripe to cancel a subscription.
+              If you have a billable Stripe subscription (active, trialing, past due,
+              or similar), Comment2DM cancels that subscription in Stripe immediately
+              before deleting the account. If Stripe cannot confirm cancellation,
+              deletion is refused and your account and billing records stay.
+            </li>
+            <li>
+              Stripe may still keep historical customer or invoice records on Stripe
+              systems after the subscription is canceled.
             </li>
             <li>
               Meta data-deletion confirmation records (confirmation code and status
@@ -97,7 +103,9 @@ export default function DataDeletionPage() {
             still acknowledges the request with a confirmation code and status{" "}
             <span className="font-medium text-slate-800">not_found</span>. No
             Instagram-sourced rows are changed in that case — use in-app account
-            deletion or the contact form.
+            deletion or the contact form. Whether Instagram Login callbacks send the
+            Instagram user ID we store must be verified in a live Meta App Review
+            check; this page does not change that matching behavior.
           </p>
           <p>
             Meta shows a confirmation code and a status URL. You can also open{" "}

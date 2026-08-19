@@ -4,11 +4,60 @@ import { getPlan, type PlanSlug } from "../config/plans";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 
+export const ACCOUNT_DELETE_BILLING_UNAVAILABLE_MESSAGE =
+  "Unable to cancel billing. Your account was not deleted. Try again later or contact support.";
+
+/** Stripe statuses that can still collect payment. Local default is `inactive`. */
+const BILLABLE_STRIPE_STATUSES = new Set([
+  "active",
+  "trialing",
+  "past_due",
+  "unpaid",
+  "incomplete",
+  "paused",
+]);
+
+export function isBillableStripeSubscription(sub: {
+  stripeSubscriptionId: string | null;
+  status: string;
+} | null): boolean {
+  if (!sub?.stripeSubscriptionId?.trim()) {
+    return false;
+  }
+  return BILLABLE_STRIPE_STATUSES.has(sub.status.trim().toLowerCase());
+}
+
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
     throw new AppError(503, "Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
   }
   return new Stripe(env.STRIPE_SECRET_KEY);
+}
+
+/** Test-only Stripe client. Production checkout/cancel/webhook still use getStripe(). */
+let stripeClientForTests: Stripe | null = null;
+
+export function setStripeClientForTests(client: Stripe | null): void {
+  stripeClientForTests = client;
+}
+
+function getStripeForAccountDeletion(): Stripe {
+  if (stripeClientForTests) {
+    return stripeClientForTests;
+  }
+  if (!env.STRIPE_SECRET_KEY) {
+    throw new AppError(503, ACCOUNT_DELETE_BILLING_UNAVAILABLE_MESSAGE);
+  }
+  return new Stripe(env.STRIPE_SECRET_KEY);
+}
+
+function isStripeResourceMissing(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: string }).code === "resource_missing"
+  );
 }
 
 async function getOrCreateSubscriptionRecord(userId: string) {
@@ -114,6 +163,67 @@ export const billingService = {
     });
 
     return { message: "Subscription will cancel at the end of the billing period" };
+  },
+
+  /**
+   * Account deletion only: immediately cancel a billable Stripe subscription.
+   * Does not change the user-facing cancel-at-period-end billing action.
+   * Does not write or delete local billing rows — caller deletes after this succeeds.
+   */
+  async stopBillableSubscriptionForAccountDeletion(userId: string): Promise<void> {
+    const sub = await prisma.subscription.findUnique({
+      where: { userId },
+      select: {
+        stripeSubscriptionId: true,
+        status: true,
+      },
+    });
+
+    const status = sub?.status?.trim().toLowerCase() ?? "";
+    const hasSubscriptionId = Boolean(sub?.stripeSubscriptionId?.trim());
+
+    if (BILLABLE_STRIPE_STATUSES.has(status) && !hasSubscriptionId) {
+      console.info("[billing] account-deletion cancel", {
+        outcome: "blocked",
+        reason: "billable_without_subscription_id",
+      });
+      throw new AppError(503, ACCOUNT_DELETE_BILLING_UNAVAILABLE_MESSAGE);
+    }
+
+    if (!isBillableStripeSubscription(sub)) {
+      return;
+    }
+
+    const subscriptionId = sub!.stripeSubscriptionId!.trim();
+
+    try {
+      const stripe = getStripeForAccountDeletion();
+      const canceled = await stripe.subscriptions.cancel(subscriptionId);
+      if (canceled.status !== "canceled") {
+        console.info("[billing] account-deletion cancel", {
+          outcome: "blocked",
+          reason: "not_canceled",
+          stripeStatus: canceled.status,
+        });
+        throw new AppError(503, ACCOUNT_DELETE_BILLING_UNAVAILABLE_MESSAGE);
+      }
+      console.info("[billing] account-deletion cancel", { outcome: "canceled" });
+    } catch (error) {
+      if (error instanceof AppError) {
+        throw error;
+      }
+      if (isStripeResourceMissing(error)) {
+        console.info("[billing] account-deletion cancel", {
+          outcome: "already_absent",
+        });
+        return;
+      }
+      console.info("[billing] account-deletion cancel", {
+        outcome: "failed",
+        reason: "stripe_unavailable",
+      });
+      throw new AppError(503, ACCOUNT_DELETE_BILLING_UNAVAILABLE_MESSAGE);
+    }
   },
 
   async handleWebhook(rawBody: Buffer, signature: string | undefined) {

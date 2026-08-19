@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import { billingService } from "./billing.service";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 
@@ -32,6 +33,8 @@ export class AccountService {
     if (!valid) {
       throw new AppError(401, "Current password is incorrect");
     }
+
+    await billingService.stopBillableSubscriptionForAccountDeletion(userId);
 
     await prisma.$transaction(async (tx) => {
       await tx.campaignClaim.deleteMany({ where: { campaign: { userId } } });

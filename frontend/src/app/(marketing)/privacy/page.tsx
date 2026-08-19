@@ -50,8 +50,9 @@ export default function PrivacyPage() {
             <a href="/data-deletion" className="text-brand-600 hover:text-brand-700">
               Data Deletion
             </a>{" "}
-            page. Some records may remain outside Comment2DM (for example Stripe
-            billing objects) according to those providers&apos; policies.
+            page. If you have a billable Stripe subscription, Comment2DM cancels it
+            before deleting the account. Historical Stripe customer or invoice
+            records may remain on Stripe according to Stripe&apos;s policies.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Your Rights</h2>

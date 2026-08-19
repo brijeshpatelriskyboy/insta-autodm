@@ -6,6 +6,7 @@ export const DATA_DELETION_SECTIONS = [
   "Meta data-deletion callback",
   "what Comment2DM deletes",
   "what may remain outside Comment2DM",
+  "Stripe subscription cancellation before delete",
   "support contact",
 ] as const;
 
