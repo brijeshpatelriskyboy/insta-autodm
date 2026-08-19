@@ -33,6 +33,7 @@ Agent environment has **no** Railway/Vercel tokens (user skipped). Hosted resour
 | `CORS_ORIGIN` | Staging Vercel URL only |
 | `RESEND_API_KEY` | Staging Resend key (after domain verify; do not commit) |
 | `EMAIL_FROM` | Staging verified From address |
+| `SUPPORT_EMAIL` | Staging inbox for `/contact` (required for a real contact send; do not commit) |
 | `COMMENT2DM_DEPLOYMENT_ENV` | `staging` |
 | `SMART_CAMPAIGNS_ENABLED` | `true` |
 | `COMMENT2DM_ALLOW_REMOTE_V2_DB` | `true` |
@@ -106,6 +107,7 @@ See [`V2-STAGING-LEVEL2.md`](./V2-STAGING-LEVEL2.md).
 
 - Do **not** change production Meta app or webhook URL.
 - Do **not** create a staging Meta app for Level 2. Level 2 stays on the private-reply stub.
+- Data deletion / deauthorize callback URLs are documented in `DEPLOYMENT.md` and are a post-merge App Review step — not part of agent deploy.
 
 ## 7) After hosted E2E passes
 

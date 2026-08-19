@@ -82,6 +82,7 @@ git push -u origin main
 | `FRONTEND_URL` | `https://your-app.vercel.app` |
 | `RESEND_API_KEY` | Resend API key (set after the sending domain is verified; never commit) |
 | `EMAIL_FROM` | Verified From, e.g. `Comment2DM <noreply@your-domain.com>` |
+| `SUPPORT_EMAIL` | Inbox for public `/contact` form messages |
 | `STRIPE_SECRET_KEY` | `sk_test_...` (test mode first) |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
 | `STRIPE_PRICE_STARTER` | Stripe Price ID |
@@ -172,6 +173,7 @@ Do **not** put API keys in git. After merge, set on Railway:
 | `RESEND_API_KEY` | From the Resend dashboard |
 | `EMAIL_FROM` | Must use a domain verified in Resend |
 | `FRONTEND_URL` | Public site origin used in the reset URL |
+| `SUPPORT_EMAIL` | Inbox for public `/contact` form messages |
 
 Until these are set, forgot-password still returns the generic success message and **invalidates** any token it created so unused reset tokens do not accumulate.
 
@@ -240,6 +242,7 @@ CORS_ORIGIN=https://your-app.vercel.app
 FRONTEND_URL=https://your-app.vercel.app
 RESEND_API_KEY=
 EMAIL_FROM=Comment2DM <noreply@your-domain.com>
+SUPPORT_EMAIL=support@your-domain.com
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
 STRIPE_PRICE_STARTER=price_...
@@ -264,6 +267,7 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 | CORS error in browser | Set `CORS_ORIGIN` to exact Vercel URL (include `https://`, no trailing slash) |
 | Stripe checkout 503 | Add all `STRIPE_*` env vars on backend |
 | Forgot-password mail not arriving | Set `RESEND_API_KEY`, `EMAIL_FROM`, and `FRONTEND_URL`. Verify the sending domain in Resend. Staging/production with missing config invalidates the token and still returns the generic HTTP message. |
+| Contact form 503 | Set `SUPPORT_EMAIL` plus the Resend From/key used for transactional mail. The UI only shows success after the API confirms send. |
 | Webhook not firing | Verify endpoint URL, signing secret, and that events are selected |
 | DB connection failed | Check `DATABASE_URL`, ensure DB allows connections from Railway/Render |
 | Migrations failed | Check deploy logs — `start:prod` runs `npx prisma migrate deploy` then starts the API. Never use `prisma db push --accept-data-loss`. |
@@ -280,7 +284,21 @@ NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
 4. Railway    → update CORS_ORIGIN + FRONTEND_URL with Vercel URL
 5. Stripe     → products, prices, webhook → backend env vars
 6. Resend     → verify sending domain, set RESEND_API_KEY + EMAIL_FROM, confirm FRONTEND_URL
-7. Test       → signup, login, billing, forgot-password on public URL
+7. Test       → signup, login, billing, forgot-password, contact form on public URL
+8. Meta App Dashboard (after merge; do not set from this PR) → Data Deletion
+   Request URL, Data Deletion Instructions URL, Deauthorize Callback URL
 ```
+
+### Meta App Dashboard — data deletion (manual after merge)
+
+Do not change Meta settings from a code PR. After this code is on the API/site the founder is using for App Review, set:
+
+| Dashboard field | Value |
+|-----------------|-------|
+| Data Deletion Request URL | `https://<API_HOST>/api/meta/data-deletion` |
+| Data Deletion Instructions URL | `https://<SITE_HOST>/data-deletion` |
+| Deauthorize Callback URL | `https://<API_HOST>/api/meta/deauthorize` |
+
+The callback verifies Meta `signed_request` with `INSTAGRAM_APP_SECRET` and returns `{ url, confirmation_code }`. The instructions page is public `/data-deletion`.
 
 **Your public URL:** `https://your-app.vercel.app` — share this for anyone to use Comment2DM.

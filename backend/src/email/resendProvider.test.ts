@@ -29,6 +29,28 @@ describe("ResendEmailProvider", () => {
     expect(body.to).toEqual(["ada@example.com"]);
   });
 
+  it("passes reply_to when Reply-To is set", async () => {
+    const fetchImpl = vi.fn(async () => new Response("{}", { status: 200 })) as unknown as typeof fetch;
+    const provider = new ResendEmailProvider(
+      "re_test_placeholder",
+      "Comment2DM <noreply@example.test>",
+      fetchImpl,
+    );
+    await provider.send({
+      kind: "support_contact",
+      to: "support@comment2dm.test",
+      replyTo: "ada@example.com",
+      subject: "[Comment2DM support] Hello",
+      html: "<p>Hi</p>",
+      text: "Hi",
+    });
+    const body = JSON.parse(
+      String(((fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(body.reply_to).toBe("ada@example.com");
+    expect(body.to).toEqual(["support@comment2dm.test"]);
+  });
+
   it("maps provider HTTP failures without leaking the response body", async () => {
     const fetchImpl = vi.fn(
       async () =>

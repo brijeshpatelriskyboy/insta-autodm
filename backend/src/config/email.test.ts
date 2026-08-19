@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isEmailDeliveryConfigured, readEmailRuntimeConfig } from "./email";
+import {
+  emailDeliveryStatusForLogs,
+  isContactDeliveryConfigured,
+  isEmailDeliveryConfigured,
+  isSupportEmailConfigured,
+  readEmailRuntimeConfig,
+} from "./email";
 
 describe("email delivery config", () => {
   it("is not configured without Resend key and From address", () => {
@@ -41,5 +47,30 @@ describe("email delivery config", () => {
     });
     expect(config.frontendUrl).toBe("https://app.example.test");
     expect(JSON.stringify({ hasKey: Boolean(config.resendApiKey) })).not.toContain("re_test");
+  });
+
+  it("treats SUPPORT_EMAIL as a boolean for logs and contact readiness", () => {
+    expect(isSupportEmailConfigured({})).toBe(false);
+    expect(
+      isSupportEmailConfigured({ SUPPORT_EMAIL: "support@comment2dm.test" }),
+    ).toBe(true);
+    expect(
+      isContactDeliveryConfigured({
+        NODE_ENV: "test",
+        SUPPORT_EMAIL: "support@comment2dm.test",
+      }),
+    ).toBe(true);
+    expect(
+      isContactDeliveryConfigured({
+        NODE_ENV: "production",
+        SUPPORT_EMAIL: "support@comment2dm.test",
+        FRONTEND_URL: "https://app.example.test",
+      }),
+    ).toBe(false);
+    const status = emailDeliveryStatusForLogs({
+      SUPPORT_EMAIL: "support@comment2dm.test",
+    });
+    expect(status.hasSupportEmail).toBe(true);
+    expect(JSON.stringify(status)).not.toContain("support@comment2dm.test");
   });
 });

@@ -110,8 +110,8 @@ export default function HelpPage() {
           </div>
           <h3 className="mt-4 text-lg font-semibold text-slate-900">Contact Support</h3>
           <p className="mt-2 text-sm text-slate-500">
-            Comment2DM is in beta. Email hello@comment2dm.com — we do not offer live
-            chat or a 24-hour SLA yet.
+            Comment2DM is in beta. Use the contact form or email hello@comment2dm.com.
+            We do not offer live chat or a 24-hour SLA yet.
           </p>
           <Link href="/contact">
             <Button variant="secondary" className="mt-4">

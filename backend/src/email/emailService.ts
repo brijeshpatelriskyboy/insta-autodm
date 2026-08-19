@@ -2,6 +2,7 @@ import { isEmailDeliveryConfigured, readEmailRuntimeConfig } from "../config/ema
 import { DisabledEmailProvider } from "./emailProviders";
 import { MemoryEmailProvider } from "./memoryProvider";
 import { buildPasswordResetEmail } from "./passwordResetTemplate";
+import { buildSupportContactEmail } from "./supportContactTemplate";
 import { ResendEmailProvider } from "./resendProvider";
 import type { EmailMessage, EmailProvider } from "./types";
 import { PASSWORD_RESET_EXPIRY_MINUTES } from "./types";
@@ -42,6 +43,30 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
   await createEmailProvider().send(message);
 }
 
+export async function sendSupportContactEmail(input: {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  to: string;
+}): Promise<void> {
+  const content = buildSupportContactEmail({
+    name: input.name,
+    email: input.email,
+    subject: input.subject,
+    message: input.message,
+    receivedAt: new Date(),
+  });
+  await sendEmail({
+    kind: "support_contact",
+    to: input.to,
+    replyTo: input.email,
+    subject: content.subject,
+    html: content.html,
+    text: content.text,
+  });
+}
+
 export async function sendPasswordResetEmail(input: {
   to: string;
   resetUrl: string;
@@ -67,6 +92,20 @@ export function logPasswordResetEmailOutcome(input: {
   httpStatus?: number;
 }): void {
   console.info("[auth] password-reset email", {
+    outcome: input.outcome,
+    reason: input.reason,
+    httpStatus: input.httpStatus,
+    provider: createEmailProvider().name,
+  });
+}
+
+/** Safe operational log line — never include message body, Reply-To, or API key. */
+export function logSupportContactEmailOutcome(input: {
+  outcome: "sent" | "skipped" | "failed";
+  reason?: string;
+  httpStatus?: number;
+}): void {
+  console.info("[contact] support email", {
     outcome: input.outcome,
     reason: input.reason,
     httpStatus: input.httpStatus,

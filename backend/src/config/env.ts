@@ -14,6 +14,8 @@ const envSchema = z.object({
   RESEND_API_KEY: z.string().optional(),
   /** Verified From address, e.g. Comment2DM <noreply@example.com> */
   EMAIL_FROM: z.string().optional(),
+  /** Inbox that receives public contact-form messages. */
+  SUPPORT_EMAIL: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_STARTER: z.string().optional(),
@@ -45,6 +47,7 @@ export const env = {
   INSTAGRAM_APP_SECRET: parsed.INSTAGRAM_APP_SECRET?.trim() || undefined,
   RESEND_API_KEY: parsed.RESEND_API_KEY?.trim() || undefined,
   EMAIL_FROM: parsed.EMAIL_FROM?.trim() || undefined,
+  SUPPORT_EMAIL: parsed.SUPPORT_EMAIL?.trim() || undefined,
 };
 
 export function isMetaOAuthEnabled(): boolean {

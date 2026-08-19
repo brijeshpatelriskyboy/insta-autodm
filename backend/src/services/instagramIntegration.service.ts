@@ -8,6 +8,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { decryptToken, encryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
+import { DISCONNECTED_INSTAGRAM_CREDENTIALS } from "./instagramAccountState";
 import { metaGraphService } from "./metaGraph.service";
 
 function mapInstagramSaveError(error: unknown): AppError {
@@ -622,11 +623,15 @@ export const instagramIntegrationService = {
     });
 
     if (!account || account.connectionStatus !== "connected") {
-      throw new AppError(404, "No connected Instagram account found");
+      return { disconnected: true, alreadyDisconnected: true as const };
     }
 
-    await prisma.instagramAccount.delete({
+    await prisma.instagramAccount.update({
       where: { userId },
+      data: {
+        ...DISCONNECTED_INSTAGRAM_CREDENTIALS,
+        lastSyncAt: new Date(),
+      },
     });
 
     await activityService.log(userId, {
@@ -634,7 +639,7 @@ export const instagramIntegrationService = {
       title: "Instagram account disconnected",
       description: `@${account.username} was disconnected.`,
       metadata: {
-        source: "mock",
+        source: "user",
         instagramUserId: account.instagramUserId,
       },
     });
