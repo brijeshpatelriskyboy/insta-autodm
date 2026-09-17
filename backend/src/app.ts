@@ -12,6 +12,7 @@ import integrationsRoutes from "./routes/integrations.routes";
 import metaRoutes from "./routes/meta.routes";
 import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
+import jarvisRoutes from "./routes/jarvis.routes";
 import { billingController } from "./controllers/billing.controller";
 import { webhookController } from "./controllers/webhook.controller";
 
@@ -55,6 +56,7 @@ export function createApp() {
   app.use("/api/integrations", integrationsRoutes);
   app.use("/api/activity", activityRoutes);
   app.use("/api/billing", billingRoutes);
+  app.use("/api/jarvis", jarvisRoutes);
 
   app.use(errorHandler);
 
