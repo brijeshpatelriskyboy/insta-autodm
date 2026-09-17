@@ -12,7 +12,7 @@ function isAuthorized(authorization?: string): boolean {
   const expectedBuffer = Buffer.from(expected, "utf8");
   const providedBuffer = Buffer.from(provided, "utf8");
 
-  if (expectedBuffer.length !== providedBuffer.length) return false;
+  if (expectedBuffer.length != providedBuffer.length) return false;
   return timingSafeEqual(expectedBuffer, providedBuffer);
 }
 
@@ -40,7 +40,6 @@ router.get("/summary", async (req, res, next) => {
       dmAttempts,
       sent,
       failed,
-      skipped,
       sending,
       recentFailures,
     ] = await Promise.all([
@@ -51,7 +50,6 @@ router.get("/summary", async (req, res, next) => {
       prisma.dmEvent.count({ where: { createdAt: { gte: startOfTodayUtc } } }),
       prisma.dmEvent.count({ where: { createdAt: { gte: startOfTodayUtc }, status: "sent" } }),
       prisma.dmEvent.count({ where: { createdAt: { gte: startOfTodayUtc }, status: "failed" } }),
-      prisma.dmEvent.count({ where: { createdAt: { gte: startOfTodayUtc }, status: "skipped" } }),
       prisma.dmEvent.count({ where: { createdAt: { gte: startOfTodayUtc }, status: "sending" } }),
       prisma.dmEvent.findMany({
         where: { status: "failed" },
@@ -59,9 +57,7 @@ router.get("/summary", async (req, res, next) => {
         take: 5,
         select: {
           createdAt: true,
-          metaErrorCode: true,
           errorSummary: true,
-          metaErrorMessage: true,
           attemptCount: true,
         },
       }),
@@ -84,13 +80,13 @@ router.get("/summary", async (req, res, next) => {
         dmAttempts,
         sent,
         failed,
-        skipped,
+        skipped: 0,
         sending,
       },
       recentFailures: recentFailures.map((failure) => ({
         createdAt: failure.createdAt.toISOString(),
-        code: failure.metaErrorCode,
-        summary: failure.errorSummary || failure.metaErrorMessage || "DM delivery failed",
+        code: null,
+        summary: failure.errorSummary || "DM delivery failed",
         attemptCount: failure.attemptCount,
       })),
     });
