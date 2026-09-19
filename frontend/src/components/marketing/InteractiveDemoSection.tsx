@@ -80,9 +80,9 @@ export function InteractiveDemoSection() {
     <section ref={sectionRef} className="bg-white py-20 sm:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <SectionHeading
-          eyebrow="Live demo"
+          eyebrow="Example flow"
           title="See Comment2DM in action"
-          description="Watch the full flow in 30 seconds — from comment to captured lead, completely automatic."
+          description="An illustrated comment-to-DM sequence. Example / illustrative data — not a live Instagram session."
         />
 
         {/* Step progress */}
@@ -123,7 +123,7 @@ export function InteractiveDemoSection() {
                 <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400" />
                 <div>
                   <p className="text-sm font-semibold text-slate-900">coach_sarah</p>
-                  <p className="text-xs text-slate-500">San Francisco, CA</p>
+                  <p className="text-xs text-slate-500">Example / illustrative data</p>
                 </div>
               </div>
 

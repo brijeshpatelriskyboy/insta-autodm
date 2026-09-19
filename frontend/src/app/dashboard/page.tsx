@@ -91,7 +91,7 @@ export default function DashboardPage() {
             <BetaBadge />
           </span>
         }
-        description="You're in early access — Comment2DM is in beta for connected Instagram test accounts."
+        description="Comment2DM is in beta. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions."
       />
 
       <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">

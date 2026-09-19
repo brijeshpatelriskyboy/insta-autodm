@@ -9,29 +9,29 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "Features",
   description:
-    "Keyword triggers, automated DMs, lead capture, analytics, activity tracking, and Instagram integration — everything you need to grow on autopilot.",
+    "Keyword rules, automated private replies, activity records, and Instagram Business and Creator comment-to-DM automation through Meta's approved production permissions.",
 };
 
 const deepFeatures = [
   {
-    title: "Smart keyword matching",
+    title: "Keyword matching",
     description:
-      "Case-insensitive matching with support for multiple keywords per campaign. Run GUIDE on one post and START on another — each with its own DM.",
+      "Create keyword rules such as GUIDE or START. A rule can apply across your content or be scoped to one post or reel. Matching uses the comment text and the rule you configured.",
   },
   {
-    title: "Personalized DM templates",
+    title: "Configured private replies",
     description:
-      "Craft messages that feel human. Include links, emojis, and dynamic placeholders. Preview exactly what your audience will receive.",
+      "When a comment matches, Comment2DM can send the message you wrote as an Instagram private reply. Delivery depends on the comment webhook and Meta private-reply eligibility.",
   },
   {
-    title: "Real-time activity feed",
+    title: "Activity records",
     description:
-      "Watch comments turn into DMs in real time. Filter by keyword, date, or status. Never wonder if your automation is working.",
+      "Comment matches and DM send outcomes are stored on your account so you can review what happened. This is not a live-chat inbox.",
   },
   {
-    title: "Conversion analytics",
+    title: "Account analytics",
     description:
-      "Track which keywords drive the most leads. Compare week-over-week performance. Make data-driven decisions about your content strategy.",
+      "Dashboard totals come from your connected account data, such as keyword-rule counts and DM events. Marketing screenshots on this site are example / illustrative data.",
   },
 ];
 
@@ -42,14 +42,14 @@ export default function FeaturesPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Features"
-            title="Built for creators who mean business"
-            description="Every feature is designed to save you time, capture more leads, and help you grow your Instagram audience on autopilot."
+            title="Comment-to-DM automation for professional Instagram accounts"
+            description="Connect an Instagram Business or Creator account, set keyword rules, and send a private reply when someone comments a matching keyword."
             align="center"
           />
           <div className="mt-10 flex justify-center">
             <Link href="/register">
               <Button size="lg">
-                Start Free Trial
+                Create Account
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -62,9 +62,9 @@ export default function FeaturesPage() {
       <section className="bg-white py-20 sm:py-28">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
-            eyebrow="Deep dive"
-            title="Power under the hood"
-            description="Beyond the basics — features that separate hobby tools from professional automation."
+            eyebrow="How it works"
+            title="What the product actually does"
+            description="These capabilities match the current Comment2DM comment-to-DM flow."
           />
           <div className="mt-16 grid gap-8 sm:grid-cols-2">
             {deepFeatures.map((feature, i) => (

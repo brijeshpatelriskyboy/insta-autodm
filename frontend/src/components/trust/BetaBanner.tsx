@@ -6,8 +6,9 @@ export function BetaBanner() {
       <p className="mx-auto flex max-w-7xl items-start gap-2 text-sm text-amber-900">
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
         <span>
-          Comment2DM is currently in beta. Instagram Business and Creator account
-          automation is available for connected test accounts.
+          Comment2DM is in beta. Instagram Business and Creator comment-to-DM
+          automation is available through Meta&apos;s approved production
+          permissions.
         </span>
       </p>
     </div>

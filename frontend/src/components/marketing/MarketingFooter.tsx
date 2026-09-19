@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
-import { navLinks, socialLinks, siteConfig } from "@/lib/marketing-data";
+import { navLinks, siteConfig } from "@/lib/marketing-data";
 
 const footerLinks = {
   product: [
@@ -26,19 +26,6 @@ export function MarketingFooter() {
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
               {siteConfig.tagline}
             </p>
-            <div className="mt-6 flex gap-4">
-              {socialLinks.map((social) => (
-                <a
-                  key={social.label}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-slate-500 transition-colors hover:text-brand-600"
-                >
-                  {social.label}
-                </a>
-              ))}
-            </div>
           </div>
 
           <div>
@@ -76,13 +63,13 @@ export function MarketingFooter() {
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Get started</h3>
             <p className="mt-4 text-sm leading-relaxed text-slate-500">
-              14-day free trial. No credit card required.
+              Creating an account does not start a paid subscription.
             </p>
             <Link
               href="/register"
               className="mt-4 inline-flex text-sm font-semibold text-brand-600 hover:text-brand-700"
             >
-              Start free trial →
+              Create Account →
             </Link>
           </div>
         </div>

@@ -9,6 +9,9 @@ export function errorHandler(
   _next: NextFunction,
 ): void {
   if (error instanceof AppError) {
+    if (error.statusCode === 429 && !res.getHeader("Retry-After")) {
+      res.setHeader("Retry-After", "1");
+    }
     res.status(error.statusCode).json({ error: error.message });
     return;
   }

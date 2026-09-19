@@ -14,29 +14,26 @@ export default function DataDeletionPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Data Deletion Instructions
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: July 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: September 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
-            {siteConfig.name} (&ldquo;we,&rdquo; &ldquo;us,&rdquo; or &ldquo;our&rdquo;)
-            lets you request deletion of your account and personal data associated with
-            the service, including data obtained through Instagram / Meta login.
+            {siteConfig.name} lets you request deletion of your account and
+            personal data associated with the service, including data obtained
+            through Instagram / Meta login.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">How to request deletion</h2>
           <ol className="list-decimal space-y-3 pl-5">
             <li>
-              Sign in to your {siteConfig.name} account (if you still have access).
+              Sign in to your {siteConfig.name} account if you still have access.
             </li>
             <li>
-              Email{" "}
-              <a
-                href="mailto:privacy@comment2dm.com"
-                className="text-brand-600 hover:text-brand-700"
-              >
-                privacy@comment2dm.com
-              </a>{" "}
-              from the email address on your account with the subject line{" "}
+              Submit a request through the{" "}
+              <Link href="/contact" className="text-brand-600 hover:text-brand-700">
+                contact form
+              </Link>{" "}
+              using the email address on your account. Use a subject such as{" "}
               <span className="font-medium text-slate-800">Data Deletion Request</span>.
             </li>
             <li>
@@ -48,35 +45,34 @@ export default function DataDeletionPage() {
           <h2 className="text-lg font-semibold text-slate-900">What we delete</h2>
           <p>Upon a verified request, we delete or anonymize:</p>
           <ul className="list-disc space-y-2 pl-5">
-            <li>Your {siteConfig.name} account profile (name, email)</li>
+            <li>Your {siteConfig.name} account profile (name, email, consent timestamps)</li>
             <li>Keyword rules and automation settings</li>
             <li>Stored Instagram connection tokens and related integration data</li>
             <li>Activity logs and DM event records tied to your account</li>
+            <li>Billing records we store, except where retention is required</li>
           </ul>
 
           <h2 className="text-lg font-semibold text-slate-900">Timeline</h2>
           <p>
-            We process verified deletion requests within 30 days. Some records may be
-            retained longer when required by law, fraud prevention, or dispute resolution.
+            We process verified deletion requests in good faith. Some records may
+            be retained longer when required by law, fraud prevention, or dispute
+            resolution. We do not guarantee a fixed number of days.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Instagram / Meta</h2>
           <p>
-            Removing your data from {siteConfig.name} does not delete your Instagram or
-            Facebook account. To revoke app permissions in Meta, open Instagram or
-            Facebook settings → Apps and websites (or Security and login → Apps and
-            websites) and remove {siteConfig.name}.
+            Removing your data from {siteConfig.name} does not delete your Instagram
+            or Facebook account. To revoke app permissions in Meta, open Instagram
+            or Facebook settings → Apps and websites (or Security and login → Apps
+            and websites) and remove {siteConfig.name}.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Contact</h2>
           <p>
-            Questions about this process? Email the {siteConfig.name} Team at{" "}
-            <a
-              href="mailto:privacy@comment2dm.com"
-              className="text-brand-600 hover:text-brand-700"
-            >
-              privacy@comment2dm.com
-            </a>
+            Questions about this process? Use the{" "}
+            <Link href="/contact" className="text-brand-600 hover:text-brand-700">
+              contact form
+            </Link>
             . See also our{" "}
             <Link href="/privacy" className="text-brand-600 hover:text-brand-700">
               Privacy Policy

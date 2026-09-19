@@ -77,9 +77,11 @@ docker compose up --build
 | Backend  | http://localhost:4000      |
 | Database | localhost:5432             |
 
-The backend runs `prisma db push` on startup to sync the schema.
+The backend container starts with `npm run start:prod`, which applies schema
+migrations using `npx prisma migrate deploy` (not `prisma db push`). For local
+development without Docker, use `npm run db:push` in `backend/`.
 
-### 3. Seed demo data (optional)
+### 3. Seed local data (optional)
 
 In a separate terminal:
 
@@ -89,9 +91,9 @@ npm install
 npm run db:seed
 ```
 
-**Demo credentials:**
-- Email: `demo@comment2dm.com`
-- Password: `demo1234`
+This can create a local development user in your database. The public `/login`
+page does not display demo credentials or a demo sign-in button. Do not publish
+those credentials on production.
 
 ---
 
@@ -200,7 +202,9 @@ App runs at **http://localhost:3000**
 1. Create a PostgreSQL service on Railway.
 2. Deploy `backend/` as a Node.js service.
 3. Set environment variables: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN` (your Vercel URL).
-4. Run `npx prisma db push` or `prisma migrate deploy` on first deploy.
+4. Production applies schema migrations with `npx prisma migrate deploy`
+   (`npm run start:prod` runs that, then `node dist/index.js`). Do not use
+   `prisma db push --accept-data-loss` in production.
 
 ---
 

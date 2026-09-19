@@ -24,11 +24,11 @@ Opens PostgreSQL, backend, and frontend in separate windows.
 | Login    | http://localhost:3000/login |
 | Backend  | http://localhost:4000 |
 
-## Demo login
+## Local seed user (optional)
 
-- Email: `demo@comment2dm.com`
-- Password: `demo1234`
-- Or click **Sign in with demo account** on the login page
+`scripts/setup-local.ps1` can seed a local development user. That account is
+for your machine only. The public `/login` page does not show demo credentials
+or a demo sign-in button.
 
 ## If login page is blank, slow, or shows 500
 

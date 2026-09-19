@@ -8,7 +8,9 @@ import { Tabs } from "@/components/ui/Tabs";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
-import { getStoredUser } from "@/lib/auth";
+import { api, ApiError } from "@/lib/api";
+import { getStoredUser, getToken } from "@/lib/auth";
+import { validateChangePasswordForm } from "@/lib/auth-forms";
 
 const tabs = [
   { id: "profile", label: "Profile" },
@@ -34,6 +36,7 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const [notifications, setNotifications] = useState({
     dmSent: true,
@@ -47,23 +50,43 @@ export default function SettingsPage() {
     toast.info("Coming Soon");
   }
 
-  function handlePasswordSave(e: React.FormEvent) {
+  async function handlePasswordSave(e: React.FormEvent) {
     e.preventDefault();
     setPasswordError("");
 
-    if (newPassword.length < 8) {
-      setPasswordError("New password must be at least 8 characters");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("Passwords do not match");
+    const validationError = validateChangePasswordForm({
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+    if (validationError) {
+      setPasswordError(validationError);
       return;
     }
 
-    toast.info("Coming Soon");
-    setCurrentPassword("");
-    setNewPassword("");
-    setConfirmPassword("");
+    const token = getToken();
+    if (!token) {
+      setPasswordError("You must be signed in to change your password");
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await api.changePassword(token, currentPassword, newPassword);
+      toast.success("Password updated");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      const message =
+        err instanceof ApiError || err instanceof Error
+          ? err.message
+          : "Unable to update password";
+      setPasswordError(message);
+      toast.error(message);
+    } finally {
+      setPasswordLoading(false);
+    }
   }
 
   function handleNotificationsSave(e: React.FormEvent) {
@@ -144,9 +167,9 @@ export default function SettingsPage() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="••••••••"
             />
-            <Button type="submit">
+            <Button type="submit" disabled={passwordLoading}>
               <Lock className="h-4 w-4" />
-              Update Password
+              {passwordLoading ? "Updating..." : "Update Password"}
             </Button>
           </form>
         </Card>

@@ -10,32 +10,28 @@ import { Logo } from "@/components/brand/Logo";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api } from "@/lib/api";
 import { setAuth } from "@/lib/auth";
+import { validateRegistrationConsent } from "@/lib/auth-forms";
 import { isOnboardingComplete } from "@/lib/onboarding";
 import type { SelectedPlan } from "@/lib/plans";
 
 interface AuthPageProps {
   initialMode: "login" | "register";
   selectedPlan?: SelectedPlan | null;
-  /** Only set via internal paths (`/demo` or `/login?demo=1`). Hidden on normal login. */
-  showDemo?: boolean;
 }
-
-const DEMO_EMAIL = "demo@comment2dm.com";
-const DEMO_PASSWORD = "demo1234";
 
 export function AuthPage({
   initialMode,
   selectedPlan = null,
-  showDemo = false,
 }: AuthPageProps) {
   const router = useRouter();
   const toast = useToast();
-  const [mode, setMode] = useState<"login" | "register">(initialMode);
+  const mode = initialMode;
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   async function authenticate(
     authEmail: string,
@@ -50,15 +46,16 @@ export function AuthPage({
       const result =
         authMode === "login"
           ? await api.login(authEmail, authPassword)
-          : await api.register(authEmail, authPassword, authName);
+          : await api.register(authEmail, authPassword, {
+              name: authName,
+              acceptedTerms: acceptedLegal,
+              acceptedPrivacy: acceptedLegal,
+            });
 
       setAuth(result.token, result.user);
       toast.success(authMode === "login" ? "Welcome back!" : "Account created successfully");
 
-      const isDemoUser = result.user.email.toLowerCase() === DEMO_EMAIL;
-      if (isDemoUser) {
-        router.push("/dashboard");
-      } else if (authMode === "register" || !isOnboardingComplete(result.user.id)) {
+      if (authMode === "register" || !isOnboardingComplete(result.user.id)) {
         router.push("/onboarding");
       } else {
         router.push("/dashboard");
@@ -74,14 +71,15 @@ export function AuthPage({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await authenticate(email, password);
-  }
-
-  async function handleDemoLogin() {
-    setMode("login");
-    setEmail(DEMO_EMAIL);
-    setPassword(DEMO_PASSWORD);
-    await authenticate(DEMO_EMAIL, DEMO_PASSWORD, "login");
+    if (mode === "register") {
+      const consentError = validateRegistrationConsent(acceptedLegal);
+      if (consentError) {
+        setError(consentError);
+        toast.error(consentError);
+        return;
+      }
+    }
+    await authenticate(email, password, mode, name);
   }
 
   return (
@@ -117,7 +115,7 @@ export function AuthPage({
             <p className="mt-2 text-sm text-slate-500">
               {mode === "login"
                 ? "Access your automation dashboard"
-                : "Start your 14-day free trial — no credit card required"}
+                : "Creating an account does not start a paid subscription."}
             </p>
 
             {mode === "register" && selectedPlan && (
@@ -129,7 +127,7 @@ export function AuthPage({
                   <span className="font-mono">${selectedPlan.price}/month</span>
                 </p>
                 <p className="mt-1 text-xs text-brand-600">
-                  14-day free trial included
+                  Billing begins only after you complete Stripe checkout when billing is enabled.
                 </p>
               </div>
             )}
@@ -157,27 +155,6 @@ export function AuthPage({
             )}
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {mode === "login" && showDemo && (
-                <div className="rounded-xl border border-brand-200 bg-brand-50/80 px-4 py-3 text-sm">
-                  <p className="font-medium text-brand-800">Demo account</p>
-                  <p className="mt-1 text-brand-700">
-                    Email: <span className="font-mono">{DEMO_EMAIL}</span>
-                  </p>
-                  <p className="text-brand-700">
-                    Password: <span className="font-mono">{DEMO_PASSWORD}</span>
-                  </p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="mt-3 w-full"
-                    disabled={loading}
-                    onClick={handleDemoLogin}
-                  >
-                    Sign in with demo account
-                  </Button>
-                </div>
-              )}
-
               {mode === "register" && (
                 <Input
                   label="Name"
@@ -204,6 +181,28 @@ export function AuthPage({
                 minLength={8}
                 hint="Minimum 8 characters"
               />
+              {mode === "register" && (
+                <label className="flex items-start gap-3 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                    checked={acceptedLegal}
+                    onChange={(e) => setAcceptedLegal(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    I agree to the{" "}
+                    <Link href="/terms" className="font-medium text-brand-600 hover:text-brand-700">
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link href="/privacy" className="font-medium text-brand-600 hover:text-brand-700">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </span>
+                </label>
+              )}
               <Button type="submit" className="w-full" disabled={loading} size="lg">
                 {loading ? (
                   "Please wait..."
@@ -216,12 +215,20 @@ export function AuthPage({
               </Button>
             </form>
 
+            {mode === "login" && (
+              <p className="mt-4 text-center text-sm text-slate-500">
+                <Link href="/forgot-password" className="font-medium text-brand-600 hover:text-brand-700">
+                  Forgot password?
+                </Link>
+              </p>
+            )}
+
             <p className="mt-4 text-center text-sm text-slate-500">
               {mode === "login" ? (
                 <>
                   Don&apos;t have an account?{" "}
                   <Link href="/register" className="font-medium text-brand-600 hover:text-brand-700">
-                    Start free trial
+                    Create Account
                   </Link>
                 </>
               ) : (

@@ -13,6 +13,7 @@ import metaRoutes from "./routes/meta.routes";
 import activityRoutes from "./routes/activity.routes";
 import billingRoutes from "./routes/billing.routes";
 import jarvisRoutes from "./routes/jarvis.routes";
+import contactRoutes from "./routes/contact.routes";
 import { billingController } from "./controllers/billing.controller";
 import { webhookController } from "./controllers/webhook.controller";
 
@@ -48,6 +49,7 @@ export function createApp() {
   app.use("/api/meta", metaRoutes);
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/contact", contactRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
   app.use("/api/analytics", analyticsRoutes);
   // GET /api/webhooks/instagram verification challenge only (POST handled above).
