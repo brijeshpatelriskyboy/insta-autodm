@@ -10,6 +10,12 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   FRONTEND_URL: z.string().default("http://localhost:3000"),
+  /** Resend API key — never log. Optional until transactional email is configured. */
+  RESEND_API_KEY: z.string().optional(),
+  /** Verified From address, e.g. Comment2DM <noreply@example.com> */
+  EMAIL_FROM: z.string().optional(),
+  /** Inbox that receives public contact-form messages. */
+  SUPPORT_EMAIL: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_STARTER: z.string().optional(),
@@ -39,6 +45,9 @@ export const env = {
   ...parsed,
   INSTAGRAM_APP_ID: parsed.INSTAGRAM_APP_ID?.trim() || undefined,
   INSTAGRAM_APP_SECRET: parsed.INSTAGRAM_APP_SECRET?.trim() || undefined,
+  RESEND_API_KEY: parsed.RESEND_API_KEY?.trim() || undefined,
+  EMAIL_FROM: parsed.EMAIL_FROM?.trim() || undefined,
+  SUPPORT_EMAIL: parsed.SUPPORT_EMAIL?.trim() || undefined,
 };
 
 export function isMetaOAuthEnabled(): boolean {

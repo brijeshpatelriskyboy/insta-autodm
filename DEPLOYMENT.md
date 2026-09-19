@@ -153,17 +153,11 @@ Start with **test mode**. Switch to live only when ready for real customers.
 
 ---
 
-## Part 6 — Seed demo user (optional)
+## Part 6 — Production login
 
-After first deploy, seed the demo account once:
-
-```bash
-# Locally with production DATABASE_URL (temporarily in backend/.env)
-cd backend
-npm run db:seed
-```
-
-Demo login: `demo@comment2dm.com` / `demo1234`
+Public `/login` does not include demo credentials or a demo sign-in button.
+Create a real account from `/register`, or use an existing production user.
+Do not seed a public demo password onto production.
 
 ---
 
@@ -175,7 +169,7 @@ Run through these on your public Vercel URL:
 |------|----------------|----------|
 | Marketing site | `/` | Homepage loads |
 | Sign up | `/register` → create account | Redirects to `/onboarding` |
-| Login | `/login` | Demo or new account → dashboard |
+| Login | `/login` | Existing account → dashboard. No public demo credentials. |
 | Dashboard | `/dashboard` | Loads after auth |
 | Instagram waitlist | `/connect-instagram` | Username saved to DB |
 | Billing page | `/dashboard/billing` | Plans shown |

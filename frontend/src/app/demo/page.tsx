@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-/** Internal demo entry — keeps credentials off the normal /login experience. */
+/** Public /demo no longer exposes demo credentials. */
 export default function DemoPage() {
-  redirect("/login?demo=1");
+  redirect("/login");
 }

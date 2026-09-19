@@ -7,6 +7,7 @@ export default defineConfig({
     env: {
       DATABASE_URL: "postgresql://u:p@localhost:5432/db",
       JWT_SECRET: "test-secret-min-16chars-vitest",
+      FRONTEND_URL: "https://app.example.test",
     },
   },
 });

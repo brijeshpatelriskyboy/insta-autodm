@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { CTASection } from "@/components/marketing/CTASection";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { SectionHeading } from "@/components/marketing/SectionHeading";
+import { billingDisclosure } from "@/lib/marketing-data";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Simple, transparent pricing for Instagram DM automation. Starter, Creator, and Pro plans with a 14-day free trial.",
+    "Starter, Creator, and Pro plans for Instagram comment-to-DM automation. Creating an account does not start a paid subscription.",
 };
 
 const comparison = [
@@ -17,7 +18,7 @@ const comparison = [
   { feature: "Activity tracking", starter: "—", creator: "✓", pro: "✓" },
   { feature: "Team seats", starter: "1", creator: "1", pro: "3" },
   { feature: "API access", starter: "—", creator: "—", pro: "✓" },
-  { feature: "Support", starter: "Email", creator: "Priority", pro: "Dedicated" },
+  { feature: "Support", starter: "Contact form", creator: "Contact form", pro: "Contact form" },
 ];
 
 export default function PricingPage() {
@@ -27,12 +28,9 @@ export default function PricingPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             eyebrow="Pricing"
-            title="Choose the plan that fits your growth"
-            description="All plans include a 14-day free trial. Upgrade, downgrade, or cancel anytime."
+            title="Choose a plan when you are ready"
+            description={billingDisclosure}
           />
-          <p className="mx-auto mt-6 max-w-2xl text-center text-sm font-medium text-amber-800">
-            Early Access Pricing — Instagram automation launching soon.
-          </p>
         </div>
       </section>
 
@@ -42,7 +40,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             title="Compare plans"
-            description="See exactly what's included in each tier."
+            description="Listed features describe the intended commercial tiers. Billing starts only after Stripe checkout when billing is enabled."
           />
           <div className="mt-12 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-left text-sm">

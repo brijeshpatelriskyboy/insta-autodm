@@ -5,7 +5,6 @@ import { HeroSection } from "@/components/marketing/HeroSection";
 import { HowItWorksSection } from "@/components/marketing/HowItWorksSection";
 import { InteractiveDemoSection } from "@/components/marketing/InteractiveDemoSection";
 import { PricingSection } from "@/components/marketing/PricingSection";
-import { TestimonialsSection } from "@/components/marketing/TestimonialsSection";
 import { TrustSection } from "@/components/marketing/TrustSection";
 
 export default function HomePage() {
@@ -17,7 +16,6 @@ export default function HomePage() {
       <InteractiveDemoSection />
       <FeaturesGrid />
       <PricingSection />
-      <TestimonialsSection />
       <FAQSection limit={6} />
       <CTASection />
     </>

@@ -2,32 +2,32 @@ export const faqItems = [
   {
     question: "How does Comment2DM work?",
     answer:
-      "When someone comments a specific keyword on your Instagram post or reel, Comment2DM automatically sends them a personalized DM with your pre-configured message or link.",
+      "When someone comments a keyword on your Instagram post or reel, Comment2DM can send the private-reply message you configured for that keyword rule.",
   },
   {
     question: "Do I need a Business Instagram account?",
     answer:
-      "Yes. Meta requires an Instagram Business or Creator account to use the Messaging API and webhooks. Comment2DM supports Instagram Login for professional accounts.",
+      "Yes. Meta requires an Instagram Business or Creator account to use the Messaging API and webhooks. Comment2DM supports Instagram Login for professional accounts. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
   },
   {
     question: "Can I use multiple keywords?",
     answer:
-      "Absolutely. Create as many keyword rules as you need. Each rule can have its own DM message and active/inactive status.",
+      "Yes. Create as many keyword rules as your plan allows. Each rule can have its own DM message and can be scoped to one post or reel, or used across your content.",
   },
   {
     question: "What happens if two keywords match?",
     answer:
-      "The first matching active rule triggers. We recommend using unique, specific keywords like GUIDE or START to avoid conflicts.",
+      "The first matching active rule is used. Use distinct keywords such as GUIDE or START to avoid overlap.",
   },
   {
     question: "Is my data secure?",
     answer:
-      "Your credentials are encrypted and stored securely. We never share your data with third parties. Access tokens are encrypted at rest and never exposed in client-side code.",
+      "Passwords are stored as hashes. Instagram access tokens are stored encrypted and are not exposed in client-side application code. See the Privacy Policy for what we collect and which processors we use.",
   },
   {
     question: "Is Comment2DM in beta?",
     answer:
-      "Yes. Comment2DM is currently in beta. Instagram Business and Creator account automation is available for connected test accounts while we complete Meta App Review.",
+      "Yes. Comment2DM is still in beta as a product. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
   },
 ];
 
@@ -35,7 +35,7 @@ export const gettingStartedSteps = [
   {
     step: 1,
     title: "Create your account",
-    description: "Sign up and access your Comment2DM dashboard.",
+    description: "Sign up and access your Comment2DM dashboard. Creating an account does not start a paid subscription.",
   },
   {
     step: 2,
@@ -55,6 +55,6 @@ export const gettingStartedSteps = [
   {
     step: 5,
     title: "Monitor results",
-    description: "Track DMs sent, leads captured, and top keywords in Analytics and Activity Log.",
+    description: "Review DM send outcomes and activity from your connected account in Analytics and the activity feed.",
   },
 ];

@@ -79,7 +79,7 @@ docker compose up --build
 
 The backend runs `prisma db push` on startup to sync the schema.
 
-### 3. Seed demo data (optional)
+### 3. Seed local data (optional)
 
 In a separate terminal:
 
@@ -89,9 +89,9 @@ npm install
 npm run db:seed
 ```
 
-**Demo credentials:**
-- Email: `demo@comment2dm.com`
-- Password: `demo1234`
+This can create a local development user in your database. The public `/login`
+page does not display demo credentials or a demo sign-in button. Do not publish
+those credentials on production.
 
 ---
 

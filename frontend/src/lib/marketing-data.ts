@@ -4,7 +4,7 @@ export const siteConfig = {
   name: "Comment2DM",
   tagline: "Turn Instagram Comments Into Conversations Automatically",
   description:
-    "Automatically DM people who comment on your posts, capture leads, and grow your audience on autopilot.",
+    "Automatically DM people who comment a keyword on your posts or reels. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
   get url() {
     return getSiteUrl();
   },
@@ -18,9 +18,18 @@ export const navLinks = [
 ];
 
 export const trustStats = [
-  { value: "2.4M+", label: "DMs Sent" },
-  { value: "580K+", label: "Leads Generated" },
-  { value: "12K+", label: "Active Creators" },
+  {
+    value: "Meta-approved",
+    label: "Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
+  },
+  {
+    value: "Keyword DMs",
+    label: "Send a private reply when someone comments a keyword you configured.",
+  },
+  {
+    value: "Post or reel",
+    label: "Scope a keyword to one post or reel, or use it across your content.",
+  },
 ];
 
 export const howItWorksSteps = [
@@ -33,19 +42,19 @@ export const howItWorksSteps = [
   {
     step: 2,
     title: "Keyword detected",
-    description: "Comment2DM instantly matches the comment to your keyword rule.",
+    description: "Comment2DM matches the comment to your keyword rule.",
     highlight: null,
   },
   {
     step: 3,
     title: "DM sent automatically",
-    description: "A personalized DM is delivered in seconds — no manual work.",
+    description: "A private reply is sent with the message you configured.",
     highlight: null,
   },
   {
     step: 4,
-    title: "Lead captured",
-    description: "The interaction is logged, tracked, and ready for follow-up.",
+    title: "Activity logged",
+    description: "The comment and DM outcome are stored on your account for follow-up.",
     highlight: null,
   },
 ];
@@ -54,37 +63,37 @@ export const features = [
   {
     title: "Keyword Triggers",
     description:
-      "Set custom keywords like GUIDE, START, or PDF. Every matching comment fires your automation instantly.",
+      "Set custom keywords like GUIDE, START, or PDF. Matching comments can trigger your configured DM.",
     icon: "keyword",
   },
   {
     title: "Automated DMs",
     description:
-      "Send personalized welcome messages, freebies, and booking links the moment someone engages.",
+      "Send a private reply with your message when someone comments a matching keyword.",
     icon: "dm",
   },
   {
-    title: "Lead Capture",
+    title: "Activity records",
     description:
-      "Turn commenters into leads automatically. Every DM interaction is stored and ready to export.",
+      "Comment matches and DM send outcomes are stored on your account.",
     icon: "lead",
   },
   {
     title: "Analytics",
     description:
-      "Track DMs sent, conversion rates, and top-performing keywords with beautiful real-time dashboards.",
+      "See keyword-rule counts and DM event totals from your own connected account data.",
     icon: "analytics",
   },
   {
     title: "Activity Tracking",
     description:
-      "See every comment, DM, and lead in a live activity feed. Never miss an engagement again.",
+      "Review comment, match, and DM events in your activity feed.",
     icon: "activity",
   },
   {
     title: "Instagram Integration",
     description:
-      "Connect your Instagram Business account securely. Built for Meta's official API standards.",
+      "Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
     icon: "instagram",
   },
 ];
@@ -94,38 +103,38 @@ export const pricingPlans = [
     name: "Starter",
     slug: "starter" as const,
     price: 9.9,
-    description: "Perfect for creators just getting started with DM automation.",
+    description: "For creators getting started with comment-to-DM automation.",
     features: [
       "1 Instagram account",
       "3 keyword rules",
       "500 DMs / month",
       "Basic analytics",
-      "Email support",
+      "Email support via the contact form",
     ],
-    cta: "Start Free Trial",
+    cta: "Create Account",
     popular: false,
   },
   {
     name: "Creator",
     slug: "creator" as const,
     price: 19,
-    description: "For growing creators and coaches scaling their audience.",
+    description: "For growing creators running more keyword rules.",
     features: [
       "2 Instagram accounts",
       "15 keyword rules",
       "5,000 DMs / month",
       "Advanced analytics",
       "Activity tracking",
-      "Priority support",
+      "Email support via the contact form",
     ],
-    cta: "Start Free Trial",
+    cta: "Create Account",
     popular: true,
   },
   {
     name: "Pro",
     slug: "pro" as const,
     price: 49,
-    description: "For agencies, teams, and high-volume businesses.",
+    description: "For higher-volume comment-to-DM automation.",
     features: [
       "5 Instagram accounts",
       "Unlimited keyword rules",
@@ -133,53 +142,10 @@ export const pricingPlans = [
       "Full analytics suite",
       "Team members (3 seats)",
       "API access",
-      "Dedicated support",
+      "Email support via the contact form",
     ],
-    cta: "Start Free Trial",
+    cta: "Create Account",
     popular: false,
-  },
-];
-
-export const testimonials = [
-  {
-    quote:
-      "I went from manually DMing 50 people a day to zero. Comment2DM handles everything while I focus on creating content.",
-    name: "Sarah Chen",
-    role: "Fitness Coach",
-    followers: "124K followers",
-    avatar: "SC",
-  },
-  {
-    quote:
-      "My lead magnet comments went from a 12% response rate to 89%. The keyword trigger for 'GUIDE' alone generated 340 leads last month.",
-    name: "Marcus Rivera",
-    role: "Real Estate Agent",
-    followers: "28K followers",
-    avatar: "MR",
-  },
-  {
-    quote:
-      "We use it for three client accounts. The analytics alone paid for the subscription in the first week.",
-    name: "Elena Vasquez",
-    role: "Social Media Agency Owner",
-    followers: "Agency · 8 clients",
-    avatar: "EV",
-  },
-  {
-    quote:
-      "Setup took 4 minutes. Connected Instagram, added my keywords, and had my first automated DM within an hour.",
-    name: "Jordan Blake",
-    role: "Lifestyle Influencer",
-    followers: "89K followers",
-    avatar: "JB",
-  },
-  {
-    quote:
-      "As a small bakery, we capture catering inquiries automatically when people comment 'MENU'. It's like having a 24/7 sales rep.",
-    name: "Priya Sharma",
-    role: "Small Business Owner",
-    followers: "12K followers",
-    avatar: "PS",
   },
 ];
 
@@ -187,52 +153,52 @@ export const faqs = [
   {
     question: "How does Comment2DM work?",
     answer:
-      "You connect your Instagram Business or Creator account, create keyword rules (like GUIDE or START), and set the DM message to send. When someone comments that keyword on your post or reel, Comment2DM automatically sends your personalized DM within seconds.",
+      "You connect an Instagram Business or Creator account, create keyword rules (like GUIDE or START), and set the DM message. When someone comments that keyword on a matching post or reel, Comment2DM can send your private reply.",
   },
   {
     question: "Is this allowed by Instagram / Meta?",
     answer:
-      "Yes. Comment2DM uses Meta's official Instagram APIs for Business and Creator accounts. We follow Meta's platform policies and rate limits to keep your account safe and compliant.",
+      "Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions. You still must follow Meta's platform policies.",
   },
   {
     question: "Do I need an Instagram Business account?",
     answer:
-      "Yes. You need an Instagram Business or Creator account. Personal accounts cannot use the Instagram Messaging API. We'll guide you through setup in under 5 minutes.",
+      "Yes. You need an Instagram Business or Creator account. Personal accounts cannot use Instagram messaging APIs.",
   },
   {
     question: "How fast are DMs sent after a comment?",
     answer:
-      "DMs are typically sent within 5–15 seconds of a matching comment. Our system monitors comments in real time and triggers your automation instantly.",
+      "Delivery depends on Instagram delivering the comment webhook and on Meta private-reply eligibility. Comment2DM sends after a matching comment is received and claimed.",
   },
   {
     question: "Can I use multiple keywords?",
     answer:
-      "Absolutely. Create as many keyword rules as your plan allows. Each keyword can have its own custom DM message, so you can run different campaigns on different posts.",
+      "Yes. Create as many keyword rules as your plan allows. Each keyword can have its own message, and a rule can be scoped to one post or reel.",
   },
   {
-    question: "What happens if I exceed my DM limit?",
+    question: "Does creating an account start billing?",
     answer:
-      "We'll notify you when you reach 80% of your monthly limit. You can upgrade your plan anytime, or automations will pause until your next billing cycle resets.",
+      "Creating an account does not start a paid subscription. Billing begins only after a paid plan is selected and Stripe checkout is completed when billing is enabled.",
   },
   {
     question: "Is there a free trial?",
     answer:
-      "Yes. Every plan includes a 14-day free trial with full access to features. No credit card required to start. Cancel anytime during the trial with no charge.",
+      "There is no 14-day free trial. You can create an account and use the product according to the plan you select when billing is enabled.",
   },
   {
     question: "Can I track leads and conversions?",
     answer:
-      "Yes. Our analytics dashboard shows DMs sent, leads captured, conversion rates, and keyword performance. The activity feed logs every comment and DM in real time.",
+      "Your dashboard shows keyword-rule counts, DM events, and activity from your connected account. Marketing screenshots on this site are example / illustrative data.",
   },
   {
     question: "Do you support Reels and carousel posts?",
     answer:
-      "Yes. Keyword triggers work on feed posts, Reels, and carousel posts. Any public comment on content linked to your connected account can trigger an automation.",
+      "Keyword triggers can run on feed posts and Reels when Instagram delivers the comment webhook for that media.",
   },
   {
     question: "How do I get support?",
     answer:
-      "Starter plans include email support with 24-hour response times. Creator and Pro plans get priority support. Pro customers also get a dedicated account manager and onboarding call.",
+      "Use the contact form. There is no live chat, guaranteed response time, or dedicated account manager.",
   },
 ];
 
@@ -244,8 +210,5 @@ export const audiences = [
   "Influencers",
 ];
 
-export const socialLinks = [
-  { label: "Instagram", href: "https://instagram.com" },
-  { label: "Twitter", href: "https://twitter.com" },
-  { label: "LinkedIn", href: "https://linkedin.com" },
-];
+export const billingDisclosure =
+  "Creating an account does not start a paid subscription. Billing begins only after a paid plan is selected and Stripe checkout is completed when billing is enabled.";

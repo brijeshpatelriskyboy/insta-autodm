@@ -41,7 +41,7 @@ export function HeroSection() {
           >
             <Link href="/register">
               <Button size="lg">
-                Start Free Trial
+                Create Account
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
@@ -80,6 +80,9 @@ export function HeroSection() {
               </div>
               <span className="ml-2 text-xs font-medium text-slate-500">
                 Comment2DM Dashboard
+              </span>
+              <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                Example / illustrative data
               </span>
             </div>
             <div className="grid gap-0 sm:grid-cols-5">

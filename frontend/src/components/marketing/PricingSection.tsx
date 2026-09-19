@@ -18,16 +18,18 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
           <SectionHeading
             eyebrow="Pricing"
             title="Simple, transparent pricing"
-            description="Start free for 14 days. Scale as your audience grows. No hidden fees."
+            description="Choose a plan when you are ready. Creating an account does not start billing."
           />
         )}
 
         <p
-          className={`text-center text-sm font-medium text-amber-800 ${
+          className={`text-center text-sm text-slate-600 ${
             showHeading ? "mt-6" : "mx-auto max-w-2xl px-4 sm:px-6 lg:px-8"
           }`}
         >
-          Early Access Pricing — Instagram automation launching soon.
+          Creating an account does not start a paid subscription. Billing begins
+          only after a paid plan is selected and Stripe checkout is completed
+          when billing is enabled.
         </p>
 
         <div
