@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { DmEventStatus } from "@prisma/client";
+import { DmEventStatus, Prisma } from "@prisma/client";
 
 const {
   mockFindFirstAccount,
@@ -56,6 +56,7 @@ vi.mock("../utils/tokenCrypto", () => ({
 }));
 
 import {
+  buildDuplicateTriggerKey,
   commentMatchesKeyword,
   dmFailureActivityTitle,
   formatDmErrorSummary,
@@ -107,6 +108,60 @@ const activeRule = {
   dmMessage: "Thanks! Here is our price list.",
   isActive: true,
 };
+
+const PRICE_TRIGGER_KEY = buildDuplicateTriggerKey({
+  commenterId: "user-1",
+  mediaId: "media-99",
+  ruleId: "rule-1",
+});
+
+function uniqueConstraintError() {
+  return new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
+    code: "P2002",
+    clientVersion: "test",
+  });
+}
+
+function commentWebhook(overrides: {
+  commentId?: string;
+  text?: string;
+  commenterId?: string;
+  username?: string;
+  mediaId?: string;
+}) {
+  return {
+    object: "instagram",
+    entry: [
+      {
+        id: "ig-business-123",
+        time: 1,
+        changes: [
+          {
+            field: "comments",
+            value: {
+              id: overrides.commentId ?? "comment-abc",
+              text: overrides.text ?? "I want the PRICE please",
+              from: {
+                id: overrides.commenterId ?? "user-1",
+                username: overrides.username ?? "buyer_jane",
+              },
+              media: { id: overrides.mediaId ?? "media-99" },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
+function stubSuccessfulClaim(dmEventId = "dm-1") {
+  mockDmFindUnique.mockResolvedValue(null);
+  mockDmCreate.mockResolvedValue({
+    id: dmEventId,
+    attemptCount: 1,
+    status: DmEventStatus.sending,
+  });
+}
 
 function stubTransaction() {
   mockTransaction.mockImplementation(async (fn: (tx: unknown) => unknown) => {
@@ -168,6 +223,15 @@ describe("instagramWebhook.service helpers", () => {
     expect(resolveDmFailureStatus(3)).toBe("action_required");
     expect(dmFailureActivityTitle("retry_available")).toBe("Failed — retry available");
     expect(dmFailureActivityTitle("action_required")).toBe("Failed — action required");
+  });
+
+  it("builds a duplicate-trigger key only when commenter, media, and rule are present", () => {
+    expect(
+      buildDuplicateTriggerKey({ commenterId: "user-1", mediaId: "media-99", ruleId: "rule-1" }),
+    ).toBe("user-1\u001fmedia-99\u001frule-1");
+    expect(buildDuplicateTriggerKey({ commenterId: "", mediaId: "media-99", ruleId: "rule-1" })).toBeNull();
+    expect(buildDuplicateTriggerKey({ commenterId: "user-1", mediaId: null, ruleId: "rule-1" })).toBeNull();
+    expect(buildDuplicateTriggerKey({ commenterId: "user-1", mediaId: "media-99", ruleId: " " })).toBeNull();
   });
 
   it("parses comment webhooks and skips missing commentId", () => {
@@ -239,7 +303,11 @@ describe("processWebhookPayload private reply flow", () => {
     expect(mockDmUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "dm-1" },
-        data: { ruleId: "rule-1" },
+        data: expect.objectContaining({
+          ruleId: "rule-1",
+          commenterId: "user-1",
+          duplicateTriggerKey: PRICE_TRIGGER_KEY,
+        }),
       }),
     );
 
@@ -319,53 +387,206 @@ describe("processWebhookPayload private reply flow", () => {
     logSpy.mockRestore();
   });
 
-  it("new comment ID from the same person and same keyword sends normally", async () => {
+  it("blocks a second successful DM for the same commenter + post + keyword rule", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([activeRule]);
-    mockDmFindUnique.mockResolvedValue(null);
-    mockDmCreate.mockResolvedValue({ id: "dm-1", attemptCount: 1, status: DmEventStatus.sending });
+    stubSuccessfulClaim("dm-1");
     mockDecryptToken.mockReturnValue("tok");
     mockSendPrivateReply.mockResolvedValue({ recipientId: "r1", messageId: "m1" });
+
+    let triggerAcquires = 0;
+    mockDmUpdate.mockImplementation(async (args: { data?: { duplicateTriggerKey?: string | null } }) => {
+      if (args.data?.duplicateTriggerKey) {
+        triggerAcquires += 1;
+        if (triggerAcquires > 1) {
+          throw uniqueConstraintError();
+        }
+      }
+      return {};
+    });
 
     const first = await instagramWebhookService.processWebhookPayload(sampleWebhook);
     expect(first.sent).toBe(1);
     expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
 
-    const secondWebhook = {
-      object: "instagram",
-      entry: [
-        {
-          id: "ig-business-123",
-          time: 2,
-          changes: [
-            {
-              field: "comments",
-              value: {
-                id: "comment-xyz-new",
-                text: "I want the PRICE please",
-                from: { id: "user-1", username: "buyer_jane" },
-                media: { id: "media-99" },
-              },
-            },
-          ],
-        },
-      ],
-    };
-
-    mockDmCreate.mockResolvedValue({ id: "dm-2", attemptCount: 1, status: DmEventStatus.sending });
+    stubSuccessfulClaim("dm-2");
     mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
 
-    const second = await instagramWebhookService.processWebhookPayload(secondWebhook);
+    const second = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({ commentId: "comment-xyz-new" }),
+    );
+
+    expect(second.sent).toBe(0);
+    expect(second.duplicates).toBe(1);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-2" },
+        data: expect.objectContaining({
+          status: DmEventStatus.skipped,
+          duplicateTriggerKey: null,
+        }),
+      }),
+    );
+    expect(logSpy).toHaveBeenCalledWith(
+      "duplicate trigger ignored",
+      expect.objectContaining({ commentId: "comment-xyz-new", ruleId: "rule-1" }),
+    );
+    logSpy.mockRestore();
+  });
+
+  it("allows a DM when a different commenter matches the same post and rule", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    stubSuccessfulClaim("dm-1");
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r1", messageId: "m1" });
+
+    await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    stubSuccessfulClaim("dm-2");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
+
+    const second = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({
+        commentId: "comment-other",
+        commenterId: "user-2",
+        username: "other_buyer",
+      }),
+    );
 
     expect(second.sent).toBe(1);
     expect(second.duplicates).toBe(0);
     expect(mockSendPrivateReply).toHaveBeenCalledTimes(2);
-    expect(mockSendPrivateReply).toHaveBeenLastCalledWith(
-      expect.objectContaining({ commentId: "comment-xyz-new" }),
-    );
-    expect(mockDmCreate).toHaveBeenCalledWith(
+    expect(mockDmUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ commentId: "comment-xyz-new" }),
+        where: { id: "dm-2" },
+        data: expect.objectContaining({
+          commenterId: "user-2",
+          duplicateTriggerKey: buildDuplicateTriggerKey({
+            commenterId: "user-2",
+            mediaId: "media-99",
+            ruleId: "rule-1",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("allows a DM when the same commenter comments on a different post/reel", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    stubSuccessfulClaim("dm-1");
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r1", messageId: "m1" });
+
+    await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    stubSuccessfulClaim("dm-2");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
+
+    const second = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({ commentId: "comment-other-post", mediaId: "media-other" }),
+    );
+
+    expect(second.sent).toBe(1);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(2);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-2" },
+        data: expect.objectContaining({
+          duplicateTriggerKey: buildDuplicateTriggerKey({
+            commenterId: "user-1",
+            mediaId: "media-other",
+            ruleId: "rule-1",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("allows a DM when the same commenter matches a different keyword rule", async () => {
+    const guideRule = {
+      ...activeRule,
+      id: "rule-guide",
+      keyword: "GUIDE",
+      dmMessage: "Here is the guide.",
+    };
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule, guideRule]);
+    stubSuccessfulClaim("dm-1");
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r1", messageId: "m1" });
+
+    await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    stubSuccessfulClaim("dm-2");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
+
+    const second = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({ commentId: "comment-guide", text: "Please send the GUIDE" }),
+    );
+
+    expect(second.sent).toBe(1);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(2);
+    expect(mockSendPrivateReply).toHaveBeenLastCalledWith(
+      expect.objectContaining({ commentId: "comment-guide", messageText: "Here is the guide." }),
+    );
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-2" },
+        data: expect.objectContaining({
+          ruleId: "rule-guide",
+          duplicateTriggerKey: buildDuplicateTriggerKey({
+            commenterId: "user-1",
+            mediaId: "media-99",
+            ruleId: "rule-guide",
+          }),
+        }),
+      }),
+    );
+  });
+
+  it("clears the second guard on private-reply failure so a later comment can send", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    stubSuccessfulClaim("dm-1");
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockRejectedValue(new Error("Meta API timeout"));
+
+    const first = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    expect(first.failed).toBe(1);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-1" },
+        data: expect.objectContaining({
+          status: DmEventStatus.failed,
+          duplicateTriggerKey: null,
+        }),
+      }),
+    );
+
+    vi.clearAllMocks();
+    mockActivityLog.mockResolvedValue({ id: "act-2" });
+    mockDmUpdate.mockResolvedValue({});
+    stubTransaction();
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    stubSuccessfulClaim("dm-2");
+    mockDecryptToken.mockReturnValue("tok");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "r2", messageId: "m2" });
+
+    const second = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({ commentId: "comment-retry-new" }),
+    );
+
+    expect(second.sent).toBe(1);
+    expect(second.duplicates).toBe(0);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-2" },
+        data: expect.objectContaining({
+          duplicateTriggerKey: PRICE_TRIGGER_KEY,
+        }),
       }),
     );
   });
@@ -411,6 +632,7 @@ describe("processWebhookPayload private reply flow", () => {
           status: DmEventStatus.failed,
           metaErrorCode: null,
           metaErrorMessage: "Invalid encrypted token format",
+          duplicateTriggerKey: null,
         }),
       }),
     );
@@ -444,6 +666,7 @@ describe("processWebhookPayload private reply flow", () => {
           metaErrorCode: 10,
           metaErrorMessage: "User not eligible for private reply",
           errorSummary: "[10] User not eligible for private reply",
+          duplicateTriggerKey: null,
         }),
       }),
     );
@@ -497,6 +720,7 @@ describe("processWebhookPayload private reply flow", () => {
           metaErrorCode: 4,
           metaErrorMessage: "Application request limit reached",
           errorSummary: "[4] Application request limit reached",
+          duplicateTriggerKey: null,
         }),
       }),
     );

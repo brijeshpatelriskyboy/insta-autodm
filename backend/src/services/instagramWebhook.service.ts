@@ -123,6 +123,73 @@ export function truncateComment(text: string, max = 80): string {
   return trimmed.length > max ? `${trimmed.slice(0, max)}…` : trimmed;
 }
 
+/** Stable key for one DM per commenter + media + keyword rule. Null if any part is missing. */
+export function buildDuplicateTriggerKey(params: {
+  commenterId?: string | null;
+  mediaId?: string | null;
+  ruleId?: string | null;
+}): string | null {
+  const commenterId = params.commenterId?.trim() || "";
+  const mediaId = params.mediaId?.trim() || "";
+  const ruleId = params.ruleId?.trim() || "";
+  if (!commenterId || !mediaId || !ruleId) {
+    return null;
+  }
+  return `${commenterId}\u001f${mediaId}\u001f${ruleId}`;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002"
+  );
+}
+
+/**
+ * Hold the second duplicate guard on this claimed row before sending.
+ * Unique on (instagramAccountId, duplicateTriggerKey) is the atomic lock.
+ * Returns "duplicate" when another in-flight or sent DM already holds the key.
+ */
+async function acquireDuplicateTriggerGuard(params: {
+  dmEventId: string;
+  commenterId?: string | null;
+  mediaId?: string | null;
+  ruleId: string;
+}): Promise<"acquired" | "duplicate"> {
+  const commenterId = params.commenterId?.trim() || null;
+  const duplicateTriggerKey = buildDuplicateTriggerKey({
+    commenterId,
+    mediaId: params.mediaId,
+    ruleId: params.ruleId,
+  });
+
+  try {
+    await prisma.dmEvent.update({
+      where: { id: params.dmEventId },
+      data: {
+        ruleId: params.ruleId,
+        commenterId,
+        duplicateTriggerKey,
+      },
+    });
+    return "acquired";
+  } catch (error) {
+    if (!isUniqueConstraintError(error) || !duplicateTriggerKey) {
+      throw error;
+    }
+
+    await prisma.dmEvent.update({
+      where: { id: params.dmEventId },
+      data: {
+        status: DmEventStatus.skipped,
+        ruleId: params.ruleId,
+        commenterId,
+        duplicateTriggerKey: null,
+      },
+    });
+    return "duplicate";
+  }
+}
+
 export function parseInstagramCommentWebhook(body: unknown): ParsedComment[] {
   if (!body || typeof body !== "object") {
     return [];
@@ -286,10 +353,7 @@ export async function claimCommentForSend(params: {
       return null;
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (isUniqueConstraintError(error)) {
       // Concurrent create lost the race — treat as duplicate unless a failed row can be claimed.
       return claimCommentForSendAfterConflict(params);
     }
@@ -490,10 +554,25 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     return empty;
   }
 
-  await prisma.dmEvent.update({
-    where: { id: claim.dmEventId },
-    data: { ruleId: matchedRule.id },
+  const triggerGuard = await acquireDuplicateTriggerGuard({
+    dmEventId: claim.dmEventId,
+    commenterId: comment.commenterId,
+    mediaId: comment.mediaId,
+    ruleId: matchedRule.id,
   });
+
+  if (triggerGuard === "duplicate") {
+    console.log("duplicate trigger ignored", {
+      eventType: comment.eventField ?? "comments",
+      accountId: comment.instagramAccountId,
+      commentId: comment.commentId,
+      commenterId: comment.commenterId ?? null,
+      mediaId: comment.mediaId ?? null,
+      ruleId: matchedRule.id,
+      sendResult: "duplicate_trigger_ignored",
+    });
+    return { matched: true, sent: false, failed: false, duplicate: true, eventsCreated: 0 };
+  }
 
   const commenter = comment.commenterUsername ? `@${comment.commenterUsername}` : "A user";
 
@@ -548,6 +627,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
         errorSummary,
         metaErrorCode,
         metaErrorMessage,
+        duplicateTriggerKey: null,
       },
     });
 
@@ -653,6 +733,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
         errorSummary,
         metaErrorCode,
         metaErrorMessage,
+        duplicateTriggerKey: null,
       },
     });
 
@@ -696,6 +777,7 @@ export const instagramWebhookService = {
   commentMatchesKeyword,
   selectMatchingKeywordRule,
   claimCommentForSend,
+  buildDuplicateTriggerKey,
   sanitizeErrorSummary,
   formatDmErrorSummary,
   resolveDmFailureStatus,
