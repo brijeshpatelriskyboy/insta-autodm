@@ -64,7 +64,7 @@ git push -u origin main
 3. Railway detects the repo — click the new service → **Settings**:
    - **Root Directory:** `backend`
    - **Build Command:** `npm run build`
-   - **Start Command:** `npm run start:prod`
+   - **Start Command:** `npm run start:prod` (`npx prisma migrate deploy && node dist/index.js`)
 4. **Variables** — add from `backend/.env.production.example`:
 
 | Variable | Value |
@@ -88,7 +88,7 @@ git push -u origin main
 ### Render alternative
 
 1. **New** → **Blueprint** → connect repo (uses root `render.yaml`), or
-2. **New Web Service** → root dir `backend`, build `npm install && npm run build`, start `npm run start:prod`
+2. **New Web Service** → root dir `backend`, build `npm install && npm run build`, start `npm run start:prod` (`npx prisma migrate deploy && node dist/index.js`)
 3. Add the same environment variables as above
 4. Link the Render PostgreSQL database
 
