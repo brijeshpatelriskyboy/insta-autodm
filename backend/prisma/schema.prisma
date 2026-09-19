@@ -76,8 +76,16 @@ model DmEvent {
   instagramAccountId String
   instagramAccount   InstagramAccount @relation(fields: [instagramAccountId], references: [id], onDelete: Cascade)
   commentId          String
+  /** Instagram commenter user id (`from.id`). Used by the duplicate-trigger guard. */
+  commenterId        String?
   status             DmEventStatus    @default(sending)
   mediaId            String?
+  /**
+   * One successful or in-flight DM per (commenter + media + keyword rule).
+   * Set before the private-reply send; cleared when the send fails so a genuine retry can run.
+   * Null when the guard is not held (including skipped/failed rows).
+   */
+  duplicateTriggerKey String?
   messageId          String?
   errorSummary       String?
   /** Meta Graph API error.code from the last failed private-reply attempt. */
@@ -89,6 +97,7 @@ model DmEvent {
   createdAt          DateTime         @default(now())
 
   @@unique([instagramAccountId, commentId])
+  @@unique([instagramAccountId, duplicateTriggerKey])
   @@index([userId, createdAt])
   @@map("dm_events")
 }
