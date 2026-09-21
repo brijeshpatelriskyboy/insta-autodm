@@ -8,6 +8,7 @@ import {
   MessageCircle,
   AlertCircle,
   Clock,
+  Ban,
   Circle,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -21,7 +22,9 @@ const typeStyles: Record<string, string> = {
   dm_sent: "bg-brand-50 text-brand-600",
   dm_failed: "bg-red-50 text-red-600",
   comment_received: "bg-sky-50 text-sky-600",
+  comment_ignored: "bg-slate-100 text-slate-600",
   keyword_matched: "bg-pink-50 text-pink-600",
+  dm_duplicate_blocked: "bg-amber-50 text-amber-700",
   dm_pending: "bg-amber-50 text-amber-600",
 };
 
@@ -33,6 +36,9 @@ function iconForType(type: string) {
       return AlertCircle;
     case "comment_received":
       return MessageCircle;
+    case "comment_ignored":
+    case "dm_duplicate_blocked":
+      return Ban;
     case "keyword_matched":
       return MessageSquare;
     case "dm_pending":

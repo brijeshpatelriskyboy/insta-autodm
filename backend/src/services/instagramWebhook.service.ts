@@ -235,13 +235,12 @@ export function parseInstagramCommentWebhook(body: unknown): ParsedComment[] {
         media?: { id?: string };
       };
 
-      const text = valueObj.text?.trim();
+      const text = typeof valueObj.text === "string" ? valueObj.text.trim() : "";
       const commentId = valueObj.id?.trim();
-      if (!text || !commentId) {
-        console.warn("[webhook] skipping comment missing text or commentId:", {
+      if (!commentId) {
+        console.warn("[webhook] skipping comment missing commentId:", {
           accountId,
           hasText: Boolean(text),
-          hasCommentId: Boolean(commentId),
           field: changeObj.field ?? null,
         });
         continue;
@@ -418,10 +417,11 @@ async function claimCommentForSendAfterConflict(params: {
 }
 
 function buildActivityMetadata(params: {
-  keyword: string;
-  ruleId: string;
+  keyword?: string | null;
+  ruleId?: string | null;
   comment: ParsedComment;
-  dmStatus: "sent" | "failed" | "pending_match";
+  dmStatus: "sent" | "failed" | "pending_match" | "skipped";
+  skipReason?: "blank_comment" | "duplicate_trigger" | null;
   messageId?: string | null;
   errorSummary?: string | null;
   attemptCount?: number;
@@ -430,8 +430,8 @@ function buildActivityMetadata(params: {
   failureStatus?: DmFailureStatus | null;
 }) {
   return {
-    keyword: params.keyword,
-    ruleId: params.ruleId,
+    keyword: params.keyword ?? null,
+    ruleId: params.ruleId ?? null,
     commentId: params.comment.commentId,
     commentText: truncateComment(params.comment.text, 200),
     commenterUsername: params.comment.commenterUsername ?? null,
@@ -439,6 +439,7 @@ function buildActivityMetadata(params: {
     mediaId: params.comment.mediaId ?? null,
     instagramAccountId: params.comment.instagramAccountId,
     dmStatus: params.dmStatus,
+    skipReason: params.skipReason ?? null,
     messageId: params.messageId ?? null,
     errorSummary: params.errorSummary ?? null,
     attemptCount: params.attemptCount ?? null,
@@ -531,6 +532,35 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     return { matched: false, sent: false, failed: false, duplicate: true, eventsCreated: 0 };
   }
 
+  const commenter = comment.commenterUsername ? `@${comment.commenterUsername}` : "A user";
+
+  if (!comment.text) {
+    await prisma.dmEvent.update({
+      where: { id: claim.dmEventId },
+      data: { status: DmEventStatus.skipped, errorSummary: null },
+    });
+
+    await activityService.log(account.userId, {
+      type: "comment_ignored",
+      title: "Blank comment ignored",
+      description: `${commenter} submitted a comment with no text. No DM was sent.`,
+      metadata: buildActivityMetadata({
+        comment,
+        dmStatus: "skipped",
+        skipReason: "blank_comment",
+      }),
+    });
+
+    console.log("[webhook] blank comment ignored", {
+      eventType: comment.eventField ?? "comments",
+      accountId: comment.instagramAccountId,
+      commentId: comment.commentId,
+      mediaId: comment.mediaId ?? null,
+      sendResult: "skipped_blank_comment",
+    });
+    return { matched: false, sent: false, failed: false, duplicate: false, eventsCreated: 1 };
+  }
+
   const rules = await prisma.keywordRule.findMany({
     where: { userId: account.userId, isActive: true },
   });
@@ -562,6 +592,19 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
   });
 
   if (triggerGuard === "duplicate") {
+    await activityService.log(account.userId, {
+      type: "dm_duplicate_blocked",
+      title: "Repeat comment — DM not sent",
+      description: `${commenter} already received this reply for the same post and keyword.`,
+      metadata: buildActivityMetadata({
+        keyword: matchedRule.keyword,
+        ruleId: matchedRule.id,
+        comment,
+        dmStatus: "skipped",
+        skipReason: "duplicate_trigger",
+      }),
+    });
+
     console.log("duplicate trigger ignored", {
       eventType: comment.eventField ?? "comments",
       accountId: comment.instagramAccountId,
@@ -571,10 +614,8 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       ruleId: matchedRule.id,
       sendResult: "duplicate_trigger_ignored",
     });
-    return { matched: true, sent: false, failed: false, duplicate: true, eventsCreated: 0 };
+    return { matched: true, sent: false, failed: false, duplicate: true, eventsCreated: 1 };
   }
-
-  const commenter = comment.commenterUsername ? `@${comment.commenterUsername}` : "A user";
 
   // Log match activity only for newly claimed attempts (not duplicate deliveries).
   // Retries of failed sends skip re-logging comment_received / keyword_matched.
