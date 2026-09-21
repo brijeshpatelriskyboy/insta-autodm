@@ -234,7 +234,7 @@ describe("instagramWebhook.service helpers", () => {
     expect(buildDuplicateTriggerKey({ commenterId: "user-1", mediaId: "media-99", ruleId: " " })).toBeNull();
   });
 
-  it("parses comment webhooks and skips missing commentId", () => {
+  it("parses blank comments but skips events missing commentId", () => {
     const parsed = parseInstagramCommentWebhook(sampleWebhook);
     expect(parsed).toHaveLength(1);
     expect(parsed[0]?.commentId).toBe("comment-abc");
@@ -250,6 +250,12 @@ describe("instagramWebhook.service helpers", () => {
       ],
     });
     expect(missingId).toHaveLength(0);
+
+    const blank = parseInstagramCommentWebhook(
+      commentWebhook({ commentId: "comment-blank", text: "   " }),
+    );
+    expect(blank).toHaveLength(1);
+    expect(blank[0]?.text).toBe("");
   });
 });
 
@@ -349,6 +355,45 @@ describe("processWebhookPayload private reply flow", () => {
     expect(mockActivityLog).not.toHaveBeenCalled();
   });
 
+  it("records a blank comment as ignored and sends no DM", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockDmFindUnique.mockResolvedValue(null);
+    mockDmCreate.mockResolvedValue({
+      id: "dm-blank",
+      attemptCount: 1,
+      status: DmEventStatus.sending,
+    });
+
+    const result = await instagramWebhookService.processWebhookPayload(
+      commentWebhook({ commentId: "comment-blank", text: "   " }),
+    );
+
+    expect(result.processed).toBe(1);
+    expect(result.skipped).toBe(1);
+    expect(result.eventsCreated).toBe(1);
+    expect(mockFindManyRules).not.toHaveBeenCalled();
+    expect(mockSendPrivateReply).not.toHaveBeenCalled();
+    expect(mockDmUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "dm-blank" },
+        data: expect.objectContaining({ status: DmEventStatus.skipped }),
+      }),
+    );
+    expect(mockActivityLog).toHaveBeenCalledWith(
+      connectedAccount.userId,
+      expect.objectContaining({
+        type: "comment_ignored",
+        title: "Blank comment ignored",
+        description: expect.stringContaining("No DM was sent"),
+        metadata: expect.objectContaining({
+          commentId: "comment-blank",
+          dmStatus: "skipped",
+          skipReason: "blank_comment",
+        }),
+      }),
+    );
+  });
+
   it("first delivery sends one DM", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([activeRule]);
@@ -419,6 +464,7 @@ describe("processWebhookPayload private reply flow", () => {
 
     expect(second.sent).toBe(0);
     expect(second.duplicates).toBe(1);
+    expect(second.eventsCreated).toBe(1);
     expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
     expect(mockDmUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -432,6 +478,19 @@ describe("processWebhookPayload private reply flow", () => {
     expect(logSpy).toHaveBeenCalledWith(
       "duplicate trigger ignored",
       expect.objectContaining({ commentId: "comment-xyz-new", ruleId: "rule-1" }),
+    );
+    expect(mockActivityLog).toHaveBeenLastCalledWith(
+      connectedAccount.userId,
+      expect.objectContaining({
+        type: "dm_duplicate_blocked",
+        title: "Repeat comment — DM not sent",
+        description: expect.stringContaining("already received this reply"),
+        metadata: expect.objectContaining({
+          keyword: "PRICE",
+          dmStatus: "skipped",
+          skipReason: "duplicate_trigger",
+        }),
+      }),
     );
     logSpy.mockRestore();
   });

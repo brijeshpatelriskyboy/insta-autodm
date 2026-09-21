@@ -15,6 +15,7 @@ import {
   Clock,
   Circle,
   AlertCircle,
+  Ban,
   Webhook,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -35,7 +36,9 @@ const typeIcons: Record<ActivityType, React.ComponentType<{ className?: string }
   dm_sent: Send,
   dm_failed: AlertCircle,
   comment_received: MessageCircle,
+  comment_ignored: Ban,
   keyword_matched: MessageSquare,
+  dm_duplicate_blocked: Ban,
   dm_pending: Clock,
   lead_captured: UserPlus,
   rule_created: PlusCircle,
@@ -49,7 +52,9 @@ const typeColors: Record<ActivityType, string> = {
   dm_sent: "bg-brand-50 text-brand-600",
   dm_failed: "bg-red-50 text-red-600",
   comment_received: "bg-sky-50 text-sky-600",
+  comment_ignored: "bg-slate-100 text-slate-600",
   keyword_matched: "bg-pink-50 text-pink-600",
+  dm_duplicate_blocked: "bg-amber-50 text-amber-700",
   dm_pending: "bg-amber-50 text-amber-600",
   lead_captured: "bg-emerald-50 text-emerald-600",
   rule_created: "bg-blue-50 text-blue-600",
@@ -215,7 +220,7 @@ export default function ActivityPage() {
       </div>
 
       <p className="text-center text-xs text-slate-400">
-        Webhook matches appear here as comment received, keyword matched, and DM sent.
+        Every automation outcome appears here, including sent, failed, blank, and repeat comments.
       </p>
     </div>
   );
