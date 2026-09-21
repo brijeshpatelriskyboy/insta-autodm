@@ -55,6 +55,15 @@ vi.mock("../utils/tokenCrypto", () => ({
   decryptToken: mockDecryptToken,
 }));
 
+vi.mock("./planLimits.service", () => ({
+  reserveMonthlyDm: vi.fn().mockResolvedValue({
+    allowed: true,
+    plan: "starter",
+    limit: 500,
+  }),
+  releaseMonthlyDm: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {
   buildDuplicateTriggerKey,
   commentMatchesKeyword,

@@ -35,6 +35,7 @@ model User {
   subscription               Subscription?
   billingEvents              BillingEvent[]
   passwordResetTokens        PasswordResetToken[]
+  planUsage                  PlanUsage[]
 
   @@map("users")
 }
@@ -208,4 +209,17 @@ model BillingEvent {
   createdAt       DateTime @default(now())
 
   @@map("billing_events")
+}
+
+model PlanUsage {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  monthKey  String
+  dmCount   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, monthKey])
+  @@map("plan_usage")
 }

@@ -4,6 +4,7 @@ import { AppError, getMetaErrorDetails } from "../utils/errors";
 import { decryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
+import { releaseMonthlyDm, reserveMonthlyDm } from "./planLimits.service";
 
 /** Max private-reply send attempts per (instagramAccountId, commentId), including the first try. */
 export const MAX_DM_ATTEMPTS = 3;
@@ -421,7 +422,7 @@ function buildActivityMetadata(params: {
   ruleId?: string | null;
   comment: ParsedComment;
   dmStatus: "sent" | "failed" | "pending_match" | "skipped";
-  skipReason?: "blank_comment" | "duplicate_trigger" | null;
+  skipReason?: "blank_comment" | "duplicate_trigger" | "monthly_limit" | null;
   messageId?: string | null;
   errorSummary?: string | null;
   attemptCount?: number;
@@ -644,6 +645,31 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
   let eventsCreated = claim.isRetry ? 0 : 2;
 
+  const quota = await reserveMonthlyDm(account.userId);
+  if (!quota.allowed) {
+    await prisma.dmEvent.update({
+      where: { id: claim.dmEventId },
+      data: {
+        status: DmEventStatus.skipped,
+        duplicateTriggerKey: null,
+        errorSummary: `Monthly DM limit reached (${quota.limit})`,
+      },
+    });
+    await activityService.log(account.userId, {
+      type: "dm_quota_blocked",
+      title: "Monthly DM limit reached",
+      description: `No DM was sent. The ${quota.plan} plan includes ${quota.limit.toLocaleString()} DMs per month.`,
+      metadata: buildActivityMetadata({
+        keyword: matchedRule.keyword,
+        ruleId: matchedRule.id,
+        comment,
+        dmStatus: "skipped",
+        skipReason: "monthly_limit",
+      }),
+    });
+    return { matched: true, sent: false, failed: false, duplicate: false, eventsCreated: eventsCreated + 1 };
+  }
+
   let accessToken: string;
   try {
     if (
@@ -654,6 +680,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     }
     accessToken = decryptToken(account.accessTokenEncrypted);
   } catch (error) {
+    await releaseMonthlyDm(account.userId);
     const metaErrorCode = null;
     const metaErrorMessage = sanitizeErrorSummary(error);
     const errorSummary = formatDmErrorSummary({
@@ -756,6 +783,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
     return { matched: true, sent: true, failed: false, duplicate: false, eventsCreated: eventsCreated + 1 };
   } catch (error) {
+    await releaseMonthlyDm(account.userId);
     const details = getMetaErrorDetails(error);
     const metaErrorCode = details.metaCode;
     const metaErrorMessage = details.metaMessage
