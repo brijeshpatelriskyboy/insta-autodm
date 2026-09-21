@@ -26,9 +26,13 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: STRIPE_PRICE_EARLY_ACCESS
+      - key: STRIPE_PRICE_STARTER
         sync: false
-      - key: STRIPE_EARLY_ACCESS_COUPON
+      - key: STRIPE_STARTER_COUPON
+        sync: false
+      - key: STRIPE_PRICE_CREATOR
+        sync: false
+      - key: STRIPE_PRICE_PRO
         sync: false
 
 databases:

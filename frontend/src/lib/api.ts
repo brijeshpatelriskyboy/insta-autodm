@@ -418,7 +418,7 @@ export const api = {
   getBillingHistory: (token: string) =>
     request<BillingHistoryItem[]>("/api/billing/history", {}, token),
 
-  createCheckout: (token: string, plan: "starter") =>
+  createCheckout: (token: string, plan: "starter" | "creator" | "pro") =>
     request<{ url: string | null }>("/api/billing/checkout", {
       method: "POST",
       body: JSON.stringify({ plan }),
