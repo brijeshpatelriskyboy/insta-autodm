@@ -4,6 +4,32 @@ import { getPlan, type PlanSlug } from "../config/plans";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 
+export function buildCheckoutSessionParams(params: {
+  customerId: string;
+  userId: string;
+  plan: NonNullable<ReturnType<typeof getPlan>>;
+  frontendUrl: string;
+}): Stripe.Checkout.SessionCreateParams {
+  const { customerId, userId, plan, frontendUrl } = params;
+  if (!plan.priceId || !plan.couponId) {
+    throw new AppError(503, "Stripe Early Access price or coupon is not configured");
+  }
+
+  return {
+    customer: customerId,
+    mode: "subscription",
+    line_items: [{ price: plan.priceId, quantity: 1 }],
+    discounts: [{ coupon: plan.couponId }],
+    client_reference_id: userId,
+    success_url: `${frontendUrl}/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${frontendUrl}/dashboard/billing?checkout=canceled`,
+    metadata: { userId, plan: plan.slug },
+    subscription_data: {
+      metadata: { userId, plan: plan.slug },
+    },
+  };
+}
+
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
     throw new AppError(503, "Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
@@ -28,6 +54,8 @@ export const billingService = {
       plan: sub?.plan ?? null,
       planName: plan?.name ?? null,
       price: plan?.price ?? null,
+      standardPrice: plan?.standardPrice ?? null,
+      introductoryMonths: plan?.introductoryMonths ?? null,
       status: sub?.status ?? "inactive",
       currentPeriodEnd: sub?.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
@@ -62,12 +90,19 @@ export const billingService = {
     }
 
     const plan = getPlan(planSlug);
-    if (!plan?.priceId) {
+    if (!plan?.priceId || !plan.couponId) {
       throw new AppError(400, "Invalid plan selected");
     }
 
     const stripe = getStripe();
     const record = await getOrCreateSubscriptionRecord(userId);
+
+    if (
+      record.stripeSubscriptionId &&
+      (record.status === "active" || record.status === "trialing")
+    ) {
+      throw new AppError(409, "You already have an active subscription");
+    }
 
     let customerId = record.stripeCustomerId;
     if (!customerId) {
@@ -82,17 +117,14 @@ export const billingService = {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: "subscription",
-      line_items: [{ price: plan.priceId, quantity: 1 }],
-      success_url: `${env.FRONTEND_URL}/dashboard/billing?checkout=success`,
-      cancel_url: `${env.FRONTEND_URL}/dashboard/billing?checkout=canceled`,
-      metadata: { userId, plan: plan.slug },
-      subscription_data: {
-        metadata: { userId, plan: plan.slug },
-      },
-    });
+    const session = await stripe.checkout.sessions.create(
+      buildCheckoutSessionParams({
+        customerId,
+        userId,
+        plan,
+        frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
+      }),
+    );
 
     return { url: session.url };
   },
@@ -121,12 +153,17 @@ export const billingService = {
       throw new AppError(503, "Stripe webhook secret is not configured");
     }
 
+    if (!signature) {
+      throw new AppError(400, "Missing Stripe webhook signature");
+    }
+
     const stripe = getStripe();
-    const event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature ?? "",
-      env.STRIPE_WEBHOOK_SECRET,
-    );
+    let event: Stripe.Event;
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, signature, env.STRIPE_WEBHOOK_SECRET);
+    } catch {
+      throw new AppError(400, "Invalid Stripe webhook signature");
+    }
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -221,6 +258,36 @@ export const billingService = {
           update: {
             status: "paid",
             amount: invoice.amount_paid,
+          },
+        });
+        break;
+      }
+
+      case "invoice.payment_failed": {
+        const invoice = event.data.object as Stripe.Invoice;
+        const customerId =
+          typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        if (!customerId) break;
+
+        const sub = await prisma.subscription.findFirst({
+          where: { stripeCustomerId: customerId },
+        });
+        if (!sub) break;
+
+        await prisma.billingEvent.upsert({
+          where: { stripeInvoiceId: invoice.id },
+          create: {
+            userId: sub.userId,
+            stripeInvoiceId: invoice.id,
+            amount: invoice.amount_due,
+            currency: invoice.currency,
+            status: "failed",
+            description: invoice.lines.data[0]?.description ?? "Subscription payment failed",
+            invoiceUrl: invoice.hosted_invoice_url ?? null,
+          },
+          update: {
+            status: "failed",
+            amount: invoice.amount_due,
           },
         });
         break;

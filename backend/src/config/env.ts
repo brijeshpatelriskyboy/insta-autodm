@@ -18,9 +18,10 @@ const envSchema = z.object({
   SUPPORT_EMAIL: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
-  STRIPE_PRICE_STARTER: z.string().optional(),
-  STRIPE_PRICE_CREATOR: z.string().optional(),
-  STRIPE_PRICE_PRO: z.string().optional(),
+  /** USD $9/month recurring Price. */
+  STRIPE_PRICE_EARLY_ACCESS: z.string().optional(),
+  /** Stripe coupon: USD $4 off, repeating for 3 months. */
+  STRIPE_EARLY_ACCESS_COUPON: z.string().optional(),
   /** Instagram App ID (Business Login for Instagram) — required for OAuth. */
   INSTAGRAM_APP_ID: z.string().optional(),
   /** Instagram App Secret (server only) — required for OAuth. Never fall back to META_APP_SECRET. */
@@ -57,8 +58,8 @@ export function isMetaOAuthEnabled(): boolean {
 export function isStripeConfigured(): boolean {
   return Boolean(
     env.STRIPE_SECRET_KEY &&
-      env.STRIPE_PRICE_STARTER &&
-      env.STRIPE_PRICE_CREATOR &&
-      env.STRIPE_PRICE_PRO,
+      env.STRIPE_WEBHOOK_SECRET &&
+      env.STRIPE_PRICE_EARLY_ACCESS &&
+      env.STRIPE_EARLY_ACCESS_COUPON,
   );
 }

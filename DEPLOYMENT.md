@@ -76,9 +76,8 @@ git push -u origin main
 | `FRONTEND_URL` | `https://your-app.vercel.app` |
 | `STRIPE_SECRET_KEY` | `sk_test_...` (test mode first) |
 | `STRIPE_WEBHOOK_SECRET` | `whsec_...` (from Stripe webhook) |
-| `STRIPE_PRICE_STARTER` | Stripe Price ID |
-| `STRIPE_PRICE_CREATOR` | Stripe Price ID |
-| `STRIPE_PRICE_PRO` | Stripe Price ID |
+| `STRIPE_PRICE_EARLY_ACCESS` | USD $9/month recurring Stripe Price ID |
+| `STRIPE_EARLY_ACCESS_COUPON` | USD $4-off coupon repeating for 3 months |
 
 5. **Settings** → **Networking** → **Generate Domain** → copy URL  
    Example: `https://insta-autodm-api-production.up.railway.app`
@@ -125,9 +124,7 @@ git push -u origin main
 
 | Plan | Price |
 |------|-------|
-| Starter | $9.90/month |
-| Creator | $19/month |
-| Pro | $49/month |
+| Early Access | USD $5/month for 3 months, then USD $9/month |
 
 3. Copy each **Price ID** (`price_...`) into backend env vars
 
@@ -210,9 +207,8 @@ CORS_ORIGIN=https://your-app.vercel.app
 FRONTEND_URL=https://your-app.vercel.app
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PRICE_STARTER=price_...
-STRIPE_PRICE_CREATOR=price_...
-STRIPE_PRICE_PRO=price_...
+STRIPE_PRICE_EARLY_ACCESS=price_...
+STRIPE_EARLY_ACCESS_COUPON=coupon_...
 ```
 
 ### Frontend (Vercel)

@@ -1,17 +1,17 @@
 import { pricingPlans } from "./marketing-data";
 
-export type PlanSlug = "starter" | "creator" | "pro";
+export type PlanSlug = "starter";
 
 export interface SelectedPlan {
   slug: PlanSlug;
   name: string;
   price: number;
+  standardPrice: number;
+  introductoryMonths: number;
 }
 
 const planSlugs: Record<string, PlanSlug> = {
   starter: "starter",
-  creator: "creator",
-  pro: "pro",
 };
 
 export function getPlanBySlug(slug: string | null): SelectedPlan | null {
@@ -28,6 +28,8 @@ export function getPlanBySlug(slug: string | null): SelectedPlan | null {
     slug: validSlug,
     name: plan.name,
     price: plan.price,
+    standardPrice: plan.standardPrice,
+    introductoryMonths: plan.introductoryMonths,
   };
 }
 

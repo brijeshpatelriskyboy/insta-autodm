@@ -72,7 +72,7 @@ export default function BillingPage() {
     }
   }, [searchParams, toast, load]);
 
-  async function handleCheckout(plan: "starter" | "creator" | "pro") {
+  async function handleCheckout(plan: "starter") {
     const token = getToken();
     if (!token) return;
 
@@ -155,7 +155,8 @@ export default function BillingPage() {
               </div>
               {subscription?.price != null && (
                 <p className="mt-1 text-sm text-slate-500">
-                  ${subscription.price}/month
+                  USD ${subscription.price}/month for the first {subscription.introductoryMonths} months,
+                  then USD ${subscription.standardPrice}/month
                   {subscription.currentPeriodEnd &&
                     ` · Renews ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
@@ -182,11 +183,13 @@ export default function BillingPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a plan — billed monthly via Stripe Checkout.
+          Early Access is billed monthly via Stripe Checkout. Cancel anytime.
         </p>
-        <div className="mt-6 grid gap-6 lg:grid-cols-3">
-          {BILLING_PLANS.map((plan) => (
-            <Card
+        <div className="mt-6 max-w-xl">
+          {BILLING_PLANS.map((plan) => {
+            const isCurrentPlan = isActive && subscription?.plan === plan.slug;
+            return (
+              <Card
               key={plan.slug}
               className={
                 plan.popular ? "border-brand-300 ring-1 ring-brand-200" : ""
@@ -200,8 +203,11 @@ export default function BillingPage() {
               )}
               <h3 className="text-lg font-semibold text-slate-900">{plan.name}</h3>
               <p className="mt-2 text-3xl font-semibold text-slate-900">
-                ${plan.price}
-                <span className="text-sm font-normal text-slate-500">/mo</span>
+                USD ${plan.price}
+                <span className="text-sm font-normal text-slate-500">/month</span>
+              </p>
+              <p className="mt-1 text-sm font-medium text-brand-700">
+                First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
               </p>
               <ul className="mt-4 space-y-2">
                 {plan.features.map((f) => (
@@ -213,9 +219,9 @@ export default function BillingPage() {
               </ul>
               <Button
                 className="mt-6 w-full"
-                variant={subscription?.plan === plan.slug ? "secondary" : "primary"}
+                variant={isCurrentPlan ? "secondary" : "primary"}
                 disabled={
-                  subscription?.plan === plan.slug ||
+                  isCurrentPlan ||
                   checkoutPlan === plan.slug ||
                   !subscription?.stripeConfigured
                 }
@@ -226,7 +232,7 @@ export default function BillingPage() {
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Redirecting...
                   </>
-                ) : subscription?.plan === plan.slug ? (
+                ) : isCurrentPlan ? (
                   "Current plan"
                 ) : (
                   <>
@@ -235,8 +241,9 @@ export default function BillingPage() {
                   </>
                 )}
               </Button>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
 

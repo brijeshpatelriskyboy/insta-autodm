@@ -228,6 +228,8 @@ export interface SubscriptionInfo {
   plan: string | null;
   planName: string | null;
   price: number | null;
+  standardPrice: number | null;
+  introductoryMonths: number | null;
   status: string;
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
@@ -416,7 +418,7 @@ export const api = {
   getBillingHistory: (token: string) =>
     request<BillingHistoryItem[]>("/api/billing/history", {}, token),
 
-  createCheckout: (token: string, plan: "starter" | "creator" | "pro") =>
+  createCheckout: (token: string, plan: "starter") =>
     request<{ url: string | null }>("/api/billing/checkout", {
       method: "POST",
       body: JSON.stringify({ plan }),
