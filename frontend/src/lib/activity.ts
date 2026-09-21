@@ -5,6 +5,7 @@ export type ActivityType =
   | "comment_ignored"
   | "keyword_matched"
   | "dm_duplicate_blocked"
+  | "dm_quota_blocked"
   | "dm_pending"
   | "lead_captured"
   | "rule_created"
@@ -29,6 +30,7 @@ const typeLabels: Record<ActivityType, string> = {
   comment_ignored: "Comment Ignored",
   keyword_matched: "Keyword Matched",
   dm_duplicate_blocked: "Repeat DM Blocked",
+  dm_quota_blocked: "Monthly Limit Reached",
   dm_pending: "DM Pending",
   lead_captured: "Lead Captured",
   rule_created: "Rule Created",

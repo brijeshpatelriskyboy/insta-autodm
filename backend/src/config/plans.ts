@@ -10,6 +10,11 @@ export interface PlanConfig {
   introductoryMonths?: number;
   priceId: string | undefined;
   couponId: string | undefined;
+  limits: {
+    instagramAccounts: number;
+    keywordRules: number | null;
+    monthlyDms: number;
+  };
 }
 
 export const PLANS: Record<PlanSlug, PlanConfig> = {
@@ -21,6 +26,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     introductoryMonths: 3,
     priceId: env.STRIPE_PRICE_STARTER,
     couponId: env.STRIPE_STARTER_COUPON,
+    limits: { instagramAccounts: 1, keywordRules: 3, monthlyDms: 500 },
   },
   creator: {
     slug: "creator",
@@ -28,6 +34,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     price: 19,
     priceId: env.STRIPE_PRICE_CREATOR,
     couponId: undefined,
+    limits: { instagramAccounts: 1, keywordRules: 15, monthlyDms: 5_000 },
   },
   pro: {
     slug: "pro",
@@ -35,6 +42,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     price: 49,
     priceId: env.STRIPE_PRICE_PRO,
     couponId: undefined,
+    limits: { instagramAccounts: 1, keywordRules: null, monthlyDms: 25_000 },
   },
 };
 

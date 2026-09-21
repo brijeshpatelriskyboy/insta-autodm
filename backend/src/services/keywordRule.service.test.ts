@@ -48,6 +48,10 @@ vi.mock("../utils/tokenCrypto", () => ({
   encryptToken: vi.fn(),
 }));
 
+vi.mock("./planLimits.service", () => ({
+  assertCanCreateKeywordRule: vi.fn().mockResolvedValue(undefined),
+}));
+
 import {
   MEDIA_SCOPE_GLOBAL,
   keywordRuleService,

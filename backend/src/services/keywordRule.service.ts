@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import { decryptToken } from "../utils/tokenCrypto";
 import { metaGraphService } from "./metaGraph.service";
+import { assertCanCreateKeywordRule } from "./planLimits.service";
 
 /** Sentinel for global (all-posts) keyword rules — always stored non-null. */
 export const MEDIA_SCOPE_GLOBAL = "__GLOBAL__";
@@ -135,6 +136,7 @@ export class KeywordRuleService {
   }
 
   async create(userId: string, input: CreateKeywordRuleInput) {
+    await assertCanCreateKeywordRule(userId);
     const keyword = input.keyword.trim().toUpperCase();
     const mediaId = input.instagramMediaId?.trim() || null;
     const mediaCache = await resolveMediaCache(userId, mediaId);

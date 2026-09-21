@@ -22,7 +22,7 @@ export const BILLING_PLANS = [
     price: 19,
     popular: true,
     features: [
-      "2 Instagram accounts",
+      "1 Instagram account",
       "15 keyword rules",
       "5,000 DMs / month",
       "Advanced analytics",
@@ -36,7 +36,7 @@ export const BILLING_PLANS = [
     name: "Pro",
     price: 49,
     features: [
-      "5 Instagram accounts",
+      "1 Instagram account",
       "Unlimited keyword rules",
       "25,000 DMs / month",
       "Full analytics suite",
