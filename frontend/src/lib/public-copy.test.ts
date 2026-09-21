@@ -56,6 +56,14 @@ describe("public website truth", () => {
     const pricing = readSrc("app/(marketing)/pricing/page.tsx");
     assert.doesNotMatch(pricing, /14-day free trial/);
     assert.doesNotMatch(pricing, /launching soon/i);
+
+    const pricingData = readSrc("lib/marketing-data.ts");
+    assert.match(pricingData, /name: "Early Access"/);
+    assert.match(pricingData, /price: 5/);
+    assert.match(pricingData, /standardPrice: 9/);
+    assert.match(pricingData, /introductoryMonths: 3/);
+    assert.doesNotMatch(pricingData, /name: "Creator"/);
+    assert.doesNotMatch(pricingData, /name: "Pro"/);
   });
 
   it("requires registration consent and labels example dashboard data", () => {

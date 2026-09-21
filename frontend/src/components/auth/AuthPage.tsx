@@ -124,7 +124,10 @@ export function AuthPage({
                 <p className="mt-1 text-brand-700">
                   <span className="font-semibold">{selectedPlan.name}</span>
                   {" · "}
-                  <span className="font-mono">${selectedPlan.price}/month</span>
+                  <span className="font-mono">USD ${selectedPlan.price}/month</span>
+                </p>
+                <p className="mt-1 text-xs font-medium text-brand-700">
+                  First {selectedPlan.introductoryMonths} months, then USD ${selectedPlan.standardPrice}/month
                 </p>
                 <p className="mt-1 text-xs text-brand-600">
                   Billing begins only after you complete Stripe checkout when billing is enabled.
