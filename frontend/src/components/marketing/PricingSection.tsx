@@ -35,8 +35,8 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
         <div
           className={
             showHeading
-              ? "mx-auto mt-16 max-w-xl"
-              : "mx-auto max-w-xl px-4 py-20 sm:px-6 sm:py-28"
+              ? "mt-16 grid gap-8 lg:grid-cols-3"
+              : "mx-auto grid max-w-7xl gap-8 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-3 lg:px-8"
           }
         >
           {pricingPlans.map((plan, i) => (
@@ -63,9 +63,11 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                   </span>
                   <span className="text-sm text-slate-500">/month</span>
                 </div>
-                <p className="mt-2 text-sm font-semibold text-brand-700">
-                  First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
-                </p>
+                {plan.introductoryMonths && plan.standardPrice && (
+                  <p className="mt-2 text-sm font-semibold text-brand-700">
+                    First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
+                  </p>
+                )}
 
                 <ul className="mt-8 flex-1 space-y-3">
                   {plan.features.map((feature) => (

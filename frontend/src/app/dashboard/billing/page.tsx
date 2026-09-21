@@ -72,7 +72,7 @@ export default function BillingPage() {
     }
   }, [searchParams, toast, load]);
 
-  async function handleCheckout(plan: "starter") {
+  async function handleCheckout(plan: "starter" | "creator" | "pro") {
     const token = getToken();
     if (!token) return;
 
@@ -155,8 +155,9 @@ export default function BillingPage() {
               </div>
               {subscription?.price != null && (
                 <p className="mt-1 text-sm text-slate-500">
-                  USD ${subscription.price}/month for the first {subscription.introductoryMonths} months,
-                  then USD ${subscription.standardPrice}/month
+                  {subscription.introductoryMonths && subscription.standardPrice
+                    ? `USD $${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD $${subscription.standardPrice}/month`
+                    : `USD $${subscription.price}/month`}
                   {subscription.currentPeriodEnd &&
                     ` · Renews ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
@@ -183,9 +184,9 @@ export default function BillingPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Early Access is billed monthly via Stripe Checkout. Cancel anytime.
+          Choose a plan — billed monthly via Stripe Checkout. Cancel anytime.
         </p>
-        <div className="mt-6 max-w-xl">
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => {
             const isCurrentPlan = isActive && subscription?.plan === plan.slug;
             return (
@@ -206,9 +207,11 @@ export default function BillingPage() {
                 USD ${plan.price}
                 <span className="text-sm font-normal text-slate-500">/month</span>
               </p>
-              <p className="mt-1 text-sm font-medium text-brand-700">
-                First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
-              </p>
+              {plan.introductoryMonths && plan.standardPrice && (
+                <p className="mt-1 text-sm font-medium text-brand-700">
+                  First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
+                </p>
+              )}
               <ul className="mt-4 space-y-2">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-slate-600">

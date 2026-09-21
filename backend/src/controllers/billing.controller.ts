@@ -4,7 +4,7 @@ import { billingService } from "../services/billing.service";
 import { AppError } from "../utils/errors";
 
 const checkoutSchema = z.object({
-  plan: z.literal("starter"),
+  plan: z.enum(["starter", "creator", "pro"]),
 });
 
 export class BillingController {

@@ -100,12 +100,12 @@ export const features = [
 
 export const pricingPlans = [
   {
-    name: "Early Access",
+    name: "Starter",
     slug: "starter" as const,
     price: 5,
     standardPrice: 9,
     introductoryMonths: 3,
-    description: "Full Comment2DM access at our introductory launch price.",
+    description: "For creators getting started with comment-to-DM automation.",
     features: [
       "1 Instagram account",
       "Unlimited keyword rules",
@@ -115,7 +115,40 @@ export const pricingPlans = [
       "Cancel anytime",
     ],
     cta: "Create Account",
+    popular: false,
+  },
+  {
+    name: "Creator",
+    slug: "creator" as const,
+    price: 19,
+    description: "For growing creators running more keyword rules.",
+    features: [
+      "2 Instagram accounts",
+      "15 keyword rules",
+      "5,000 DMs / month",
+      "Advanced analytics",
+      "Activity tracking",
+      "Email support via the contact form",
+    ],
+    cta: "Create Account",
     popular: true,
+  },
+  {
+    name: "Pro",
+    slug: "pro" as const,
+    price: 49,
+    description: "For higher-volume comment-to-DM automation.",
+    features: [
+      "5 Instagram accounts",
+      "Unlimited keyword rules",
+      "25,000 DMs / month",
+      "Full analytics suite",
+      "Team members (3 seats)",
+      "API access",
+      "Email support via the contact form",
+    ],
+    cta: "Create Account",
+    popular: false,
   },
 ];
 

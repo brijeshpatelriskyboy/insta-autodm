@@ -9,7 +9,7 @@ describe("billing checkout configuration", () => {
       frontendUrl: "https://comment2dm.example",
       plan: {
         slug: "starter",
-        name: "Early Access",
+        name: "Starter",
         price: 5,
         standardPrice: 9,
         introductoryMonths: 3,
@@ -42,7 +42,7 @@ describe("billing checkout configuration", () => {
         frontendUrl: "https://comment2dm.example",
         plan: {
           slug: "starter",
-          name: "Early Access",
+          name: "Starter",
           price: 5,
           standardPrice: 9,
           introductoryMonths: 3,
@@ -50,6 +50,24 @@ describe("billing checkout configuration", () => {
           couponId: undefined,
         },
       }),
-    ).toThrow("Stripe Early Access price or coupon is not configured");
+    ).toThrow("Stripe price or Starter coupon is not configured");
+  });
+
+  it("does not apply the Starter coupon to Creator or Pro", () => {
+    const params = buildCheckoutSessionParams({
+      customerId: "cus_test",
+      userId: "user-1",
+      frontendUrl: "https://comment2dm.example",
+      plan: {
+        slug: "creator",
+        name: "Creator",
+        price: 19,
+        priceId: "price_creator_monthly",
+        couponId: undefined,
+      },
+    });
+
+    expect(params.line_items).toEqual([{ price: "price_creator_monthly", quantity: 1 }]);
+    expect(params.discounts).toBeUndefined();
   });
 });
