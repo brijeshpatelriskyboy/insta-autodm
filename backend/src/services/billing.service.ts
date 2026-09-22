@@ -30,6 +30,25 @@ export function buildCheckoutSessionParams(params: {
   };
 }
 
+export function buildPlanChangeParams(params: {
+  itemId: string;
+  userId: string;
+  plan: NonNullable<ReturnType<typeof getPlan>>;
+}): Stripe.SubscriptionUpdateParams {
+  const { itemId, userId, plan } = params;
+  if (!plan.priceId) {
+    throw new AppError(503, "Stripe price is not configured for this plan");
+  }
+
+  return {
+    items: [{ id: itemId, price: plan.priceId, quantity: 1 }],
+    metadata: { userId, plan: plan.slug },
+    cancel_at_period_end: false,
+    proration_behavior: "always_invoice",
+    payment_behavior: "error_if_incomplete",
+  };
+}
+
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
     throw new AppError(503, "Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
@@ -223,6 +242,56 @@ export const billingService = {
     });
 
     return { message: "Subscription will cancel at the end of the billing period" };
+  },
+
+  async changePlan(userId: string, planSlug: string) {
+    if (!isStripeConfigured()) {
+      throw new AppError(503, "Stripe billing is not configured");
+    }
+
+    const plan = getPlan(planSlug);
+    if (!plan?.priceId) {
+      throw new AppError(400, "Invalid plan selected");
+    }
+
+    const record = await prisma.subscription.findUnique({ where: { userId } });
+    if (
+      !record?.stripeSubscriptionId ||
+      (record.status !== "active" && record.status !== "trialing")
+    ) {
+      throw new AppError(400, "No active subscription to change");
+    }
+    if (record.plan === plan.slug) {
+      throw new AppError(409, `You are already on the ${plan.name} plan`);
+    }
+
+    const stripe = getStripe();
+    const current = await stripe.subscriptions.retrieve(record.stripeSubscriptionId);
+    const item = current.items.data[0];
+    if (!item) {
+      throw new AppError(409, "The Stripe subscription has no plan to replace");
+    }
+
+    const updated = await stripe.subscriptions.update(
+      record.stripeSubscriptionId,
+      buildPlanChangeParams({ itemId: item.id, userId, plan }),
+    );
+
+    await prisma.subscription.update({
+      where: { userId },
+      data: {
+        plan: plan.slug,
+        status: updated.status,
+        cancelAtPeriodEnd: updated.cancel_at_period_end,
+        currentPeriodEnd: subscriptionPeriodEnd(updated),
+      },
+    });
+
+    return {
+      message: `Plan changed to ${plan.name} successfully`,
+      plan: plan.slug,
+      status: updated.status,
+    };
   },
 
   async handleWebhook(rawBody: Buffer, signature: string | undefined) {

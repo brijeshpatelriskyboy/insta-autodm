@@ -225,7 +225,7 @@ export interface MetaOAuthUrlPreview {
 }
 
 export interface SubscriptionInfo {
-  plan: string | null;
+  plan: "starter" | "creator" | "pro" | null;
   planName: string | null;
   price: number | null;
   standardPrice: number | null;
@@ -420,6 +420,12 @@ export const api = {
 
   createCheckout: (token: string, plan: "starter" | "creator" | "pro") =>
     request<{ url: string | null }>("/api/billing/checkout", {
+      method: "POST",
+      body: JSON.stringify({ plan }),
+    }, token),
+
+  changePlan: (token: string, plan: "starter" | "creator" | "pro") =>
+    request<{ message: string; plan: string; status: string }>("/api/billing/change-plan", {
       method: "POST",
       body: JSON.stringify({ plan }),
     }, token),
