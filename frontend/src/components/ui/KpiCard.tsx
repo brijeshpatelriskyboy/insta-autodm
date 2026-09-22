@@ -10,6 +10,7 @@ interface KpiCardProps {
   loading?: boolean;
   accent?: "violet" | "pink" | "emerald" | "blue";
   delay?: number;
+  detail?: string;
 }
 
 const accents = {
@@ -27,6 +28,7 @@ export function KpiCard({
   loading,
   accent = "violet",
   delay = 0,
+  detail,
 }: KpiCardProps) {
   if (loading) {
     return <Skeleton className="h-[132px] w-full rounded-2xl" />;
@@ -47,6 +49,7 @@ export function KpiCard({
           <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
             {value}
           </p>
+          {detail ? <p className="mt-1 text-sm text-slate-500">{detail}</p> : null}
         </div>
         <div
           className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${accents[accent]} text-white shadow-sm transition-transform duration-300 group-hover:scale-105`}
