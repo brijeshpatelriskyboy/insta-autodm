@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildCheckoutSessionParams, buildPlanChangeParams } from "./billing.service";
+import {
+  buildCheckoutSessionParams,
+  buildPlanChangeParams,
+  invoiceDescription,
+} from "./billing.service";
 
 describe("billing checkout configuration", () => {
   it("applies the three-month Early Access coupon to the USD $9 recurring price", () => {
@@ -111,5 +115,26 @@ describe("billing plan changes", () => {
         },
       }),
     ).toThrow("Stripe price is not configured for this plan");
+  });
+});
+
+describe("billing history descriptions", () => {
+  it("summarizes a prorated upgrade using both invoice lines", () => {
+    expect(
+      invoiceDescription([
+        { description: "Unused time on Starter (with $4.00 off) after 22 Sep 2026" },
+        { description: "Remaining time on Creator after 22 Sep 2026" },
+      ]),
+    ).toBe("Plan change: Starter → Creator");
+  });
+
+  it("keeps Stripe's normal recurring invoice description", () => {
+    expect(invoiceDescription([{ description: "1 × Starter (at $9.00 / month)" }])).toBe(
+      "1 × Starter (at $9.00 / month)",
+    );
+  });
+
+  it("falls back safely when Stripe provides no description", () => {
+    expect(invoiceDescription([])).toBe("Subscription payment");
   });
 });

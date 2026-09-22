@@ -74,7 +74,39 @@ function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
     : null;
 }
 
+export function invoiceDescription(
+  lines: Array<{ description?: string | null }>,
+): string {
+  const descriptions = lines
+    .map((line) => line.description?.trim())
+    .filter((description): description is string => Boolean(description));
+  const unused = descriptions.find((description) =>
+    description.toLowerCase().startsWith("unused time on "),
+  );
+  const remaining = descriptions.find((description) =>
+    description.toLowerCase().startsWith("remaining time on "),
+  );
+
+  if (unused && remaining) {
+    const fromPlan = unused
+      .replace(/^Unused time on /i, "")
+      .replace(/ after .*/i, "")
+      .replace(/\s+\(.*\)$/, "");
+    const toPlan = remaining
+      .replace(/^Remaining time on /i, "")
+      .replace(/ after .*/i, "")
+      .replace(/\s+\(.*\)$/, "");
+
+    if (fromPlan && toPlan) {
+      return `Plan change: ${fromPlan} → ${toPlan}`;
+    }
+  }
+
+  return descriptions[0] ?? "Subscription payment";
+}
+
 async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
+  const description = invoiceDescription(invoice.lines.data);
   await prisma.billingEvent.upsert({
     where: { stripeInvoiceId: invoice.id },
     create: {
@@ -83,12 +115,13 @@ async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
       amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
       currency: invoice.currency,
       status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
-      description: invoice.lines.data[0]?.description ?? "Subscription payment",
+      description,
       invoiceUrl: invoice.hosted_invoice_url ?? null,
     },
     update: {
       amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
       status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
+      description,
       invoiceUrl: invoice.hosted_invoice_url ?? null,
     },
   });
