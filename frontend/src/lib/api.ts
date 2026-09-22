@@ -144,6 +144,10 @@ export interface AnalyticsSummary {
   totalKeywordRules: number;
   totalDmEvents: number;
   totalLeads: number;
+  monthlyDmUsed: number;
+  monthlyDmLimit: number;
+  monthlyDmRemaining: number;
+  plan: "starter" | "creator" | "pro";
 }
 
 export interface InstagramStatus {
