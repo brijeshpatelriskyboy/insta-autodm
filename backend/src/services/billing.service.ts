@@ -45,8 +45,84 @@ async function getOrCreateSubscriptionRecord(userId: string) {
   });
 }
 
+function stripeId(value: string | { id: string } | null | undefined) {
+  return typeof value === "string" ? value : value?.id;
+}
+
+function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
+  return subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
+}
+
+async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
+  await prisma.billingEvent.upsert({
+    where: { stripeInvoiceId: invoice.id },
+    create: {
+      userId,
+      stripeInvoiceId: invoice.id,
+      amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
+      currency: invoice.currency,
+      status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
+      description: invoice.lines.data[0]?.description ?? "Subscription payment",
+      invoiceUrl: invoice.hosted_invoice_url ?? null,
+    },
+    update: {
+      amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
+      status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
+      invoiceUrl: invoice.hosted_invoice_url ?? null,
+    },
+  });
+}
+
+/**
+ * Webhooks remain the primary source of billing updates, but dashboard reads also
+ * reconcile with Stripe. This repairs a missed or out-of-order webhook without
+ * making the customer repeat Checkout.
+ */
+async function reconcileStripeBilling(userId: string) {
+  if (!isStripeConfigured()) return;
+
+  const local = await prisma.subscription.findUnique({ where: { userId } });
+  if (!local?.stripeSubscriptionId || !local.stripeCustomerId) return;
+
+  const stripe = getStripe();
+  const [subscription, invoices] = await Promise.all([
+    stripe.subscriptions.retrieve(local.stripeSubscriptionId),
+    stripe.invoices.list({ customer: local.stripeCustomerId, limit: 24 }),
+  ]);
+
+  await prisma.subscription.update({
+    where: { userId },
+    data: {
+      status: subscription.status,
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+      currentPeriodEnd: subscriptionPeriodEnd(subscription),
+      ...(subscription.metadata?.plan
+        ? { plan: subscription.metadata.plan as PlanSlug }
+        : {}),
+    },
+  });
+
+  await Promise.all(invoices.data.map((invoice) => storeInvoice(userId, invoice)));
+}
+
+async function reconcileStripeBillingForDashboard(userId: string) {
+  try {
+    await reconcileStripeBilling(userId);
+  } catch (error) {
+    // Keep the dashboard available during a temporary Stripe outage. Webhooks or
+    // a later dashboard read will retry the reconciliation.
+    console.error("[billing] Stripe reconciliation failed", {
+      userId,
+      error: error instanceof Error ? error.message : "Unknown Stripe error",
+    });
+  }
+}
+
 export const billingService = {
   async getSubscription(userId: string) {
+    await reconcileStripeBillingForDashboard(userId);
     const sub = await prisma.subscription.findUnique({ where: { userId } });
     const plan = getPlan(sub?.plan ?? "starter");
 
@@ -64,6 +140,7 @@ export const billingService = {
   },
 
   async getBillingHistory(userId: string) {
+    await reconcileStripeBillingForDashboard(userId);
     const events = await prisma.billingEvent.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
@@ -176,6 +253,7 @@ export const billingService = {
             : session.subscription?.id;
 
         if (userId && subscriptionId) {
+          const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
           await prisma.subscription.upsert({
             where: { userId },
             create: {
@@ -184,13 +262,17 @@ export const billingService = {
                 typeof session.customer === "string" ? session.customer : session.customer?.id,
               stripeSubscriptionId: subscriptionId,
               plan: plan ?? "starter",
-              status: "active",
+              status: stripeSubscription.status,
+              currentPeriodEnd: subscriptionPeriodEnd(stripeSubscription),
+              cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
             },
             update: {
+              stripeCustomerId: stripeId(session.customer),
               stripeSubscriptionId: subscriptionId,
               plan: plan ?? "starter",
-              status: "active",
-              cancelAtPeriodEnd: false,
+              status: stripeSubscription.status,
+              currentPeriodEnd: subscriptionPeriodEnd(stripeSubscription),
+              cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
             },
           });
         }
@@ -202,13 +284,12 @@ export const billingService = {
         const userId = subscription.metadata?.userId;
         if (!userId) break;
 
-        const periodEnd = subscription.current_period_end;
         await prisma.subscription.updateMany({
           where: { userId },
           data: {
             status: subscription.status,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
-            currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
+            currentPeriodEnd: subscriptionPeriodEnd(subscription),
             ...(subscription.metadata?.plan
               ? { plan: subscription.metadata.plan as PlanSlug }
               : {}),
@@ -233,10 +314,10 @@ export const billingService = {
         break;
       }
 
-      case "invoice.paid": {
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice;
-        const customerId =
-          typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+        const customerId = stripeId(invoice.customer);
         if (!customerId) break;
 
         const sub = await prisma.subscription.findFirst({
@@ -244,22 +325,7 @@ export const billingService = {
         });
         if (!sub) break;
 
-        await prisma.billingEvent.upsert({
-          where: { stripeInvoiceId: invoice.id },
-          create: {
-            userId: sub.userId,
-            stripeInvoiceId: invoice.id,
-            amount: invoice.amount_paid,
-            currency: invoice.currency,
-            status: "paid",
-            description: invoice.lines.data[0]?.description ?? "Subscription payment",
-            invoiceUrl: invoice.hosted_invoice_url ?? null,
-          },
-          update: {
-            status: "paid",
-            amount: invoice.amount_paid,
-          },
-        });
+        await storeInvoice(sub.userId, invoice);
         break;
       }
 
