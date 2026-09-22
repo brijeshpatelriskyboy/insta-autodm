@@ -14,5 +14,6 @@ router.post("/change-plan", (req, res, next) =>
   billingController.changePlan(req, res, next),
 );
 router.post("/cancel", (req, res, next) => billingController.cancel(req, res, next));
+router.post("/resume", (req, res, next) => billingController.resume(req, res, next));
 
 export default router;

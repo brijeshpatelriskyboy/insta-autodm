@@ -64,6 +64,16 @@ export class BillingController {
     }
   }
 
+  async resume(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const result = await billingService.resumeSubscription(req.user.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async webhook(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const signature = req.headers["stripe-signature"];

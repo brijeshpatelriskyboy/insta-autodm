@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildCheckoutSessionParams,
   buildPlanChangeParams,
+  buildResumeSubscriptionParams,
   invoiceDescription,
 } from "./billing.service";
 
@@ -115,6 +116,14 @@ describe("billing plan changes", () => {
         },
       }),
     ).toThrow("Stripe price is not configured for this plan");
+  });
+});
+
+describe("billing cancellation recovery", () => {
+  it("resumes renewal without changing the plan or billing cycle", () => {
+    expect(buildResumeSubscriptionParams()).toEqual({
+      cancel_at_period_end: false,
+    });
   });
 });
 

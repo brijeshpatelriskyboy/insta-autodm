@@ -44,6 +44,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [canceling, setCanceling] = useState(false);
+  const [resuming, setResuming] = useState(false);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -122,6 +123,22 @@ export default function BillingPage() {
     }
   }
 
+  async function handleResume() {
+    const token = getToken();
+    if (!token) return;
+
+    setResuming(true);
+    try {
+      const result = await api.resumeSubscription(token);
+      toast.success(result.message);
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Resume failed");
+    } finally {
+      setResuming(false);
+    }
+  }
+
   const isActive =
     subscription?.status === "active" || subscription?.status === "trialing";
 
@@ -183,7 +200,14 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {isActive && !subscription?.cancelAtPeriodEnd && (
+            {isActive && subscription?.cancelAtPeriodEnd ? (
+              <Button
+                onClick={handleResume}
+                disabled={resuming || !subscription?.stripeConfigured}
+              >
+                {resuming ? "Resuming..." : "Resume subscription"}
+              </Button>
+            ) : isActive ? (
               <Button
                 variant="secondary"
                 onClick={handleCancel}
@@ -191,7 +215,7 @@ export default function BillingPage() {
               >
                 {canceling ? "Canceling..." : "Cancel subscription"}
               </Button>
-            )}
+            ) : null}
           </div>
         )}
       </Card>
