@@ -27,6 +27,27 @@ function currentMonthKey(now = new Date()): string {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
+export async function getMonthlyDmUsage(userId: string): Promise<{
+  used: number;
+  limit: number;
+  remaining: number;
+  plan: PlanSlug;
+}> {
+  const plan = await getUserPlan(userId);
+  const usage = await prisma.planUsage.findUnique({
+    where: { userId_monthKey: { userId, monthKey: currentMonthKey() } },
+    select: { dmCount: true },
+  });
+  const used = Math.max(0, usage?.dmCount ?? 0);
+
+  return {
+    used,
+    limit: plan.limits.monthlyDms,
+    remaining: Math.max(0, plan.limits.monthlyDms - used),
+    plan: plan.slug,
+  };
+}
+
 export async function reserveMonthlyDm(userId: string): Promise<{
   allowed: boolean;
   plan: PlanSlug;
