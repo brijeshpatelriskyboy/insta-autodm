@@ -53,6 +53,17 @@ export class BillingController {
     }
   }
 
+  async changePlan(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const body = checkoutSchema.parse(req.body);
+      const result = await billingService.changePlan(req.user.id, body.plan);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async webhook(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const signature = req.headers["stripe-signature"];
