@@ -645,7 +645,45 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
   let eventsCreated = claim.isRetry ? 0 : 2;
 
-  const quota = await reserveMonthlyDm(account.userId);
+  let quota: Awaited<ReturnType<typeof reserveMonthlyDm>>;
+  try {
+    quota = await reserveMonthlyDm(account.userId);
+  } catch (error) {
+    const errorSummary = `Monthly DM usage check failed: ${sanitizeErrorSummary(error)}`;
+    await prisma.dmEvent.update({
+      where: { id: claim.dmEventId },
+      data: {
+        status: DmEventStatus.failed,
+        errorSummary,
+        duplicateTriggerKey: null,
+      },
+    });
+    await activityService.log(account.userId, {
+      type: "dm_failed",
+      title: "DM failed — retry available",
+      description: `The reply to ${commenter} could not be sent because the monthly usage check failed.`,
+      metadata: buildActivityMetadata({
+        keyword: matchedRule.keyword,
+        ruleId: matchedRule.id,
+        comment,
+        dmStatus: "failed",
+        attemptCount: claim.attemptCount,
+      }),
+    });
+    console.error("[webhook] monthly DM usage reservation failed:", {
+      userId: account.userId,
+      commentId: comment.commentId,
+      ruleId: matchedRule.id,
+      errorSummary,
+    });
+    return {
+      matched: true,
+      sent: false,
+      failed: true,
+      duplicate: false,
+      eventsCreated: eventsCreated + 1,
+    };
+  }
   if (!quota.allowed) {
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
