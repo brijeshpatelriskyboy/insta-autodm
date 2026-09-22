@@ -5,12 +5,14 @@ const {
   mockKeywordCount,
   mockUsageUpsert,
   mockUsageUpdateMany,
+  mockUsageFindUnique,
   mockTransaction,
 } = vi.hoisted(() => ({
   mockSubscriptionFindUnique: vi.fn(),
   mockKeywordCount: vi.fn(),
   mockUsageUpsert: vi.fn(),
   mockUsageUpdateMany: vi.fn(),
+  mockUsageFindUnique: vi.fn(),
   mockTransaction: vi.fn(),
 }));
 
@@ -18,13 +20,14 @@ vi.mock("../lib/prisma", () => ({
   prisma: {
     subscription: { findUnique: mockSubscriptionFindUnique },
     keywordRule: { count: mockKeywordCount },
-    planUsage: { updateMany: mockUsageUpdateMany },
+    planUsage: { findUnique: mockUsageFindUnique, updateMany: mockUsageUpdateMany },
     $transaction: mockTransaction,
   },
 }));
 
 import {
   assertCanCreateKeywordRule,
+  getMonthlyDmUsage,
   releaseMonthlyDm,
   reserveMonthlyDm,
 } from "./planLimits.service";
@@ -83,5 +86,25 @@ describe("plan limits", () => {
         data: { dmCount: { decrement: 1 } },
       }),
     );
+  });
+
+  it("reports the active plan's monthly DM usage and remaining allowance", async () => {
+    mockUsageFindUnique.mockResolvedValue({ dmCount: 14 });
+
+    await expect(getMonthlyDmUsage("user-1")).resolves.toEqual({
+      used: 14,
+      limit: 500,
+      remaining: 486,
+      plan: "starter",
+    });
+  });
+
+  it("reports zero usage when the current month has no counter yet", async () => {
+    mockUsageFindUnique.mockResolvedValue(null);
+
+    await expect(getMonthlyDmUsage("user-1")).resolves.toMatchObject({
+      used: 0,
+      remaining: 500,
+    });
   });
 });
