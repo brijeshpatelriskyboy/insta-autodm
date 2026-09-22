@@ -434,4 +434,9 @@ export const api = {
     request<{ message: string }>("/api/billing/cancel", {
       method: "POST",
     }, token),
+
+  resumeSubscription: (token: string) =>
+    request<{ message: string }>("/api/billing/resume", {
+      method: "POST",
+    }, token),
 };
