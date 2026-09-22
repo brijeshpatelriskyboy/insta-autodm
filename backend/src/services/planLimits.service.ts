@@ -56,22 +56,20 @@ export async function reserveMonthlyDm(userId: string): Promise<{
   const plan = await getUserPlan(userId);
   const monthKey = currentMonthKey();
 
-  const allowed = await prisma.$transaction(async (tx) => {
-    await tx.planUsage.upsert({
-      where: { userId_monthKey: { userId, monthKey } },
-      create: { userId, monthKey, dmCount: 0 },
-      update: {},
-    });
-    const reserved = await tx.planUsage.updateMany({
-      where: {
-        userId,
-        monthKey,
-        dmCount: { lt: plan.limits.monthlyDms },
-      },
-      data: { dmCount: { increment: 1 } },
-    });
-    return reserved.count === 1;
+  await prisma.planUsage.upsert({
+    where: { userId_monthKey: { userId, monthKey } },
+    create: { userId, monthKey, dmCount: 0 },
+    update: {},
   });
+  const reserved = await prisma.planUsage.updateMany({
+    where: {
+      userId,
+      monthKey,
+      dmCount: { lt: plan.limits.monthlyDms },
+    },
+    data: { dmCount: { increment: 1 } },
+  });
+  const allowed = reserved.count === 1;
 
   return { allowed, plan: plan.slug, limit: plan.limits.monthlyDms };
 }

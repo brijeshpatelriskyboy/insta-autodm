@@ -6,22 +6,23 @@ const {
   mockUsageUpsert,
   mockUsageUpdateMany,
   mockUsageFindUnique,
-  mockTransaction,
 } = vi.hoisted(() => ({
   mockSubscriptionFindUnique: vi.fn(),
   mockKeywordCount: vi.fn(),
   mockUsageUpsert: vi.fn(),
   mockUsageUpdateMany: vi.fn(),
   mockUsageFindUnique: vi.fn(),
-  mockTransaction: vi.fn(),
 }));
 
 vi.mock("../lib/prisma", () => ({
   prisma: {
     subscription: { findUnique: mockSubscriptionFindUnique },
     keywordRule: { count: mockKeywordCount },
-    planUsage: { findUnique: mockUsageFindUnique, updateMany: mockUsageUpdateMany },
-    $transaction: mockTransaction,
+    planUsage: {
+      findUnique: mockUsageFindUnique,
+      upsert: mockUsageUpsert,
+      updateMany: mockUsageUpdateMany,
+    },
   },
 }));
 
@@ -36,14 +37,6 @@ describe("plan limits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter" });
-    mockTransaction.mockImplementation(async (callback) =>
-      callback({
-        planUsage: {
-          upsert: mockUsageUpsert,
-          updateMany: mockUsageUpdateMany,
-        },
-      }),
-    );
   });
 
   it("blocks a fourth Starter keyword rule", async () => {
@@ -70,6 +63,7 @@ describe("plan limits", () => {
     expect(mockUsageUpdateMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ dmCount: { lt: 500 } }) }),
     );
+    expect(mockUsageUpsert).toHaveBeenCalledOnce();
   });
 
   it("rejects a DM when the monthly allowance is exhausted", async () => {
