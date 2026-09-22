@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCheckoutSessionParams } from "./billing.service";
+import { buildCheckoutSessionParams, buildPlanChangeParams } from "./billing.service";
 
 describe("billing checkout configuration", () => {
   it("applies the three-month Early Access coupon to the USD $9 recurring price", () => {
@@ -69,5 +69,47 @@ describe("billing checkout configuration", () => {
 
     expect(params.line_items).toEqual([{ price: "price_creator_monthly", quantity: 1 }]);
     expect(params.discounts).toBeUndefined();
+  });
+});
+
+describe("billing plan changes", () => {
+  it("replaces the existing item, invoices prorations, and resumes cancellation", () => {
+    const params = buildPlanChangeParams({
+      itemId: "si_current",
+      userId: "user-1",
+      plan: {
+        slug: "creator",
+        name: "Creator",
+        price: 19,
+        priceId: "price_creator_monthly",
+        couponId: undefined,
+        limits: { instagramAccounts: 1, keywordRules: 15, monthlyDms: 5_000 },
+      },
+    });
+
+    expect(params).toEqual({
+      items: [{ id: "si_current", price: "price_creator_monthly", quantity: 1 }],
+      metadata: { userId: "user-1", plan: "creator" },
+      cancel_at_period_end: false,
+      proration_behavior: "always_invoice",
+      payment_behavior: "error_if_incomplete",
+    });
+  });
+
+  it("fails closed when the target plan has no Stripe price", () => {
+    expect(() =>
+      buildPlanChangeParams({
+        itemId: "si_current",
+        userId: "user-1",
+        plan: {
+          slug: "pro",
+          name: "Pro",
+          price: 49,
+          priceId: undefined,
+          couponId: undefined,
+          limits: { instagramAccounts: 1, keywordRules: null, monthlyDms: 25_000 },
+        },
+      }),
+    ).toThrow("Stripe price is not configured for this plan");
   });
 });
