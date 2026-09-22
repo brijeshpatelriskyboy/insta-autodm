@@ -109,21 +109,37 @@ export function invoiceDescription(
   return descriptions[0] ?? "Subscription payment";
 }
 
+export function invoiceHistoryAmount(invoice: {
+  status: string | null;
+  total: number;
+  amountPaid: number;
+  amountDue: number;
+}): number {
+  if (invoice.total < 0) return invoice.total;
+  return invoice.status === "paid" ? invoice.amountPaid : invoice.amountDue;
+}
+
 async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
   const description = invoiceDescription(invoice.lines.data);
+  const amount = invoiceHistoryAmount({
+    status: invoice.status,
+    total: invoice.total,
+    amountPaid: invoice.amount_paid,
+    amountDue: invoice.amount_due,
+  });
   await prisma.billingEvent.upsert({
     where: { stripeInvoiceId: invoice.id },
     create: {
       userId,
       stripeInvoiceId: invoice.id,
-      amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
+      amount,
       currency: invoice.currency,
       status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
       description,
       invoiceUrl: invoice.hosted_invoice_url ?? null,
     },
     update: {
-      amount: invoice.status === "paid" ? invoice.amount_paid : invoice.amount_due,
+      amount,
       status: invoice.status === "paid" ? "paid" : invoice.status ?? "open",
       description,
       invoiceUrl: invoice.hosted_invoice_url ?? null,

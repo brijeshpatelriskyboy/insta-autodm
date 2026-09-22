@@ -4,6 +4,7 @@ import {
   buildPlanChangeParams,
   buildResumeSubscriptionParams,
   invoiceDescription,
+  invoiceHistoryAmount,
 } from "./billing.service";
 
 describe("billing checkout configuration", () => {
@@ -145,5 +146,29 @@ describe("billing history descriptions", () => {
 
   it("falls back safely when Stripe provides no description", () => {
     expect(invoiceDescription([])).toBe("Subscription payment");
+  });
+});
+
+describe("billing history amounts", () => {
+  it("shows a negative invoice total as customer credit", () => {
+    expect(
+      invoiceHistoryAmount({
+        status: "paid",
+        total: -1354,
+        amountPaid: 0,
+        amountDue: 0,
+      }),
+    ).toBe(-1354);
+  });
+
+  it("shows the amount actually collected for a paid invoice", () => {
+    expect(
+      invoiceHistoryAmount({
+        status: "paid",
+        total: 1355,
+        amountPaid: 1355,
+        amountDue: 0,
+      }),
+    ).toBe(1355);
   });
 });
