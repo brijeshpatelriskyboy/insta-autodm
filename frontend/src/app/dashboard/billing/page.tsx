@@ -340,7 +340,13 @@ export default function BillingPage() {
                     <td className="py-3 pr-4">
                       <StatusPill
                         status={item.status === "paid" ? "active" : "pending"}
-                        label={item.status === "paid" ? "Paid" : undefined}
+                        label={
+                          item.amount < 0
+                            ? "Credit"
+                            : item.status === "paid"
+                              ? "Paid"
+                              : undefined
+                        }
                       />
                     </td>
                     <td className="py-3">
