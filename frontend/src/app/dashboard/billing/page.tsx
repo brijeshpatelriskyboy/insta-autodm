@@ -76,8 +76,23 @@ export default function BillingPage() {
     const token = getToken();
     if (!token) return;
 
+    if (isActive) {
+      const planName = BILLING_PLANS.find((item) => item.slug === plan)?.name ?? plan;
+      const confirmed = window.confirm(
+        `Change to the ${planName} plan? Stripe will apply any prorated charge or credit now.`,
+      );
+      if (!confirmed) return;
+    }
+
     setCheckoutPlan(plan);
     try {
+      if (isActive) {
+        const result = await api.changePlan(token, plan);
+        toast.success(result.message);
+        await load();
+        return;
+      }
+
       const { url } = await api.createCheckout(token, plan);
       if (url) {
         window.location.href = url;
@@ -184,11 +199,21 @@ export default function BillingPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a plan — billed monthly via Stripe Checkout. Cancel anytime.
+          Choose a plan — billed monthly. Plan changes include an immediate prorated charge
+          or credit. Cancel anytime.
         </p>
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => {
             const isCurrentPlan = isActive && subscription?.plan === plan.slug;
+            const planOrder = { starter: 0, creator: 1, pro: 2 } as const;
+            const currentPlanOrder = subscription?.plan
+              ? planOrder[subscription.plan]
+              : -1;
+            const actionLabel = isActive
+              ? planOrder[plan.slug] > currentPlanOrder
+                ? "Upgrade plan"
+                : "Downgrade plan"
+              : "Subscribe";
             return (
               <Card
               key={plan.slug}
@@ -233,14 +258,14 @@ export default function BillingPage() {
                 {checkoutPlan === plan.slug ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Redirecting...
+                    {isActive ? "Changing plan..." : "Redirecting..."}
                   </>
                 ) : isCurrentPlan ? (
                   "Current plan"
                 ) : (
                   <>
                     <CreditCard className="h-4 w-4" />
-                    Subscribe
+                    {actionLabel}
                   </>
                 )}
               </Button>
