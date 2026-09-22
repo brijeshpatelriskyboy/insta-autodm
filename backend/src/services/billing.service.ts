@@ -49,6 +49,10 @@ export function buildPlanChangeParams(params: {
   };
 }
 
+export function buildResumeSubscriptionParams(): Stripe.SubscriptionUpdateParams {
+  return { cancel_at_period_end: false };
+}
+
 function getStripe(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
     throw new AppError(503, "Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
@@ -275,6 +279,38 @@ export const billingService = {
     });
 
     return { message: "Subscription will cancel at the end of the billing period" };
+  },
+
+  async resumeSubscription(userId: string) {
+    const record = await prisma.subscription.findUnique({ where: { userId } });
+    if (!record?.stripeSubscriptionId) {
+      throw new AppError(400, "No subscription to resume");
+    }
+
+    const stripe = getStripe();
+    const current = await stripe.subscriptions.retrieve(record.stripeSubscriptionId);
+    if (current.status !== "active" && current.status !== "trialing") {
+      throw new AppError(400, "Only an active subscription can be resumed");
+    }
+    if (!current.cancel_at_period_end) {
+      throw new AppError(409, "This subscription is already set to renew");
+    }
+
+    const updated = await stripe.subscriptions.update(
+      record.stripeSubscriptionId,
+      buildResumeSubscriptionParams(),
+    );
+
+    await prisma.subscription.update({
+      where: { userId },
+      data: {
+        status: updated.status,
+        cancelAtPeriodEnd: updated.cancel_at_period_end,
+        currentPeriodEnd: subscriptionPeriodEnd(updated),
+      },
+    });
+
+    return { message: "Subscription resumed successfully" };
   },
 
   async changePlan(userId: string, planSlug: string) {
