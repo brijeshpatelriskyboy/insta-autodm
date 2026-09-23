@@ -77,13 +77,14 @@ export default function RulesPage() {
     if (!query) return rules;
     return rules.filter(
       (rule) =>
-        rule.keyword.toLowerCase().includes(query) ||
+        (rule.triggerType === "any_comment" ? "any comment" : rule.keyword.toLowerCase()).includes(query) ||
         rule.dmMessage.toLowerCase().includes(query),
     );
   }, [rules, search]);
 
   async function handleCreate(data: {
     keyword: string;
+    triggerType: "keyword" | "any_comment";
     dmMessage: string;
     isActive: boolean;
     instagramMediaId: string | null;
@@ -94,7 +95,7 @@ export default function RulesPage() {
     const wasEmpty = rules.length === 0;
     const created = await api.createKeywordRule(token, data);
     setShowForm(false);
-    toast.success(`Created rule "${data.keyword.toUpperCase()}"`);
+    toast.success(data.triggerType === "any_comment" ? "Created Any comment rule" : `Created rule "${data.keyword.toUpperCase()}"`);
 
     if (wasEmpty && userId) {
       clearTestAutomationPanelDismiss(userId);
@@ -107,6 +108,7 @@ export default function RulesPage() {
 
   async function handleUpdate(data: {
     keyword: string;
+    triggerType: "keyword" | "any_comment";
     dmMessage: string;
     isActive: boolean;
     instagramMediaId: string | null;
@@ -116,7 +118,7 @@ export default function RulesPage() {
 
     const updated = await api.updateKeywordRule(token, editingRule.id, data);
     setEditingRule(null);
-    toast.success(`Updated rule "${updated.keyword}"`);
+    toast.success(updated.triggerType === "any_comment" ? "Updated Any comment rule" : `Updated rule "${updated.keyword}"`);
     await loadRules();
   }
 
