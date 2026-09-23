@@ -61,7 +61,7 @@ export function KeywordRulesTable({
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/80">
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Keyword
+                Trigger
               </th>
               <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Post
@@ -82,7 +82,7 @@ export function KeywordRulesTable({
               <tr key={rule.id} className="transition-colors hover:bg-slate-50/80">
                 <td className="whitespace-nowrap px-5 py-4">
                   <span className="inline-flex rounded-lg bg-brand-50 px-2.5 py-1 text-sm font-semibold text-brand-700">
-                    {rule.keyword}
+                    {rule.triggerType === "any_comment" ? "Any comment" : rule.keyword}
                   </span>
                 </td>
                 <td className="px-5 py-4">
@@ -101,7 +101,7 @@ export function KeywordRulesTable({
                       variant="ghost"
                       size="sm"
                       onClick={() => onEdit(rule)}
-                      aria-label={`Edit ${rule.keyword}`}
+                      aria-label={`Edit ${rule.triggerType === "any_comment" ? "Any comment" : rule.keyword}`}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -111,7 +111,7 @@ export function KeywordRulesTable({
                       size="sm"
                       disabled={deletingId === rule.id}
                       onClick={() => onDelete(rule)}
-                      aria-label={`Delete ${rule.keyword}`}
+                      aria-label={`Delete ${rule.triggerType === "any_comment" ? "Any comment" : rule.keyword}`}
                       className="text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
