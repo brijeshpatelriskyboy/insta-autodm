@@ -13,7 +13,8 @@ const mediaIdSchema = z
   .optional();
 
 const createSchema = z.object({
-  keyword: z.string().min(1).max(50),
+  keyword: z.string().max(50).optional(),
+  triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(1000),
   isActive: z.boolean().optional(),
   /** null/omit = global (all posts); string = pin to that Instagram media ID */
@@ -21,7 +22,8 @@ const createSchema = z.object({
 });
 
 const updateSchema = z.object({
-  keyword: z.string().min(1).max(50).optional(),
+  keyword: z.string().max(50).optional(),
+  triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(1000).optional(),
   isActive: z.boolean().optional(),
   /** Explicit null clears to global; omit leaves unchanged */
