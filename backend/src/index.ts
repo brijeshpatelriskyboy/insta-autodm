@@ -1,5 +1,5 @@
 import { createApp } from "./app";
-import { logInstagramTableStatus } from "./lib/dbStartup";
+import { ensurePlanUsageTable, logInstagramTableStatus } from "./lib/dbStartup";
 import {
   getCredentialDiagnostics,
   getMetaRedirectUri,
@@ -55,6 +55,7 @@ async function bootstrap(): Promise<void> {
   console.log(`[startup][meta] Callback route: GET /api/meta/callback`);
   console.log(`[startup][meta] Webhook verify token configured: ${Boolean(getMetaVerifyToken())}`);
 
+  await ensurePlanUsageTable();
   await logInstagramTableStatus();
 
   app.listen(port, host, () => {
