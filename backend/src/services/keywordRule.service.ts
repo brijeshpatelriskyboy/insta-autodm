@@ -7,6 +7,8 @@ import { assertCanCreateKeywordRule } from "./planLimits.service";
 
 /** Sentinel for global (all-posts) keyword rules — always stored non-null. */
 export const MEDIA_SCOPE_GLOBAL = "__GLOBAL__";
+export const ANY_COMMENT_KEYWORD = "__ANY_COMMENT__";
+export type RuleTriggerType = "keyword" | "any_comment";
 
 const MEDIA_CAPTION_MAX = 280;
 
@@ -24,7 +26,8 @@ function truncateCaption(caption: string | null | undefined): string | null {
 }
 
 interface CreateKeywordRuleInput {
-  keyword: string;
+  keyword?: string;
+  triggerType?: RuleTriggerType;
   dmMessage: string;
   isActive?: boolean;
   /** null/undefined = global scope */
@@ -33,10 +36,20 @@ interface CreateKeywordRuleInput {
 
 interface UpdateKeywordRuleInput {
   keyword?: string;
+  triggerType?: RuleTriggerType;
   dmMessage?: string;
   isActive?: boolean;
   /** Explicit null clears to global; undefined leaves unchanged */
   instagramMediaId?: string | null;
+}
+
+function toApiRule<T extends { keyword: string }>(rule: T) {
+  const isAnyComment = rule.keyword === ANY_COMMENT_KEYWORD;
+  return {
+    ...rule,
+    keyword: isAnyComment ? "" : rule.keyword,
+    triggerType: (isAnyComment ? "any_comment" : "keyword") as RuleTriggerType,
+  };
 }
 
 async function resolveMediaCache(
@@ -117,10 +130,11 @@ function mapUniqueConstraintError(error: unknown): AppError | null {
 
 export class KeywordRuleService {
   async listByUser(userId: string) {
-    return prisma.keywordRule.findMany({
+    const rules = await prisma.keywordRule.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
     });
+    return rules.map(toApiRule);
   }
 
   async getById(userId: string, ruleId: string) {
@@ -132,17 +146,22 @@ export class KeywordRuleService {
       throw new AppError(404, "Keyword rule not found");
     }
 
-    return rule;
+    return toApiRule(rule);
   }
 
   async create(userId: string, input: CreateKeywordRuleInput) {
     await assertCanCreateKeywordRule(userId);
-    const keyword = input.keyword.trim().toUpperCase();
+    const triggerType = input.triggerType ?? "keyword";
+    const keyword =
+      triggerType === "any_comment"
+        ? ANY_COMMENT_KEYWORD
+        : input.keyword?.trim().toUpperCase();
+    if (!keyword) throw new AppError(400, "Keyword is required for a keyword trigger");
     const mediaId = input.instagramMediaId?.trim() || null;
     const mediaCache = await resolveMediaCache(userId, mediaId);
 
     try {
-      return await prisma.keywordRule.create({
+      const rule = await prisma.keywordRule.create({
         data: {
           userId,
           keyword,
@@ -151,6 +170,7 @@ export class KeywordRuleService {
           ...mediaCache,
         },
       });
+      return toApiRule(rule);
     } catch (error) {
       const mapped = mapUniqueConstraintError(error);
       if (mapped) throw mapped;
@@ -161,8 +181,16 @@ export class KeywordRuleService {
   async update(userId: string, ruleId: string, input: UpdateKeywordRuleInput) {
     const existing = await this.getById(userId, ruleId);
 
+    const triggerType = input.triggerType ?? existing.triggerType;
     const keyword =
-      input.keyword !== undefined ? input.keyword.trim().toUpperCase() : existing.keyword;
+      triggerType === "any_comment"
+        ? ANY_COMMENT_KEYWORD
+        : input.keyword !== undefined
+          ? input.keyword.trim().toUpperCase()
+          : existing.keyword;
+    if (!keyword || keyword === ANY_COMMENT_KEYWORD) {
+      throw new AppError(400, "Keyword is required for a keyword trigger");
+    }
 
     let mediaCache: Awaited<ReturnType<typeof resolveMediaCache>> | null = null;
     if (input.instagramMediaId !== undefined) {
@@ -174,7 +202,7 @@ export class KeywordRuleService {
       const updated = await prisma.keywordRule.update({
         where: { id: ruleId },
         data: {
-          ...(input.keyword !== undefined && { keyword }),
+          ...((input.keyword !== undefined || input.triggerType !== undefined) && { keyword }),
           ...(input.dmMessage !== undefined && {
             dmMessage: input.dmMessage.trim(),
           }),
@@ -194,7 +222,7 @@ export class KeywordRuleService {
       });
 
       console.log(`[KeywordRules] Updated rule ${ruleId} for user ${userId}`);
-      return updated;
+      return toApiRule(updated);
     } catch (error) {
       const mapped = mapUniqueConstraintError(error);
       if (mapped) throw mapped;

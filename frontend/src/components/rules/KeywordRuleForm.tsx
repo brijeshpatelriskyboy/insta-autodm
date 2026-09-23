@@ -17,6 +17,7 @@ interface KeywordRuleFormProps {
   initial?: KeywordRule;
   onSubmit: (data: {
     keyword: string;
+    triggerType: "keyword" | "any_comment";
     dmMessage: string;
     isActive: boolean;
     instagramMediaId: string | null;
@@ -29,10 +30,14 @@ interface FormErrors {
   dmMessage?: string;
 }
 
-function validate(keyword: string, dmMessage: string): FormErrors {
+function validate(
+  triggerType: "keyword" | "any_comment",
+  keyword: string,
+  dmMessage: string,
+): FormErrors {
   const errors: FormErrors = {};
 
-  if (!keyword.trim()) {
+  if (triggerType === "keyword" && !keyword.trim()) {
     errors.keyword = "Keyword is required";
   } else if (keyword.trim().length > 50) {
     errors.keyword = "Keyword must be 50 characters or less";
@@ -49,6 +54,9 @@ function validate(keyword: string, dmMessage: string): FormErrors {
 
 export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleFormProps) {
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
+  const [triggerType, setTriggerType] = useState<"keyword" | "any_comment">(
+    initial?.triggerType ?? "keyword",
+  );
   const [dmMessage, setDmMessage] = useState(initial?.dmMessage ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
   const [instagramMediaId, setInstagramMediaId] = useState<string | null>(
@@ -63,6 +71,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
 
   useEffect(() => {
     setKeyword(initial?.keyword ?? "");
+    setTriggerType(initial?.triggerType ?? "keyword");
     setDmMessage(initial?.dmMessage ?? "");
     setIsActive(initial?.isActive ?? true);
     setInstagramMediaId(initial?.instagramMediaId ?? null);
@@ -71,6 +80,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
   }, [
     initial?.id,
     initial?.keyword,
+    initial?.triggerType,
     initial?.dmMessage,
     initial?.isActive,
     initial?.instagramMediaId,
@@ -125,7 +135,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     e.preventDefault();
     setSubmitError("");
 
-    const validationErrors = validate(keyword, dmMessage);
+    const validationErrors = validate(triggerType, keyword, dmMessage);
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
@@ -135,7 +145,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setLoading(true);
 
     try {
-      await onSubmit({ keyword, dmMessage, isActive, instagramMediaId });
+      await onSubmit({ keyword, triggerType, dmMessage, isActive, instagramMediaId });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to save rule");
     } finally {
@@ -151,23 +161,39 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         </div>
       )}
 
-      <Input
-        label="Keyword"
-        placeholder="e.g. GUIDE"
-        value={keyword}
-        onChange={(e) => {
-          setKeyword(e.target.value.toUpperCase());
-          if (errors.keyword) setErrors((prev) => ({ ...prev, keyword: undefined }));
-        }}
-        error={errors.keyword}
-        hint="Commenters must type this keyword to trigger the DM."
-      />
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium text-slate-700">Trigger type</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["keyword", "any_comment"] as const).map((type) => (
+            <label key={type} className="flex cursor-pointer gap-3 rounded-xl border border-slate-200 px-4 py-3">
+              <input type="radio" name="triggerType" value={type} checked={triggerType === type} onChange={() => setTriggerType(type)} />
+              <span>
+                <span className="block text-sm font-medium text-slate-900">{type === "keyword" ? "Specific keyword" : "Any comment"}</span>
+                <span className="block text-xs text-slate-500">{type === "keyword" ? "Send when the comment contains your keyword." : "Send when no specific keyword rule matches."}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      {triggerType === "keyword" && (
+        <Input
+          label="Keyword"
+          placeholder="e.g. GUIDE"
+          value={keyword}
+          onChange={(e) => {
+            setKeyword(e.target.value.toUpperCase());
+            if (errors.keyword) setErrors((prev) => ({ ...prev, keyword: undefined }));
+          }}
+          error={errors.keyword}
+          hint="Commenters must type this keyword to trigger the DM."
+        />
+      )}
 
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-700">Instagram post</label>
         <p className="text-xs text-slate-500">
-          Attach this keyword to one post/Reel, or keep it global for all posts. The same keyword
-          can be used on different posts.
+          Apply this trigger to one post/Reel, or keep it global for all posts.
         </p>
         <select
           value={instagramMediaId ?? ""}
@@ -195,7 +221,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         )}
         {!selectedMedia && instagramMediaId == null && (
           <p className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            Global rule — matches this keyword on any post.
+            Global rule — applies this trigger on any post.
           </p>
         )}
       </div>

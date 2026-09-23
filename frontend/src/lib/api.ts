@@ -109,6 +109,7 @@ export interface KeywordRule {
   id: string;
   userId: string;
   keyword: string;
+  triggerType: "keyword" | "any_comment";
   dmMessage: string;
   isActive: boolean;
   /** Null = global (all posts). */
@@ -323,6 +324,7 @@ export const api = {
     token: string,
     data: {
       keyword: string;
+      triggerType: "keyword" | "any_comment";
       dmMessage: string;
       isActive?: boolean;
       instagramMediaId?: string | null;
@@ -338,6 +340,7 @@ export const api = {
     id: string,
     data: {
       keyword?: string;
+      triggerType?: "keyword" | "any_comment";
       dmMessage?: string;
       isActive?: boolean;
       instagramMediaId?: string | null;

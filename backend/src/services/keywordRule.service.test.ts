@@ -137,6 +137,24 @@ describe("keywordRuleService media scope CRUD", () => {
     );
   });
 
+  it("stores and returns an Any comment trigger without exposing its sentinel", async () => {
+    mockCreate.mockResolvedValue({
+      id: "any-1",
+      keyword: "__ANY_COMMENT__",
+      instagramMediaId: null,
+      mediaScopeKey: MEDIA_SCOPE_GLOBAL,
+    });
+
+    const rule = await keywordRuleService.create("user-1", {
+      triggerType: "any_comment",
+      dmMessage: "Hello everyone",
+      instagramMediaId: null,
+    });
+
+    expect(mockCreate.mock.calls[0]?.[0].data.keyword).toBe("__ANY_COMMENT__");
+    expect(rule).toMatchObject({ keyword: "", triggerType: "any_comment" });
+  });
+
   it("rejects duplicate keyword on the same post via unique constraint", async () => {
     const err = new Prisma.PrismaClientKnownRequestError("Unique constraint failed", {
       code: "P2002",
