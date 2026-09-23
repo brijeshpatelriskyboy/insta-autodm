@@ -46,8 +46,8 @@ export default function AnalyticsPage() {
       summary.totalLeads > 0);
 
   const conversion =
-    summary && summary.totalDmEvents > 0
-      ? `${Math.round((summary.totalLeads / summary.totalDmEvents) * 1000) / 10}%`
+    summary && summary.totalKeywordMatches > 0
+      ? `${summary.conversionRate}%`
       : "—";
 
   return (
@@ -84,6 +84,7 @@ export default function AnalyticsPage() {
             <KpiCard
               label="Leads Generated"
               value={formatNumber(summary?.totalLeads ?? 0)}
+              detail="Unique successful DM recipients"
               icon={Users}
               accent="emerald"
               delay={160}
@@ -91,6 +92,7 @@ export default function AnalyticsPage() {
             <KpiCard
               label="Conversion Rate"
               value={conversion}
+              detail="Unique leads from keyword matches"
               icon={Percent}
               accent="blue"
               delay={240}
