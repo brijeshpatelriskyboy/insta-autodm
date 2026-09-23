@@ -5,6 +5,7 @@ import { decryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
 import { releaseMonthlyDm, reserveMonthlyDm } from "./planLimits.service";
+import { ANY_COMMENT_KEYWORD } from "./keywordRule.service";
 
 /** Max private-reply send attempts per (instagramAccountId, commentId), including the first try. */
 export const MAX_DM_ATTEMPTS = 3;
@@ -77,23 +78,25 @@ export function selectMatchingKeywordRule<
   commentText: string,
   commentMediaId: string | null | undefined,
 ): T | null {
-  const keywordMatches = rules.filter((rule) =>
-    commentMatchesKeyword(commentText, rule.keyword),
-  );
-  if (keywordMatches.length === 0) {
-    return null;
-  }
-
   const mediaId = commentMediaId?.trim() || null;
-  if (mediaId) {
-    const postScoped = keywordMatches.find((rule) => rule.instagramMediaId === mediaId);
-    if (postScoped) {
-      return postScoped;
+  const chooseByScope = (candidates: T[]): T | null => {
+    if (mediaId) {
+      const postScoped = candidates.find((rule) => rule.instagramMediaId === mediaId);
+      if (postScoped) return postScoped;
     }
-  }
+    return candidates.find((rule) => rule.instagramMediaId == null) ?? null;
+  };
 
-  const global = keywordMatches.find((rule) => rule.instagramMediaId == null);
-  return global ?? null;
+  const keywordMatch = chooseByScope(
+    rules.filter(
+      (rule) =>
+        rule.keyword !== ANY_COMMENT_KEYWORD &&
+        commentMatchesKeyword(commentText, rule.keyword),
+    ),
+  );
+  if (keywordMatch) return keywordMatch;
+
+  return chooseByScope(rules.filter((rule) => rule.keyword === ANY_COMMENT_KEYWORD));
 }
 
 /** Sanitize and length-limit error text for DB/logs — never store tokens or raw payloads. */
