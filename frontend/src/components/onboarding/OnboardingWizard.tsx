@@ -184,6 +184,7 @@ export function OnboardingWizard() {
       try {
         await api.createKeywordRule(token, {
           keyword: keyword.trim().toUpperCase(),
+          triggerType: "keyword",
           dmMessage: dmMessage.trim(),
           isActive: true,
         });
