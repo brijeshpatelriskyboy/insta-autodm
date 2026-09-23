@@ -212,6 +212,24 @@ describe("instagramWebhook.service helpers", () => {
     expect(selectMatchingKeywordRule(rules, "nope", "media-a")).toBeNull();
   });
 
+  it("uses Any comment only when no specific keyword rule matches", () => {
+    const rules = [
+      { id: "keyword", keyword: "GUIDE", instagramMediaId: null as string | null },
+      { id: "any", keyword: "__ANY_COMMENT__", instagramMediaId: null as string | null },
+    ];
+    expect(selectMatchingKeywordRule(rules, "send GUIDE", null)?.id).toBe("keyword");
+    expect(selectMatchingKeywordRule(rules, "hello there", null)?.id).toBe("any");
+  });
+
+  it("prefers a post-scoped Any comment rule over the global fallback", () => {
+    const rules = [
+      { id: "global-any", keyword: "__ANY_COMMENT__", instagramMediaId: null as string | null },
+      { id: "post-any", keyword: "__ANY_COMMENT__", instagramMediaId: "media-a" },
+    ];
+    expect(selectMatchingKeywordRule(rules, "hello", "media-a")?.id).toBe("post-any");
+    expect(selectMatchingKeywordRule(rules, "hello", "media-b")?.id).toBe("global-any");
+  });
+
   it("sanitizes and truncates error summaries without secrets", () => {
     const summary = sanitizeErrorSummary(
       "Bearer IGQxxxSECRET failed access_token=abc123 client_secret=shh " + "x".repeat(300),
