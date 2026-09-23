@@ -141,11 +141,8 @@ export default function DashboardPage() {
               />
               <KpiCard
                 label="Conversion Rate"
-                value={
-                  summary && summary.totalDmEvents > 0
-                    ? `${Math.round((summary.totalLeads / summary.totalDmEvents) * 1000) / 10}%`
-                    : "—"
-                }
+                value={summary?.totalKeywordMatches ? `${summary.conversionRate}%` : "—"}
+                detail="Unique leads from keyword matches"
                 icon={Percent}
                 accent="blue"
                 delay={240}
