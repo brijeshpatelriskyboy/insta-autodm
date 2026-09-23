@@ -144,6 +144,8 @@ export interface AnalyticsSummary {
   totalKeywordRules: number;
   totalDmEvents: number;
   totalLeads: number;
+  totalKeywordMatches: number;
+  conversionRate: number;
   monthlyDmUsed: number;
   monthlyDmLimit: number;
   monthlyDmRemaining: number;
