@@ -65,7 +65,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                 </div>
                 {plan.introductoryMonths && plan.offerPrice && (
                   <p className="mt-2 text-sm font-semibold text-brand-700">
-                    Instagram launch offer: USD ${plan.offerPrice}/month for your first {plan.introductoryMonths} months
+                    Instagram launch offer: 50% off — USD ${plan.offerPrice}/month for your first {plan.introductoryMonths} months
                   </p>
                 )}
 

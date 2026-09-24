@@ -68,6 +68,15 @@ export default function TermsPage() {
             offerings; they do not by themselves charge your card. Refunds, if
             any, are handled case by case and are not guaranteed.
           </p>
+          <p>
+            The Instagram launch promotion provides 50% off an eligible
+            customer&apos;s initial subscription for up to three consecutive
+            monthly billing periods. It is limited to first-time customers and
+            one redemption per customer. If you cancel or schedule cancellation
+            during the promotional period, the promotion ends and cannot be
+            restored, transferred, or reused if the subscription is resumed or a
+            new subscription is created.
+          </p>
 
           <h2 className="text-lg font-semibold text-slate-900">5. Support</h2>
           <p>

@@ -128,7 +128,7 @@ export function AuthPage({
                 </p>
                 {selectedPlan.introductoryMonths && selectedPlan.offerPrice && (
                   <p className="mt-1 text-xs font-medium text-brand-700">
-                    Use your Instagram code at checkout for USD ${selectedPlan.offerPrice}/month for the first {selectedPlan.introductoryMonths} months
+                    Use your Instagram launch code at checkout for 50% off: USD ${selectedPlan.offerPrice}/month for the first {selectedPlan.introductoryMonths} months
                   </p>
                 )}
                 <p className="mt-1 text-xs text-brand-600">

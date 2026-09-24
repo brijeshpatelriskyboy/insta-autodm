@@ -19,7 +19,7 @@ export function buildCheckoutSessionParams(params: {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: plan.priceId, quantity: 1 }],
-    ...(plan.slug === "starter" ? { allow_promotion_codes: true } : {}),
+    allow_promotion_codes: true,
     client_reference_id: userId,
     success_url: `${frontendUrl}/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${frontendUrl}/dashboard/billing?checkout=canceled`,
@@ -51,6 +51,15 @@ export function buildPlanChangeParams(params: {
 
 export function buildResumeSubscriptionParams(): Stripe.SubscriptionUpdateParams {
   return { cancel_at_period_end: false };
+}
+
+export function buildCancelSubscriptionParams(): Stripe.SubscriptionUpdateParams {
+  return {
+    cancel_at_period_end: true,
+    // A launch discount rewards one continuous initial subscription. Once a
+    // customer schedules cancellation, it must not return if they later resume.
+    discounts: [],
+  };
 }
 
 function getStripe(): Stripe {
@@ -285,9 +294,10 @@ export const billingService = {
     }
 
     const stripe = getStripe();
-    await stripe.subscriptions.update(sub.stripeSubscriptionId, {
-      cancel_at_period_end: true,
-    });
+    await stripe.subscriptions.update(
+      sub.stripeSubscriptionId,
+      buildCancelSubscriptionParams(),
+    );
 
     await prisma.subscription.update({
       where: { userId },

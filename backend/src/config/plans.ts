@@ -21,9 +21,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
   starter: {
     slug: "starter",
     name: "Starter",
-    price: 5,
-    standardPrice: 9,
-    introductoryMonths: 3,
+    price: 9,
     priceId: env.STRIPE_PRICE_STARTER,
     couponId: env.STRIPE_STARTER_COUPON,
     limits: { instagramAccounts: 1, keywordRules: 3, monthlyDms: 500 },
