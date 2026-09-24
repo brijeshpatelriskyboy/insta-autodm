@@ -221,4 +221,4 @@ export const audiences = [
 ];
 
 export const billingDisclosure =
-  "Follow @comment2dm.ai and comment LAUNCH on our pinned Instagram post to unlock 50% off any plan for your first 3 months. The offer requires one continuous initial subscription; cancelling ends the promotion and it cannot be restored or reused. Billing begins only after Stripe checkout is completed.";
+  "Follow @comment2dm.ai and comment GREAT on our pinned Instagram post to unlock 50% off any plan for your first 3 months. The offer requires one continuous initial subscription; cancelling ends the promotion and it cannot be restored or reused. Billing begins only after Stripe checkout is completed.";
