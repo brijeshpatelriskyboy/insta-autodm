@@ -6,7 +6,7 @@ export interface SelectedPlan {
   slug: PlanSlug;
   name: string;
   price: number;
-  standardPrice?: number;
+  offerPrice?: number;
   introductoryMonths?: number;
 }
 
@@ -30,7 +30,7 @@ export function getPlanBySlug(slug: string | null): SelectedPlan | null {
     slug: validSlug,
     name: plan.name,
     price: plan.price,
-    standardPrice: plan.standardPrice,
+    offerPrice: plan.offerPrice,
     introductoryMonths: plan.introductoryMonths,
   };
 }

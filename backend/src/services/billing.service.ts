@@ -11,15 +11,15 @@ export function buildCheckoutSessionParams(params: {
   frontendUrl: string;
 }): Stripe.Checkout.SessionCreateParams {
   const { customerId, userId, plan, frontendUrl } = params;
-  if (!plan.priceId || (plan.slug === "starter" && !plan.couponId)) {
-    throw new AppError(503, "Stripe price or Starter coupon is not configured");
+  if (!plan.priceId) {
+    throw new AppError(503, "Stripe price is not configured");
   }
 
   return {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: plan.priceId, quantity: 1 }],
-    ...(plan.couponId ? { discounts: [{ coupon: plan.couponId }] } : {}),
+    ...(plan.slug === "starter" ? { allow_promotion_codes: true } : {}),
     client_reference_id: userId,
     success_url: `${frontendUrl}/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${frontendUrl}/dashboard/billing?checkout=canceled`,
@@ -239,7 +239,7 @@ export const billingService = {
     }
 
     const plan = getPlan(planSlug);
-    if (!plan?.priceId || (plan.slug === "starter" && !plan.couponId)) {
+    if (!plan?.priceId) {
       throw new AppError(400, "Invalid plan selected");
     }
 

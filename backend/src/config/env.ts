@@ -62,7 +62,6 @@ export function isStripeConfigured(): boolean {
     env.STRIPE_SECRET_KEY &&
       env.STRIPE_WEBHOOK_SECRET &&
       env.STRIPE_PRICE_STARTER &&
-      env.STRIPE_STARTER_COUPON &&
       env.STRIPE_PRICE_CREATOR &&
       env.STRIPE_PRICE_PRO,
   );

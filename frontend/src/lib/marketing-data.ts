@@ -102,8 +102,8 @@ export const pricingPlans = [
   {
     name: "Starter",
     slug: "starter" as const,
-    price: 5,
-    standardPrice: 9,
+    price: 9,
+    offerPrice: 5,
     introductoryMonths: 3,
     description: "For new creators testing comment-to-DM automation.",
     features: [
@@ -217,4 +217,4 @@ export const audiences = [
 ];
 
 export const billingDisclosure =
-  "Creating an account does not start a paid subscription. Billing begins only after a paid plan is selected and Stripe checkout is completed when billing is enabled.";
+  "Starter is USD $9/month. Follow @comment2dm.ai and comment STARTER on our pinned Instagram post to unlock USD $5/month for your first 3 months. Billing begins only after Stripe checkout is completed.";

@@ -59,8 +59,8 @@ describe("public website truth", () => {
 
     const pricingData = readSrc("lib/marketing-data.ts");
     assert.match(pricingData, /name: "Starter"/);
-    assert.match(pricingData, /price: 5/);
-    assert.match(pricingData, /standardPrice: 9/);
+    assert.match(pricingData, /price: 9/);
+    assert.match(pricingData, /offerPrice: 5/);
     assert.match(pricingData, /introductoryMonths: 3/);
     assert.match(pricingData, /name: "Creator"/);
     assert.match(pricingData, /name: "Pro"/);
