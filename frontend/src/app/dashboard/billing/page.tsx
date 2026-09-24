@@ -258,7 +258,7 @@ export default function BillingPage() {
               </p>
               {plan.introductoryMonths && plan.offerPrice && (
                 <p className="mt-1 text-sm font-medium text-brand-700">
-                  Follow @comment2dm.ai and comment LAUNCH on our pinned post to unlock 50% off for your first {plan.introductoryMonths} months
+                  Follow @comment2dm.ai and comment GREAT on our pinned post to unlock 50% off for your first {plan.introductoryMonths} months
                 </p>
               )}
               <ul className="mt-4 space-y-2">
