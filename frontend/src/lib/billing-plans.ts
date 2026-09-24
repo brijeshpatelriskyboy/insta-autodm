@@ -3,7 +3,7 @@ export const BILLING_PLANS = [
     slug: "starter" as const,
     name: "Starter",
     price: 9,
-    offerPrice: 5,
+    offerPrice: 4.5,
     introductoryMonths: 3,
     popular: false,
     features: [
@@ -20,6 +20,8 @@ export const BILLING_PLANS = [
     slug: "creator" as const,
     name: "Creator",
     price: 19,
+    offerPrice: 9.5,
+    introductoryMonths: 3,
     popular: true,
     features: [
       "1 Instagram account",
@@ -35,6 +37,8 @@ export const BILLING_PLANS = [
     slug: "pro" as const,
     name: "Pro",
     price: 49,
+    offerPrice: 24.5,
+    introductoryMonths: 3,
     features: [
       "1 Instagram account",
       "Unlimited keyword rules",

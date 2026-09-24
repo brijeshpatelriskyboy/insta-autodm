@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCheckoutSessionParams,
+  buildCancelSubscriptionParams,
   buildPlanChangeParams,
   buildResumeSubscriptionParams,
   invoiceDescription,
@@ -8,7 +9,7 @@ import {
 } from "./billing.service";
 
 describe("billing checkout configuration", () => {
-  it("lets Starter customers enter the Instagram promotion code", () => {
+  it("lets customers enter the Instagram promotion code on every plan", () => {
     const params = buildCheckoutSessionParams({
       customerId: "cus_test",
       userId: "user-1",
@@ -59,7 +60,7 @@ describe("billing checkout configuration", () => {
     ).not.toThrow();
   });
 
-  it("does not apply the Starter coupon to Creator or Pro", () => {
+  it("also enables promotion codes for Creator and Pro", () => {
     const params = buildCheckoutSessionParams({
       customerId: "cus_test",
       userId: "user-1",
@@ -75,7 +76,7 @@ describe("billing checkout configuration", () => {
 
     expect(params.line_items).toEqual([{ price: "price_creator_monthly", quantity: 1 }]);
     expect(params.discounts).toBeUndefined();
-    expect(params.allow_promotion_codes).toBeUndefined();
+    expect(params.allow_promotion_codes).toBe(true);
   });
 });
 
@@ -122,6 +123,13 @@ describe("billing plan changes", () => {
 });
 
 describe("billing cancellation recovery", () => {
+  it("removes promotional discounts when cancellation is scheduled", () => {
+    expect(buildCancelSubscriptionParams()).toEqual({
+      cancel_at_period_end: true,
+      discounts: [],
+    });
+  });
+
   it("resumes renewal without changing the plan or billing cycle", () => {
     expect(buildResumeSubscriptionParams()).toEqual({
       cancel_at_period_end: false,

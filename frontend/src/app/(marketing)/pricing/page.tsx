@@ -7,7 +7,7 @@ import { billingDisclosure } from "@/lib/marketing-data";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Starter, Creator, and Pro plans for Instagram comment-to-DM automation. Starter is USD $9 per month, with an Instagram launch offer of USD $5 per month for 3 months.",
+    "Starter, Creator, and Pro plans for Instagram comment-to-DM automation, with an Instagram launch offer of 50% off any plan for 3 months.",
 };
 
 const comparison = [
@@ -40,7 +40,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             title="Compare plans"
-            description="Follow @comment2dm.ai and comment STARTER on our pinned Instagram post to receive the Starter launch code. Enter it at Stripe Checkout for USD $5/month for your first 3 months."
+            description="Follow @comment2dm.ai and comment LAUNCH on our pinned Instagram post to receive 50% off any plan for your first 3 months. Cancelling ends the promotion and it cannot be restored or reused."
           />
           <div className="mt-12 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-left text-sm">

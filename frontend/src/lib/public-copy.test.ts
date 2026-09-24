@@ -60,10 +60,13 @@ describe("public website truth", () => {
     const pricingData = readSrc("lib/marketing-data.ts");
     assert.match(pricingData, /name: "Starter"/);
     assert.match(pricingData, /price: 9/);
-    assert.match(pricingData, /offerPrice: 5/);
+    assert.match(pricingData, /offerPrice: 4\.5/);
+    assert.match(pricingData, /offerPrice: 9\.5/);
+    assert.match(pricingData, /offerPrice: 24\.5/);
     assert.match(pricingData, /introductoryMonths: 3/);
     assert.match(pricingData, /name: "Creator"/);
     assert.match(pricingData, /name: "Pro"/);
+    assert.doesNotMatch(pricingData, /LAUNCH50/);
   });
 
   it("requires registration consent and labels example dashboard data", () => {
