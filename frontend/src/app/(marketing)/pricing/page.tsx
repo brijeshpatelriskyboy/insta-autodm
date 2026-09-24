@@ -40,7 +40,7 @@ export default function PricingPage() {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <SectionHeading
             title="Compare plans"
-            description="Follow @comment2dm.ai and comment LAUNCH on our pinned Instagram post to receive 50% off any plan for your first 3 months. Cancelling ends the promotion and it cannot be restored or reused."
+            description="Follow @comment2dm.ai and comment GREAT on our pinned Instagram post to receive 50% off any plan for your first 3 months. Cancelling ends the promotion and it cannot be restored or reused."
           />
           <div className="mt-12 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-left text-sm">
