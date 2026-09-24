@@ -258,7 +258,7 @@ export default function BillingPage() {
               </p>
               {plan.introductoryMonths && plan.offerPrice && (
                 <p className="mt-1 text-sm font-medium text-brand-700">
-                  Use code STARTER5 at checkout: USD ${plan.offerPrice}/month for your first {plan.introductoryMonths} months
+                  Follow @comment2dm.ai and comment STARTER on our pinned post to unlock over 40% off for your first {plan.introductoryMonths} months
                 </p>
               )}
               <ul className="mt-4 space-y-2">
