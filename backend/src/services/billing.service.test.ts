@@ -8,7 +8,7 @@ import {
 } from "./billing.service";
 
 describe("billing checkout configuration", () => {
-  it("applies the three-month Early Access coupon to the USD $9 recurring price", () => {
+  it("lets Starter customers enter the Instagram promotion code", () => {
     const params = buildCheckoutSessionParams({
       customerId: "cus_test",
       userId: "user-1",
@@ -29,7 +29,7 @@ describe("billing checkout configuration", () => {
       client_reference_id: "user-1",
       mode: "subscription",
       line_items: [{ price: "price_9_usd_monthly", quantity: 1 }],
-      discounts: [{ coupon: "coupon_4_usd_three_months" }],
+      allow_promotion_codes: true,
       metadata: { userId: "user-1", plan: "starter" },
       subscription_data: {
         metadata: { userId: "user-1", plan: "starter" },
@@ -40,7 +40,7 @@ describe("billing checkout configuration", () => {
     });
   });
 
-  it("fails closed when the price or coupon is missing", () => {
+  it("does not require an automatically applied Starter coupon", () => {
     expect(() =>
       buildCheckoutSessionParams({
         customerId: "cus_test",
@@ -56,7 +56,7 @@ describe("billing checkout configuration", () => {
           couponId: undefined,
         },
       }),
-    ).toThrow("Stripe price or Starter coupon is not configured");
+    ).not.toThrow();
   });
 
   it("does not apply the Starter coupon to Creator or Pro", () => {
@@ -75,6 +75,7 @@ describe("billing checkout configuration", () => {
 
     expect(params.line_items).toEqual([{ price: "price_creator_monthly", quantity: 1 }]);
     expect(params.discounts).toBeUndefined();
+    expect(params.allow_promotion_codes).toBeUndefined();
   });
 });
 

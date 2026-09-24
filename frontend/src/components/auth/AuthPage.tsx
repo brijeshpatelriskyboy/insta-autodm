@@ -126,9 +126,9 @@ export function AuthPage({
                   {" · "}
                   <span className="font-mono">USD ${selectedPlan.price}/month</span>
                 </p>
-                {selectedPlan.introductoryMonths && selectedPlan.standardPrice && (
+                {selectedPlan.introductoryMonths && selectedPlan.offerPrice && (
                   <p className="mt-1 text-xs font-medium text-brand-700">
-                    First {selectedPlan.introductoryMonths} months, then USD ${selectedPlan.standardPrice}/month
+                    Use your Instagram code at checkout for USD ${selectedPlan.offerPrice}/month for the first {selectedPlan.introductoryMonths} months
                   </p>
                 )}
                 <p className="mt-1 text-xs text-brand-600">

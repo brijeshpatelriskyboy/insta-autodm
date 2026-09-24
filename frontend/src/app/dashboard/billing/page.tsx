@@ -256,9 +256,9 @@ export default function BillingPage() {
                 USD ${plan.price}
                 <span className="text-sm font-normal text-slate-500">/month</span>
               </p>
-              {plan.introductoryMonths && plan.standardPrice && (
+              {plan.introductoryMonths && plan.offerPrice && (
                 <p className="mt-1 text-sm font-medium text-brand-700">
-                  First {plan.introductoryMonths} months, then USD ${plan.standardPrice}/month
+                  Use code STARTER5 at checkout: USD ${plan.offerPrice}/month for your first {plan.introductoryMonths} months
                 </p>
               )}
               <ul className="mt-4 space-y-2">

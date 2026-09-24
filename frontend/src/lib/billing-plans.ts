@@ -2,8 +2,8 @@ export const BILLING_PLANS = [
   {
     slug: "starter" as const,
     name: "Starter",
-    price: 5,
-    standardPrice: 9,
+    price: 9,
+    offerPrice: 5,
     introductoryMonths: 3,
     popular: false,
     features: [
