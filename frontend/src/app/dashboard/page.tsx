@@ -126,8 +126,8 @@ export default function DashboardPage() {
               />
               <KpiCard
                 label="Monthly DMs"
-                value={`${formatNumber(summary?.monthlyDmUsed ?? 0)} / ${formatNumber(summary?.monthlyDmLimit ?? 500)}`}
-                detail={`${formatNumber(summary?.monthlyDmRemaining ?? 500)} remaining this month`}
+                value={`${formatNumber(summary?.monthlyDmUsed ?? 0)} / ${formatNumber(summary?.monthlyDmLimit ?? 1_000)}`}
+                detail={`${formatNumber(summary?.monthlyDmRemaining ?? 1_000)} remaining this month`}
                 icon={Send}
                 accent="pink"
                 delay={80}

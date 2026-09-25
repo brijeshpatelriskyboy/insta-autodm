@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 const comparison = [
   { feature: "Instagram accounts", starter: "1", creator: "1", pro: "1" },
   { feature: "Keyword rules", starter: "3", creator: "15", pro: "Unlimited" },
-  { feature: "DMs per month", starter: "500", creator: "5,000", pro: "25,000" },
+  { feature: "DMs per month", starter: "1,000", creator: "10,000", pro: "25,000" },
   { feature: "Analytics", starter: "Basic", creator: "Advanced", pro: "Full suite" },
   { feature: "Activity tracking", starter: "—", creator: "✓", pro: "✓" },
   { feature: "Team seats", starter: "1", creator: "1", pro: "3" },

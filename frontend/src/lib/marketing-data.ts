@@ -108,8 +108,8 @@ export const pricingPlans = [
     description: "For new creators testing comment-to-DM automation.",
     features: [
       "1 Instagram account",
-      "3 keyword rules",
-      "500 DMs / month",
+      "5 keyword rules",
+      "1,000 DMs / month",
       "Automatic comment-to-DM replies",
       "Basic analytics",
       "Email support via the contact form",
@@ -127,8 +127,8 @@ export const pricingPlans = [
     description: "For growing creators managing regular campaigns.",
     features: [
       "1 Instagram account",
-      "15 keyword rules",
-      "5,000 DMs / month",
+      "Unlimited keyword rules",
+      "10,000 DMs / month",
       "Advanced analytics",
       "Activity tracking",
       "Email support via the contact form",

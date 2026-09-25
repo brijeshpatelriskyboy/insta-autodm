@@ -39,12 +39,18 @@ describe("plan limits", () => {
     mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter" });
   });
 
-  it("blocks a fourth Starter keyword rule", async () => {
-    mockKeywordCount.mockResolvedValue(3);
+  it("blocks a sixth Starter keyword rule", async () => {
+    mockKeywordCount.mockResolvedValue(5);
     await expect(assertCanCreateKeywordRule("user-1")).rejects.toMatchObject({
       statusCode: 403,
-      message: expect.stringContaining("up to 3 keyword rules"),
+      message: expect.stringContaining("up to 5 keyword rules"),
     });
+  });
+
+  it("allows unlimited Creator keyword rules", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator" });
+    await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
+    expect(mockKeywordCount).not.toHaveBeenCalled();
   });
 
   it("allows unlimited Pro keyword rules", async () => {
@@ -58,10 +64,10 @@ describe("plan limits", () => {
     await expect(reserveMonthlyDm("user-1")).resolves.toEqual({
       allowed: true,
       plan: "starter",
-      limit: 500,
+      limit: 1_000,
     });
     expect(mockUsageUpdateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ dmCount: { lt: 500 } }) }),
+      expect.objectContaining({ where: expect.objectContaining({ dmCount: { lt: 1_000 } }) }),
     );
     expect(mockUsageUpsert).toHaveBeenCalledOnce();
   });
@@ -87,8 +93,8 @@ describe("plan limits", () => {
 
     await expect(getMonthlyDmUsage("user-1")).resolves.toEqual({
       used: 14,
-      limit: 500,
-      remaining: 486,
+      limit: 1_000,
+      remaining: 986,
       plan: "starter",
     });
   });
@@ -98,7 +104,7 @@ describe("plan limits", () => {
 
     await expect(getMonthlyDmUsage("user-1")).resolves.toMatchObject({
       used: 0,
-      remaining: 500,
+      remaining: 1_000,
     });
   });
 });

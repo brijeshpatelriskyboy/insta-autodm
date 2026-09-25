@@ -8,8 +8,8 @@ export const BILLING_PLANS = [
     popular: false,
     features: [
       "1 Instagram account",
-      "3 keyword rules",
-      "500 DMs / month",
+      "5 keyword rules",
+      "1,000 DMs / month",
       "Automatic comment-to-DM replies",
       "Basic analytics",
       "Email support via the contact form",
@@ -25,8 +25,8 @@ export const BILLING_PLANS = [
     popular: true,
     features: [
       "1 Instagram account",
-      "15 keyword rules",
-      "5,000 DMs / month",
+      "Unlimited keyword rules",
+      "10,000 DMs / month",
       "Advanced analytics",
       "Activity tracking",
       "Email support via the contact form",

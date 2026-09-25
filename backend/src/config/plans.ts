@@ -24,7 +24,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     price: 9,
     priceId: env.STRIPE_PRICE_STARTER,
     couponId: env.STRIPE_STARTER_COUPON,
-    limits: { instagramAccounts: 1, keywordRules: 3, monthlyDms: 500 },
+    limits: { instagramAccounts: 1, keywordRules: 5, monthlyDms: 1_000 },
   },
   creator: {
     slug: "creator",
@@ -32,7 +32,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     price: 19,
     priceId: env.STRIPE_PRICE_CREATOR,
     couponId: undefined,
-    limits: { instagramAccounts: 1, keywordRules: 15, monthlyDms: 5_000 },
+    limits: { instagramAccounts: 1, keywordRules: null, monthlyDms: 10_000 },
   },
   pro: {
     slug: "pro",
