@@ -30,6 +30,8 @@ interface CreateKeywordRuleInput {
   triggerType?: RuleTriggerType;
   dmMessage: string;
   isActive?: boolean;
+  publicReplyEnabled?: boolean;
+  publicReplyMessage?: string | null;
   /** null/undefined = global scope */
   instagramMediaId?: string | null;
 }
@@ -39,6 +41,8 @@ interface UpdateKeywordRuleInput {
   triggerType?: RuleTriggerType;
   dmMessage?: string;
   isActive?: boolean;
+  publicReplyEnabled?: boolean;
+  publicReplyMessage?: string | null;
   /** Explicit null clears to global; undefined leaves unchanged */
   instagramMediaId?: string | null;
 }
@@ -167,6 +171,10 @@ export class KeywordRuleService {
           keyword,
           dmMessage: input.dmMessage.trim(),
           isActive: input.isActive ?? true,
+          publicReplyEnabled: input.publicReplyEnabled ?? false,
+          publicReplyMessage: input.publicReplyEnabled
+            ? input.publicReplyMessage?.trim() || "Thanks! We sent the details to your DM 📩"
+            : null,
           ...mediaCache,
         },
       });
@@ -207,6 +215,12 @@ export class KeywordRuleService {
             dmMessage: input.dmMessage.trim(),
           }),
           ...(input.isActive !== undefined && { isActive: input.isActive }),
+          ...(input.publicReplyEnabled !== undefined && {
+            publicReplyEnabled: input.publicReplyEnabled,
+          }),
+          ...(input.publicReplyMessage !== undefined && {
+            publicReplyMessage: input.publicReplyMessage?.trim() || null,
+          }),
           ...(mediaCache
             ? {
                 instagramMediaId: mediaCache.instagramMediaId,

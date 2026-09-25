@@ -90,6 +90,9 @@ export function KeywordRulesTable({
                 </td>
                 <td className="max-w-xs px-5 py-4 text-sm text-slate-600 lg:max-w-md">
                   <p className="line-clamp-2">{rule.dmMessage}</p>
+                  {rule.publicReplyEnabled && (
+                    <p className="mt-1 text-xs font-medium text-brand-600">Public reply enabled</p>
+                  )}
                 </td>
                 <td className="whitespace-nowrap px-5 py-4">
                   <Badge active={rule.isActive} />

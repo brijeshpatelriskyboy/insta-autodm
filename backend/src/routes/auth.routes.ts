@@ -31,6 +31,11 @@ router.post(
   authenticate,
   (req, res, next) => authController.changePassword(req, res, next),
 );
+router.post(
+  "/complete-instagram-profile",
+  authenticate,
+  (req, res, next) => authController.completeInstagramProfile(req, res, next),
+);
 router.get("/me", authenticate, (req, res, next) => authController.me(req, res, next));
 
 export default router;

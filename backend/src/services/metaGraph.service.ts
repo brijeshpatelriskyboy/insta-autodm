@@ -662,6 +662,47 @@ export const metaGraphService = {
     }
   },
 
+  /** Post a public reply beneath the Instagram comment after the private reply succeeds. */
+  async replyToComment(params: {
+    commentId: string;
+    accessToken: string;
+    messageText: string;
+    timeoutMs?: number;
+  }): Promise<{ replyId: string }> {
+    const version = getMetaGraphApiVersion();
+    const url = `https://graph.instagram.com/${version}/${encodeURIComponent(params.commentId)}/replies`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? 10_000);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${params.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: params.messageText }),
+        signal: controller.signal,
+      });
+      const raw = (await response.json()) as {
+        id?: string;
+        error?: { message?: string; code?: number };
+      };
+      if (!response.ok || raw.error || !raw.id) {
+        const message = raw.error?.message ?? `Instagram comment reply failed (HTTP ${response.status})`;
+        throw new AppError(502, message, raw.error?.code ?? null, message);
+      }
+      return { replyId: raw.id };
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new AppError(504, "Instagram comment reply timed out");
+      }
+      throw new AppError(502, error instanceof Error ? error.message : "Instagram comment reply failed");
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+
   /** @deprecated Use fetchInstagramProfile — kept for any residual Facebook Login callers. */
   async fetchFacebookProfile(accessToken: string): Promise<{
     id: string;

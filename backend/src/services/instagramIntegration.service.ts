@@ -1,4 +1,6 @@
 import { Prisma } from "@prisma/client";
+import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS } from "../config/meta";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
@@ -335,7 +337,15 @@ export const instagramIntegrationService = {
     });
   },
 
-  async connectViaOAuth(userId: string, code: string) {
+  async connectViaOAuth(
+    userId: string,
+    code: string,
+    resolved?: {
+      shortLived: Awaited<ReturnType<typeof metaGraphService.exchangeCodeForToken>>;
+      longLived: Awaited<ReturnType<typeof metaGraphService.exchangeForLongLivedToken>>;
+      profile: Awaited<ReturnType<typeof metaGraphService.fetchInstagramProfile>>;
+    },
+  ) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true },
@@ -345,9 +355,9 @@ export const instagramIntegrationService = {
       throw new AppError(404, "User not found for OAuth state");
     }
 
-    const shortLived = await metaGraphService.exchangeCodeForToken(code);
-    const longLived = await metaGraphService.exchangeForLongLivedToken(shortLived.access_token);
-    const profile = await metaGraphService.fetchInstagramProfile(longLived.access_token);
+    const shortLived = resolved?.shortLived ?? await metaGraphService.exchangeCodeForToken(code);
+    const longLived = resolved?.longLived ?? await metaGraphService.exchangeForLongLivedToken(shortLived.access_token);
+    const profile = resolved?.profile ?? await metaGraphService.fetchInstagramProfile(longLived.access_token);
 
     const now = new Date();
     const instagramUserId = String(profile.user_id ?? profile.id ?? shortLived.user_id);
@@ -457,6 +467,43 @@ export const instagramIntegrationService = {
         probes: pageLookup.probes,
       },
     };
+  },
+
+  async loginViaOAuth(code: string): Promise<{ userId: string; needsProfileCompletion: boolean }> {
+    const shortLived = await metaGraphService.exchangeCodeForToken(code);
+    const longLived = await metaGraphService.exchangeForLongLivedToken(shortLived.access_token);
+    const profile = await metaGraphService.fetchInstagramProfile(longLived.access_token);
+    const instagramUserId = String(profile.user_id ?? profile.id ?? shortLived.user_id);
+    const username = profile.username?.trim() || `instagram_${instagramUserId.slice(-8)}`;
+    const existing = await prisma.instagramAccount.findUnique({
+      where: { instagramUserId },
+      select: { userId: true },
+    });
+
+    let userId = existing?.userId;
+    if (!userId) {
+      const passwordHash = await bcrypt.hash(crypto.randomBytes(32).toString("base64url"), 10);
+      const acceptedAt = new Date();
+      const user = await prisma.user.create({
+        data: {
+          email: `instagram+${instagramUserId}@users.comment2dm.local`,
+          name: username,
+          passwordHash,
+          authProvider: "instagram",
+          termsAcceptedAt: acceptedAt,
+          privacyAcceptedAt: acceptedAt,
+        },
+        select: { id: true },
+      });
+      userId = user.id;
+    }
+
+    await this.connectViaOAuth(userId, code, { shortLived, longLived, profile });
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { profileCompletedAt: true },
+    });
+    return { userId, needsProfileCompletion: !user.profileCompletedAt };
   },
 
   /**

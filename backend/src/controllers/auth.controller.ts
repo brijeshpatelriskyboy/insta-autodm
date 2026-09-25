@@ -35,6 +35,12 @@ const changePasswordSchema = z.object({
   newPassword: z.string().min(PASSWORD_MIN_LENGTH),
 });
 
+const completeInstagramProfileSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(PASSWORD_MIN_LENGTH),
+  name: z.string().trim().min(1).max(100).optional(),
+});
+
 function assertNoSecretLeakage(payload: unknown): void {
   const serialized = JSON.stringify(payload);
   if (
@@ -120,6 +126,18 @@ export class AuthController {
         body.currentPassword,
         body.newPassword,
       );
+      assertNoSecretLeakage(result);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async completeInstagramProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const body = completeInstagramProfileSchema.parse(req.body);
+      const result = await authService.completeInstagramProfile(req.user.id, body);
       assertNoSecretLeakage(result);
       res.json(result);
     } catch (error) {

@@ -14,6 +14,9 @@ router.get("/instagram/callback", (req, res, next) =>
 router.get("/instagram/meta-config", (req, res, next) =>
   instagramIntegrationController.metaConfig(req, res, next),
 );
+router.get("/instagram/login-url", (req, res, next) =>
+  instagramIntegrationController.loginOAuthUrl(req, res, next),
+);
 
 router.use(authenticate);
 

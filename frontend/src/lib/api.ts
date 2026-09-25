@@ -98,6 +98,7 @@ export interface User {
   id: string;
   email: string;
   name: string | null;
+  needsProfileCompletion?: boolean;
 }
 
 export interface AuthResponse {
@@ -112,6 +113,8 @@ export interface KeywordRule {
   triggerType: "keyword" | "any_comment";
   dmMessage: string;
   isActive: boolean;
+  publicReplyEnabled: boolean;
+  publicReplyMessage: string | null;
   /** Null = global (all posts). */
   instagramMediaId: string | null;
   mediaScopeKey: string;
@@ -282,6 +285,17 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
 
+  getInstagramLoginUrl: () =>
+    request<MetaOAuthUrlPreview>("/api/integrations/instagram/login-url"),
+
+  completeInstagramProfile: (
+    token: string,
+    data: { email: string; password: string; name?: string },
+  ) => request<AuthResponse>("/api/auth/complete-instagram-profile", {
+    method: "POST",
+    body: JSON.stringify(data),
+  }, token),
+
   forgotPassword: (email: string) =>
     request<{ message: string }>("/api/auth/forgot-password", {
       method: "POST",
@@ -327,6 +341,8 @@ export const api = {
       triggerType: "keyword" | "any_comment";
       dmMessage: string;
       isActive?: boolean;
+      publicReplyEnabled?: boolean;
+      publicReplyMessage?: string | null;
       instagramMediaId?: string | null;
     },
   ) =>
@@ -343,6 +359,8 @@ export const api = {
       triggerType?: "keyword" | "any_comment";
       dmMessage?: string;
       isActive?: boolean;
+      publicReplyEnabled?: boolean;
+      publicReplyMessage?: string | null;
       instagramMediaId?: string | null;
     },
   ) =>

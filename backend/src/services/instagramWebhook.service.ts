@@ -811,6 +811,42 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       }),
     });
 
+    // A public acknowledgement is optional and must never turn a successful DM
+    // into a failed automation. It runs only after Meta confirms the private reply.
+    if (matchedRule.publicReplyEnabled && matchedRule.publicReplyMessage?.trim()) {
+      try {
+        const publicReply = await metaGraphService.replyToComment({
+          commentId: comment.commentId,
+          accessToken,
+          messageText: matchedRule.publicReplyMessage.trim(),
+        });
+        await prisma.dmEvent.update({
+          where: { id: claim.dmEventId },
+          data: {
+            publicReplyStatus: "sent",
+            publicReplyId: publicReply.replyId,
+            publicReplyError: null,
+            publicReplyAttemptedAt: new Date(),
+          },
+        });
+      } catch (publicReplyError) {
+        const summary = sanitizeErrorSummary(publicReplyError);
+        await prisma.dmEvent.update({
+          where: { id: claim.dmEventId },
+          data: {
+            publicReplyStatus: "failed",
+            publicReplyError: summary,
+            publicReplyAttemptedAt: new Date(),
+          },
+        });
+        console.error("[webhook] public comment reply failed after DM success:", {
+          commentId: comment.commentId,
+          ruleId: matchedRule.id,
+          errorSummary: summary,
+        });
+      }
+    }
+
     console.log("[webhook] private reply sent:", {
       eventType: comment.eventField ?? "comments",
       accountId: comment.instagramAccountId,
