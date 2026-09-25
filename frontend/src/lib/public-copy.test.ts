@@ -66,6 +66,10 @@ describe("public website truth", () => {
     assert.match(pricingData, /introductoryMonths: 3/);
     assert.match(pricingData, /name: "Creator"/);
     assert.match(pricingData, /name: "Pro"/);
+    assert.match(pricingData, /"5 keyword rules"/);
+    assert.match(pricingData, /"1,000 DMs \/ month"/);
+    assert.match(pricingData, /"Unlimited keyword rules"/);
+    assert.match(pricingData, /"10,000 DMs \/ month"/);
     assert.doesNotMatch(pricingData, /LAUNCH50/);
   });
 
