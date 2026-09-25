@@ -76,6 +76,14 @@ export class InstagramIntegrationController {
     }
   }
 
+  async loginOAuthUrl(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      res.json(metaOAuthService.getLoginOAuthUrl());
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async callback(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       // Read OAuth params once from the query string. Do not decode/trim/mutate the code.

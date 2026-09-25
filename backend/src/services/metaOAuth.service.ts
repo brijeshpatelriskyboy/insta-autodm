@@ -1,4 +1,5 @@
 import { env } from "../config/env";
+import crypto from "crypto";
 import {
   buildOAuthUrl,
   getInstagramAppId,
@@ -13,25 +14,33 @@ import {
 } from "../config/meta";
 import { AppError } from "../utils/errors";
 import { instagramIntegrationService } from "./instagramIntegration.service";
+import { authService } from "./auth.service";
 
-/** state = userId:timestamp:authorizeClientId */
-function buildOAuthState(userId: string, authorizeClientId: string): string {
-  return `${userId}:${Date.now()}:${authorizeClientId}`;
+type OAuthMode = "connect" | "login";
+interface OAuthState { mode: OAuthMode; userId?: string; ts: number; nonce: string }
+
+function buildOAuthState(mode: OAuthMode, userId?: string): string {
+  const payload: OAuthState = { mode, userId, ts: Date.now(), nonce: crypto.randomBytes(16).toString("base64url") };
+  const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", env.JWT_SECRET).update(encoded).digest("base64url");
+  return `${encoded}.${signature}`;
 }
 
-function parseOAuthState(state?: string): { userId: string; authorizeClientId: string | null } | null {
-  if (!state?.trim()) {
-    return null;
-  }
-
-  const parts = state.split(":");
-  const userId = parts[0]?.trim();
-  if (!userId) {
-    return null;
-  }
-
-  const authorizeClientId = parts[2]?.trim() || null;
-  return { userId, authorizeClientId };
+function parseOAuthState(state?: string): OAuthState | null {
+  if (!state) return null;
+  const [encoded, signature] = state.split(".");
+  if (!encoded || !signature) return null;
+  const expected = crypto.createHmac("sha256", env.JWT_SECRET).update(encoded).digest();
+  let supplied: Buffer;
+  try { supplied = Buffer.from(signature, "base64url"); } catch { return null; }
+  if (expected.length !== supplied.length || !crypto.timingSafeEqual(expected, supplied)) return null;
+  try {
+    const parsed = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as OAuthState;
+    if (!(["connect", "login"] as string[]).includes(parsed.mode)) return null;
+    if (!Number.isFinite(parsed.ts) || Date.now() - parsed.ts > 10 * 60_000 || parsed.ts > Date.now() + 60_000) return null;
+    if (parsed.mode === "connect" && !parsed.userId) return null;
+    return parsed;
+  } catch { return null; }
 }
 
 function integrationsRedirect(params: Record<string, string>): string {
@@ -57,8 +66,7 @@ export const metaOAuthService = {
     const configured = isMetaOAuthConfigured();
     const redirectUri = getMetaRedirectUri();
     const missing = getMissingMetaCredentials();
-    const authorizeClientId = getInstagramAppId() ?? "";
-    const state = buildOAuthState(userId, authorizeClientId);
+    const state = buildOAuthState("connect", userId);
 
     if (!oauthEnabled) {
       return {
@@ -101,6 +109,28 @@ export const metaOAuthService = {
     };
   },
 
+  getLoginOAuthUrl() {
+    const base = this.getOAuthUrlForState(buildOAuthState("login"));
+    return base;
+  },
+
+  getOAuthUrlForState(state: string) {
+    const oauthEnabled = isMetaOAuthEnabled();
+    const configured = isMetaOAuthConfigured();
+    const redirectUri = getMetaRedirectUri();
+    const missing = getMissingMetaCredentials();
+    const url = configured ? buildOAuthUrl(state) : null;
+    return {
+      url: oauthEnabled ? url : null,
+      previewUrl: url,
+      oauthEnabled,
+      configured,
+      redirectUri,
+      setupError: configured ? null : { missing, message: `Instagram setup required. Missing: ${missing.join(", ")}` },
+      message: !oauthEnabled ? "Instagram OAuth is disabled." : configured ? "Redirect to Instagram to continue." : "Instagram setup required.",
+    };
+  },
+
   async handleCallback(query: {
     code?: string;
     state?: string;
@@ -132,25 +162,29 @@ export const metaOAuthService = {
     }
 
     const parsedState = parseOAuthState(query.state);
-    if (!parsedState?.userId) {
+    if (!parsedState) {
       throw new AppError(400, "Invalid OAuth state");
     }
 
-    const { userId, authorizeClientId } = parsedState;
+    const userId = parsedState.userId;
     const tokenExchangeClientId = getInstagramAppId();
 
     console.log("[instagram-oauth] callback received:", {
-      userId,
+      userId: userId ?? null,
+      mode: parsedState.mode,
       hasCode: true,
       hasState: Boolean(query.state),
-      authorizeClientId,
-      authorizeClientIdLast4: last4(authorizeClientId),
       tokenExchangeClientId,
       tokenExchangeClientIdLast4: last4(tokenExchangeClientId),
-      clientIdsStrictlyEqual: authorizeClientId === tokenExchangeClientId,
       codeLength: query.code.length,
     });
 
+    if (parsedState.mode === "login") {
+      const login = await instagramIntegrationService.loginViaOAuth(query.code);
+      const session = await authService.createSessionForUser(login.userId);
+      return { status: "authenticated", oauthEnabled: true, session };
+    }
+    if (!userId) throw new AppError(400, "Invalid OAuth state");
     const account = await instagramIntegrationService.connectViaOAuth(userId, query.code);
     const subscription = account.webhookSubscription;
     const webhookOk = subscription?.success === true;
@@ -200,10 +234,15 @@ export const metaOAuthService = {
     }
 
     try {
+      const parsedState = parseOAuthState(query.state);
       const result = await this.handleCallback(query);
+      if (parsedState?.mode === "login" && "session" in result) {
+        const payload = Buffer.from(JSON.stringify(result.session)).toString("base64url");
+        return `${env.FRONTEND_URL.replace(/\/$/, "")}/auth/instagram/callback#session=${payload}`;
+      }
       return integrationsRedirect({
         oauth: "success",
-        message: result.message,
+        message: result.message ?? "Instagram connected successfully.",
       });
     } catch (error) {
       const message =

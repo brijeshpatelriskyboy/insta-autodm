@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, MessageCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/brand/Logo";
@@ -80,6 +80,21 @@ export function AuthPage({
       }
     }
     await authenticate(email, password, mode, name);
+  }
+
+  async function continueWithInstagram() {
+    setError("");
+    setLoading(true);
+    try {
+      const result = await api.getInstagramLoginUrl();
+      if (!result.url) throw new Error(result.message || "Instagram login is unavailable");
+      window.location.assign(result.url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Instagram login failed";
+      setError(message);
+      toast.error(message);
+      setLoading(false);
+    }
   }
 
   return (
@@ -159,7 +174,25 @@ export function AuthPage({
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="mt-6 w-full"
+              disabled={loading}
+              onClick={continueWithInstagram}
+            >
+              <MessageCircle className="h-4 w-4" />
+              Continue with Instagram
+            </Button>
+            <p className="mt-2 text-center text-xs text-slate-500">
+              By continuing, you agree to our <Link href="/terms" className="text-brand-600">Terms</Link> and <Link href="/privacy" className="text-brand-600">Privacy Policy</Link>.
+            </p>
+            <div className="my-5 flex items-center gap-3 text-xs text-slate-400">
+              <span className="h-px flex-1 bg-slate-200" /><span>or use email</span><span className="h-px flex-1 bg-slate-200" />
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
               {mode === "register" && (
                 <Input
                   label="Name"

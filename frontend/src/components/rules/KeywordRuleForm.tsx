@@ -20,6 +20,8 @@ interface KeywordRuleFormProps {
     triggerType: "keyword" | "any_comment";
     dmMessage: string;
     isActive: boolean;
+    publicReplyEnabled: boolean;
+    publicReplyMessage: string | null;
     instagramMediaId: string | null;
   }) => Promise<void>;
   onCancel: () => void;
@@ -59,6 +61,10 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
   );
   const [dmMessage, setDmMessage] = useState(initial?.dmMessage ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
+  const [publicReplyEnabled, setPublicReplyEnabled] = useState(initial?.publicReplyEnabled ?? false);
+  const [publicReplyMessage, setPublicReplyMessage] = useState(
+    initial?.publicReplyMessage ?? "Thanks! We sent the details to your DM 📩",
+  );
   const [instagramMediaId, setInstagramMediaId] = useState<string | null>(
     initial?.instagramMediaId ?? null,
   );
@@ -74,6 +80,8 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setTriggerType(initial?.triggerType ?? "keyword");
     setDmMessage(initial?.dmMessage ?? "");
     setIsActive(initial?.isActive ?? true);
+    setPublicReplyEnabled(initial?.publicReplyEnabled ?? false);
+    setPublicReplyMessage(initial?.publicReplyMessage ?? "Thanks! We sent the details to your DM 📩");
     setInstagramMediaId(initial?.instagramMediaId ?? null);
     setErrors({});
     setSubmitError("");
@@ -83,6 +91,8 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     initial?.triggerType,
     initial?.dmMessage,
     initial?.isActive,
+    initial?.publicReplyEnabled,
+    initial?.publicReplyMessage,
     initial?.instagramMediaId,
   ]);
 
@@ -145,7 +155,15 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setLoading(true);
 
     try {
-      await onSubmit({ keyword, triggerType, dmMessage, isActive, instagramMediaId });
+      await onSubmit({
+        keyword,
+        triggerType,
+        dmMessage,
+        isActive,
+        publicReplyEnabled,
+        publicReplyMessage: publicReplyEnabled ? publicReplyMessage : null,
+        instagramMediaId,
+      });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Failed to save rule");
     } finally {
@@ -238,6 +256,32 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         error={errors.dmMessage}
         hint={`${dmMessage.length}/1000 characters`}
       />
+
+      <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={publicReplyEnabled}
+            onChange={(e) => setPublicReplyEnabled(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+          />
+          <div>
+            <p className="text-sm font-medium text-slate-900">Reply publicly after the DM is sent</p>
+            <p className="text-xs text-slate-500">Adds a short reply beneath the comment so the customer knows to check their DMs.</p>
+          </div>
+        </label>
+        {publicReplyEnabled && (
+          <Textarea
+            label="Public reply"
+            value={publicReplyMessage}
+            onChange={(e) => setPublicReplyMessage(e.target.value)}
+            rows={2}
+            maxLength={300}
+            required
+            hint={`${publicReplyMessage.length}/300 characters`}
+          />
+        )}
+      </div>
 
       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3">
         <input

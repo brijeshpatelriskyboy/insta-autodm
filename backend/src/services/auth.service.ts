@@ -16,12 +16,13 @@ import { logPasswordResetEmailOutcome, sendPasswordResetEmail } from "../email/e
 import { buildPasswordResetUrl } from "../email/resetUrl";
 import { AppError } from "../utils/errors";
 
-interface AuthResult {
+export interface AuthResult {
   token: string;
   user: {
     id: string;
     email: string;
     name: string | null;
+    needsProfileCompletion: boolean;
   };
 }
 
@@ -78,8 +79,9 @@ export class AuthService {
         name: options.name,
         termsAcceptedAt: acceptedAt,
         privacyAcceptedAt: acceptedAt,
+        profileCompletedAt: acceptedAt,
       },
-      select: { id: true, email: true, name: true },
+      select: { id: true, email: true, name: true, profileCompletedAt: true },
     });
 
     return this.buildAuthResult(user);
@@ -102,20 +104,51 @@ export class AuthService {
       id: user.id,
       email: user.email,
       name: user.name,
+      profileCompletedAt: user.profileCompletedAt,
     });
   }
 
   async getProfile(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, name: true, createdAt: true },
+      select: { id: true, email: true, name: true, createdAt: true, profileCompletedAt: true },
     });
 
     if (!user) {
       throw new AppError(404, "User not found");
     }
 
-    return user;
+    return { ...user, needsProfileCompletion: !user.profileCompletedAt };
+  }
+
+  async createSessionForUser(userId: string): Promise<AuthResult> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, profileCompletedAt: true },
+    });
+    if (!user) throw new AppError(404, "User not found");
+    return this.buildAuthResult(user);
+  }
+
+  async completeInstagramProfile(
+    userId: string,
+    input: { email: string; password: string; name?: string },
+  ): Promise<AuthResult> {
+    assertPasswordPolicy(input.password);
+    const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
+    if (existing && existing.id !== userId) throw new AppError(409, "Email already registered");
+    const passwordHash = await bcrypt.hash(input.password, 10);
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: input.email.toLowerCase(),
+        name: input.name?.trim() || undefined,
+        passwordHash,
+        profileCompletedAt: new Date(),
+      },
+      select: { id: true, email: true, name: true, profileCompletedAt: true },
+    });
+    return this.buildAuthResult(user);
   }
 
   /**
@@ -278,6 +311,7 @@ export class AuthService {
     id: string;
     email: string;
     name: string | null;
+    profileCompletedAt: Date | null;
   }): AuthResult {
     const token = jwt.sign(
       { userId: user.id, email: user.email, name: user.name },
@@ -285,7 +319,15 @@ export class AuthService {
       { expiresIn: "7d" },
     );
 
-    return { token, user };
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        needsProfileCompletion: !user.profileCompletedAt,
+      },
+    };
   }
 }
 

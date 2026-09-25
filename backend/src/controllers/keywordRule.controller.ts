@@ -17,6 +17,8 @@ const createSchema = z.object({
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(1000),
   isActive: z.boolean().optional(),
+  publicReplyEnabled: z.boolean().optional(),
+  publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),
   /** null/omit = global (all posts); string = pin to that Instagram media ID */
   instagramMediaId: mediaIdSchema,
 });
@@ -26,6 +28,8 @@ const updateSchema = z.object({
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(1000).optional(),
   isActive: z.boolean().optional(),
+  publicReplyEnabled: z.boolean().optional(),
+  publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),
   /** Explicit null clears to global; omit leaves unchanged */
   instagramMediaId: mediaIdSchema,
 });

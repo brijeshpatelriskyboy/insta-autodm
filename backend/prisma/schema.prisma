@@ -20,6 +20,8 @@ model User {
   email                      String                      @unique
   name                       String?
   passwordHash               String
+  authProvider               String                      @default("password")
+  profileCompletedAt         DateTime?
   /** Set when the user accepted Terms of Service at registration. */
   termsAcceptedAt            DateTime?
   /** Set when the user accepted the Privacy Policy at registration. */
@@ -61,6 +63,8 @@ model KeywordRule {
   keyword             String
   dmMessage           String
   isActive            Boolean  @default(true)
+  publicReplyEnabled  Boolean  @default(false)
+  publicReplyMessage  String?
   /**
    * Instagram media ID this rule is scoped to.
    * Null = global (all posts). Matching uses this field, not cached preview metadata.
@@ -107,6 +111,10 @@ model DmEvent {
    */
   duplicateTriggerKey String?
   messageId          String?
+  publicReplyStatus  String?
+  publicReplyId      String?
+  publicReplyError   String?
+  publicReplyAttemptedAt DateTime?
   errorSummary       String?
   /** Meta Graph API error.code from the last failed private-reply attempt. */
   metaErrorCode      Int?

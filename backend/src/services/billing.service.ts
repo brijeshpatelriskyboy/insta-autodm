@@ -240,6 +240,14 @@ export const billingService = {
   },
 
   async createCheckoutSession(userId: string, email: string, planSlug: string) {
+    const billingUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, profileCompletedAt: true },
+    });
+    if (!billingUser?.profileCompletedAt) {
+      throw new AppError(400, "Complete your email and password before starting checkout");
+    }
+    email = billingUser.email;
     if (!isStripeConfigured()) {
       throw new AppError(
         503,
