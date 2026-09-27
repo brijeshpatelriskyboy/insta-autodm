@@ -6,7 +6,32 @@ import {
   buildResumeSubscriptionParams,
   invoiceDescription,
   invoiceHistoryAmount,
+  subscriptionPeriodEnd,
 } from "./billing.service";
+
+describe("Stripe billing period compatibility", () => {
+  const end = 1792540800;
+  it("reads Acacia subscription-level billing periods", () => {
+    expect(subscriptionPeriodEnd({ current_period_end: end }))
+      .toEqual(new Date(end * 1000));
+  });
+  it("reads newer webhook item-level billing periods without a top-level field", () => {
+    expect(subscriptionPeriodEnd({ items: { data: [{ current_period_end: end }] } }))
+      .toEqual(new Date(end * 1000));
+  });
+  it("uses the next renewal when items have different periods", () => {
+    expect(subscriptionPeriodEnd({ items: { data: [
+      { current_period_end: end + 86400 }, { current_period_end: end },
+    ] } })).toEqual(new Date(end * 1000));
+  });
+  it("returns null when no valid billing period is available", () => {
+    expect(subscriptionPeriodEnd({})).toBeNull();
+    expect(subscriptionPeriodEnd({ items: { data: [
+      {}, { current_period_end: null }, { current_period_end: NaN },
+      { current_period_end: 0 },
+    ] } })).toBeNull();
+  });
+});
 
 describe("billing checkout configuration", () => {
   it("lets customers enter the Instagram promotion code on every plan", () => {

@@ -81,10 +81,19 @@ function stripeId(value: string | { id: string } | null | undefined) {
   return typeof value === "string" ? value : value?.id;
 }
 
-function subscriptionPeriodEnd(subscription: Stripe.Subscription) {
-  return subscription.current_period_end
-    ? new Date(subscription.current_period_end * 1000)
-    : null;
+export function subscriptionPeriodEnd(subscription: {
+  current_period_end?: number | null;
+  items?: { data: Array<{ id?: string; current_period_end?: number | null }> };
+}) {
+  // Acacia API responses use the subscription field; Basil and newer webhook
+  // snapshots (including Dahlia) put billing periods on subscription items.
+  const periods = [subscription.current_period_end,
+    ...(subscription.items?.data ?? []).map((item) => item.current_period_end),
+  ].filter((value): value is number =>
+    typeof value === "number" && Number.isFinite(value) && value > 0,
+  );
+  // Plans currently have one item. If more are added, show the next renewal.
+  return periods.length ? new Date(Math.min(...periods) * 1000) : null;
 }
 
 export function invoiceDescription(
