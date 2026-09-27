@@ -1,5 +1,7 @@
 "use client";
 
+import { DM_BRANDING, DM_BODY_MAX_LENGTH } from "@/lib/dm-branding";
+
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -375,14 +377,15 @@ export function OnboardingWizard() {
                     setDmMessage(e.target.value);
                     persist({ dmMessage: e.target.value });
                   }}
-                  hint="Include links, offers, or a personal touch"
+                  maxLength={DM_BODY_MAX_LENGTH}
+                  hint={`${dmMessage.length}/${DM_BODY_MAX_LENGTH} characters · ${DM_BRANDING} is added automatically`}
                 />
                 <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
                   <p className="text-xs font-medium uppercase tracking-wider text-slate-500">
                     DM preview
                   </p>
                   <div className="mt-3 max-w-sm rounded-2xl rounded-bl-md bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-sm ring-1 ring-slate-200/80">
-                    {dmMessage.split("\n").map((line, i) => (
+                    {`${dmMessage.trimEnd()}\n\n${DM_BRANDING}`.split("\n").map((line, i) => (
                       <p key={i} className={i > 0 ? "mt-1" : ""}>
                         {line}
                       </p>
