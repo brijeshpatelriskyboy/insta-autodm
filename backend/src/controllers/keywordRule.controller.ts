@@ -3,6 +3,7 @@ import { z } from "zod";
 import { keywordRuleService } from "../services/keywordRule.service";
 import { AppError } from "../utils/errors";
 import { getRouteParam } from "../utils/params";
+import { DM_BODY_MAX_LENGTH } from "../utils/dmBranding";
 
 const mediaIdSchema = z
   .string()
@@ -15,7 +16,7 @@ const mediaIdSchema = z
 const createSchema = z.object({
   keyword: z.string().max(50).optional(),
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
-  dmMessage: z.string().min(1).max(1000),
+  dmMessage: z.string().min(1).max(DM_BODY_MAX_LENGTH, "Leave room for the automatic Powered by Comment2DM footer"),
   isActive: z.boolean().optional(),
   publicReplyEnabled: z.boolean().optional(),
   publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),
@@ -26,7 +27,7 @@ const createSchema = z.object({
 const updateSchema = z.object({
   keyword: z.string().max(50).optional(),
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
-  dmMessage: z.string().min(1).max(1000).optional(),
+  dmMessage: z.string().min(1).max(DM_BODY_MAX_LENGTH, "Leave room for the automatic Powered by Comment2DM footer").optional(),
   isActive: z.boolean().optional(),
   publicReplyEnabled: z.boolean().optional(),
   publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),

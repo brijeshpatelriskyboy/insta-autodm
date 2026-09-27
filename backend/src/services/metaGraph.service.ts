@@ -9,6 +9,7 @@ import {
   logOAuthClientDiagnostics,
 } from "../config/meta";
 import { AppError } from "../utils/errors";
+import { brandDm } from "../utils/dmBranding";
 
 type MetaGraphError = {
   error?: {
@@ -605,7 +606,7 @@ export const metaGraphService = {
         },
         body: JSON.stringify({
           recipient: { comment_id: params.commentId },
-          message: { text: params.messageText },
+          message: { text: brandDm(params.messageText) },
         }),
         signal: controller.signal,
       });

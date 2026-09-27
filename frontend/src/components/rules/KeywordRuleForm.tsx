@@ -1,5 +1,7 @@
 "use client";
 
+import { DM_BRANDING, DM_BODY_MAX_LENGTH } from "@/lib/dm-branding";
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -47,8 +49,8 @@ function validate(
 
   if (!dmMessage.trim()) {
     errors.dmMessage = "DM message is required";
-  } else if (dmMessage.trim().length > 1000) {
-    errors.dmMessage = "Message must be 1000 characters or less";
+  } else if (dmMessage.length > DM_BODY_MAX_LENGTH) {
+    errors.dmMessage = `Message must be ${DM_BODY_MAX_LENGTH} characters or less to leave room for the automatic footer`;
   }
 
   return errors;
@@ -254,7 +256,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         }}
         rows={4}
         error={errors.dmMessage}
-        hint={`${dmMessage.length}/1000 characters`}
+        hint={`${dmMessage.length}/${DM_BODY_MAX_LENGTH} characters · Automatically ends with “${DM_BRANDING}”`}
       />
 
       <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3">
