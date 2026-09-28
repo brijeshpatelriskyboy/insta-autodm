@@ -18,6 +18,7 @@ const createSchema = z.object({
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(DM_BODY_MAX_LENGTH, "Leave room for the automatic Powered by Comment2DM footer"),
   isActive: z.boolean().optional(),
+  requireFollow: z.boolean().optional(),
   publicReplyEnabled: z.boolean().optional(),
   publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),
   /** null/omit = global (all posts); string = pin to that Instagram media ID */
@@ -29,6 +30,7 @@ const updateSchema = z.object({
   triggerType: z.enum(["keyword", "any_comment"]).optional(),
   dmMessage: z.string().min(1).max(DM_BODY_MAX_LENGTH, "Leave room for the automatic Powered by Comment2DM footer").optional(),
   isActive: z.boolean().optional(),
+  requireFollow: z.boolean().optional(),
   publicReplyEnabled: z.boolean().optional(),
   publicReplyMessage: z.string().trim().min(1).max(300).nullable().optional(),
   /** Explicit null clears to global; omit leaves unchanged */
