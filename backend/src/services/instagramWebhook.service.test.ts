@@ -294,6 +294,20 @@ describe("processWebhookPayload private reply flow", () => {
     stubTransaction();
   });
 
+  it("sends a follow request instead of the offer for a gated rule", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([{ ...activeRule, requireFollow: true }]);
+    stubSuccessfulClaim();
+    mockDecryptToken.mockReturnValue("decrypted-access-token");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "igsid-1", messageId: "mid-1" });
+    await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    expect(mockSendPrivateReply).toHaveBeenCalledWith(expect.objectContaining({ followGatePayload: "C2D_FOLLOW:dm-1" }));
+    expect(mockSendPrivateReply.mock.calls[0][0].messageText).not.toBe(activeRule.dmMessage);
+    expect(mockDmUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({
+      followGateStatus: "waiting", followGateRecipientId: "igsid-1",
+    }) }));
+  });
+
   it("matches a keyword and sends a private reply, logging dm_sent", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockFindManyRules.mockResolvedValue([activeRule]);

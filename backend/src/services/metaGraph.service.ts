@@ -587,7 +587,9 @@ export const metaGraphService = {
   async sendPrivateReplyToComment(params: {
     igUserId: string;
     accessToken: string;
-    commentId: string;
+    commentId?: string;
+    recipientId?: string;
+    followGatePayload?: string;
     messageText: string;
     timeoutMs?: number;
   }): Promise<{ recipientId: string | null; messageId: string }> {
@@ -605,8 +607,13 @@ export const metaGraphService = {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipient: { comment_id: params.commentId },
-          message: { text: brandDm(params.messageText) },
+          recipient: params.recipientId ? { id: params.recipientId } : { comment_id: params.commentId },
+          message: params.followGatePayload ? {
+            attachment: { type: "template", payload: {
+              template_type: "button", text: brandDm(params.messageText),
+              buttons: [{ type: "postback", title: "I've followed", payload: params.followGatePayload }],
+            } },
+          } : { text: brandDm(params.messageText) },
         }),
         signal: controller.signal,
       });
@@ -661,6 +668,23 @@ export const metaGraphService = {
     } finally {
       clearTimeout(timer);
     }
+  },
+
+  /** Only call after a recent, verified inbound messaging interaction. */
+  async getFollowerStatus(recipientId: string, accessToken: string): Promise<boolean> {
+    const url = new URL(`https://graph.instagram.com/${getMetaGraphApiVersion()}/${encodeURIComponent(recipientId)}`);
+    url.searchParams.set("fields", "is_user_follow_business");
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    const raw = await response.json() as {
+      is_user_follow_business?: unknown; error?: { code?: number };
+    };
+    if (!response.ok || raw.error || typeof raw.is_user_follow_business !== "boolean") {
+      throw new AppError(502, "Instagram could not verify follow status. Ask the recipient to reply DONE and try again.", raw.error?.code);
+    }
+    return raw.is_user_follow_business;
   },
 
   /** Post a public reply beneath the Instagram comment after the private reply succeeds. */

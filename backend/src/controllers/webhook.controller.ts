@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { getMetaVerifyToken } from "../config/meta";
+import { processFollowInteractions } from "../services/followGate.service";
 import { instagramWebhookService } from "../services/instagramWebhook.service";
 
 export class WebhookController {
@@ -33,6 +34,7 @@ export class WebhookController {
       });
 
       const result = await instagramWebhookService.processWebhookPayload(req.body);
+      await processFollowInteractions(req.body);
 
       res.status(200).json({
         received: true,

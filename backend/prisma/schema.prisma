@@ -63,6 +63,7 @@ model KeywordRule {
   keyword             String
   dmMessage           String
   isActive            Boolean  @default(true)
+  requireFollow       Boolean  @default(false)
   publicReplyEnabled  Boolean  @default(false)
   publicReplyMessage  String?
   /**
@@ -111,6 +112,11 @@ model DmEvent {
    */
   duplicateTriggerKey String?
   messageId          String?
+  followGateStatus   String?
+  followGateRecipientId String?
+  followGateLastInteractionAt DateTime?
+  followGateCheckedAt DateTime?
+  followGateMessageId String?
   publicReplyStatus  String?
   publicReplyId      String?
   publicReplyError   String?

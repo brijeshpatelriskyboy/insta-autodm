@@ -10,6 +10,8 @@ const {
   mockFindUniqueAccount,
   mockGetMediaById,
   mockDecryptToken,
+  mockSubscribe,
+  mockAccountUpdate,
 } = vi.hoisted(() => ({
   mockFindMany: vi.fn(),
   mockFindFirst: vi.fn(),
@@ -19,6 +21,8 @@ const {
   mockFindUniqueAccount: vi.fn(),
   mockGetMediaById: vi.fn(),
   mockDecryptToken: vi.fn(),
+  mockSubscribe: vi.fn(),
+  mockAccountUpdate: vi.fn(),
 }));
 
 vi.mock("../lib/prisma", () => ({
@@ -32,6 +36,7 @@ vi.mock("../lib/prisma", () => ({
     },
     instagramAccount: {
       findUnique: mockFindUniqueAccount,
+      update: mockAccountUpdate,
     },
   },
 }));
@@ -39,6 +44,7 @@ vi.mock("../lib/prisma", () => ({
 vi.mock("./metaGraph.service", () => ({
   metaGraphService: {
     getInstagramMediaById: mockGetMediaById,
+    subscribeAppWebhooks: mockSubscribe,
     listInstagramMedia: vi.fn(),
   },
 }));
@@ -281,5 +287,27 @@ describe("keywordRuleService media scope CRUD", () => {
         mediaCaption: null,
       }),
     );
+  });
+});
+
+
+describe("follow requirement settings", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFindUniqueAccount.mockResolvedValue(connectedAccount);
+    mockSubscribe.mockResolvedValue({ fields: ["comments", "live_comments", "messages", "messaging_postbacks"] });
+    mockAccountUpdate.mockResolvedValue({});
+    mockFindFirst.mockResolvedValue({ id: "r1", userId: "user-1", keyword: "__ANY_COMMENT__" });
+    mockUpdate.mockResolvedValue({ id: "r1", keyword: "__ANY_COMMENT__", requireFollow: true });
+  });
+  it("enables the follow requirement for any-comment rules and subscribes callbacks", async () => {
+    await keywordRuleService.update("user-1", "r1", { requireFollow: true });
+    expect(mockSubscribe).toHaveBeenCalledWith(expect.objectContaining({ fields: expect.arrayContaining(["messages", "messaging_postbacks"]) }));
+    expect(mockUpdate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ requireFollow: true }) }));
+  });
+  it("does not save the gate when webhook subscription fails", async () => {
+    mockSubscribe.mockRejectedValueOnce(new Error("permission missing"));
+    await expect(keywordRuleService.update("user-1", "r1", { requireFollow: true })).rejects.toThrow("permission missing");
+    expect(mockUpdate).not.toHaveBeenCalled();
   });
 });

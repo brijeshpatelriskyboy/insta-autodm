@@ -113,6 +113,7 @@ export interface KeywordRule {
   triggerType: "keyword" | "any_comment";
   dmMessage: string;
   isActive: boolean;
+  requireFollow?: boolean;
   publicReplyEnabled: boolean;
   publicReplyMessage: string | null;
   /** Null = global (all posts). */
@@ -341,6 +342,7 @@ export const api = {
       triggerType: "keyword" | "any_comment";
       dmMessage: string;
       isActive?: boolean;
+      requireFollow?: boolean;
       publicReplyEnabled?: boolean;
       publicReplyMessage?: string | null;
       instagramMediaId?: string | null;
@@ -359,6 +361,7 @@ export const api = {
       triggerType?: "keyword" | "any_comment";
       dmMessage?: string;
       isActive?: boolean;
+      requireFollow?: boolean;
       publicReplyEnabled?: boolean;
       publicReplyMessage?: string | null;
       instagramMediaId?: string | null;

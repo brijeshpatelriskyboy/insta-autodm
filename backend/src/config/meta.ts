@@ -14,6 +14,8 @@ export const INSTAGRAM_OAUTH_SCOPES = [
 export const INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS = [
   "comments",
   "live_comments",
+  "messages",
+  "messaging_postbacks",
 ] as const;
 
 /** @deprecated Prefer INSTAGRAM_OAUTH_SCOPES — kept for public config compatibility. */

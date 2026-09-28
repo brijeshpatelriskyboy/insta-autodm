@@ -41,7 +41,7 @@ describe("metaGraphService.subscribeAppWebhooks", () => {
 
     expect(result).toEqual({
       success: true,
-      fields: ["comments", "live_comments"],
+      fields: ["comments", "live_comments", "messages", "messaging_postbacks"],
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -52,7 +52,7 @@ describe("metaGraphService.subscribeAppWebhooks", () => {
     expect(calledUrl).toContain(
       "https://graph.instagram.com/v21.0/17841463495771314/subscribed_apps",
     );
-    expect(calledUrl).toContain("subscribed_fields=comments%2Clive_comments");
+    expect(calledUrl).toContain("subscribed_fields=comments%2Clive_comments%2Cmessages%2Cmessaging_postbacks");
     expect(calledUrl).toContain("access_token=IGAA-test-token");
   });
 

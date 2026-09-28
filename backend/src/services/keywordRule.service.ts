@@ -30,6 +30,7 @@ interface CreateKeywordRuleInput {
   triggerType?: RuleTriggerType;
   dmMessage: string;
   isActive?: boolean;
+  requireFollow?: boolean;
   publicReplyEnabled?: boolean;
   publicReplyMessage?: string | null;
   /** null/undefined = global scope */
@@ -41,10 +42,26 @@ interface UpdateKeywordRuleInput {
   triggerType?: RuleTriggerType;
   dmMessage?: string;
   isActive?: boolean;
+  requireFollow?: boolean;
   publicReplyEnabled?: boolean;
   publicReplyMessage?: string | null;
   /** Explicit null clears to global; undefined leaves unchanged */
   instagramMediaId?: string | null;
+}
+
+async function prepareFollowGate(userId: string) {
+  const account = await prisma.instagramAccount.findUnique({ where: { userId } });
+  if (!account || account.connectionStatus !== "connected") {
+    throw new AppError(400, "Connect Instagram before enabling the follow requirement");
+  }
+  const { fields } = await metaGraphService.subscribeAppWebhooks({
+    igUserId: account.instagramUserId,
+    accessToken: decryptToken(account.accessTokenEncrypted),
+    fields: ["comments", "live_comments", "messages", "messaging_postbacks"],
+  });
+  await prisma.instagramAccount.update({ where: { id: account.id }, data: {
+    webhookSubscribedAt: new Date(), webhookSubscribedFields: fields.join(","),
+  } });
 }
 
 function toApiRule<T extends { keyword: string }>(rule: T) {
@@ -154,6 +171,7 @@ export class KeywordRuleService {
   }
 
   async create(userId: string, input: CreateKeywordRuleInput) {
+    if (input.requireFollow) await prepareFollowGate(userId);
     await assertCanCreateKeywordRule(userId);
     const triggerType = input.triggerType ?? "keyword";
     const keyword =
@@ -171,6 +189,7 @@ export class KeywordRuleService {
           keyword,
           dmMessage: input.dmMessage.trim(),
           isActive: input.isActive ?? true,
+          requireFollow: input.requireFollow ?? false,
           publicReplyEnabled: input.publicReplyEnabled ?? false,
           publicReplyMessage: input.publicReplyEnabled
             ? input.publicReplyMessage?.trim() || "Thanks! We sent the details to your DM 📩"
@@ -188,6 +207,7 @@ export class KeywordRuleService {
 
   async update(userId: string, ruleId: string, input: UpdateKeywordRuleInput) {
     const existing = await this.getById(userId, ruleId);
+    if (input.requireFollow) await prepareFollowGate(userId);
 
     const triggerType = input.triggerType ?? existing.triggerType;
     const keyword =
@@ -196,7 +216,7 @@ export class KeywordRuleService {
         : input.keyword !== undefined
           ? input.keyword.trim().toUpperCase()
           : existing.keyword;
-    if (!keyword || keyword === ANY_COMMENT_KEYWORD) {
+    if (!keyword || (triggerType === "keyword" && keyword === ANY_COMMENT_KEYWORD)) {
       throw new AppError(400, "Keyword is required for a keyword trigger");
     }
 
@@ -214,6 +234,7 @@ export class KeywordRuleService {
           ...(input.dmMessage !== undefined && {
             dmMessage: input.dmMessage.trim(),
           }),
+          ...(input.requireFollow !== undefined && { requireFollow: input.requireFollow }),
           ...(input.isActive !== undefined && { isActive: input.isActive }),
           ...(input.publicReplyEnabled !== undefined && {
             publicReplyEnabled: input.publicReplyEnabled,

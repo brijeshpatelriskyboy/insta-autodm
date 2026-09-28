@@ -5,6 +5,7 @@ import { decryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
 import { releaseMonthlyDm, reserveMonthlyDm } from "./planLimits.service";
+import { FOLLOW_GATE_PREFIX, followRequest } from "./followGate.service";
 import { ANY_COMMENT_KEYWORD } from "./keywordRule.service";
 
 /** Max private-reply send attempts per (instagramAccountId, commentId), including the first try. */
@@ -783,7 +784,8 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       igUserId: account.instagramUserId,
       accessToken,
       commentId: comment.commentId,
-      messageText: matchedRule.dmMessage,
+      messageText: matchedRule.requireFollow ? followRequest(account.username) : matchedRule.dmMessage,
+      ...(matchedRule.requireFollow ? { followGatePayload: `${FOLLOW_GATE_PREFIX}${claim.dmEventId}` } : {}),
     });
 
     await prisma.dmEvent.update({
@@ -791,6 +793,10 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       data: {
         status: DmEventStatus.sent,
         messageId: result.messageId,
+        ...(matchedRule.requireFollow ? {
+          followGateStatus: "waiting",
+          followGateRecipientId: result.recipientId ?? comment.commenterId ?? null,
+        } : {}),
         errorSummary: null,
         metaErrorCode: null,
         metaErrorMessage: null,
@@ -799,8 +805,10 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
     await activityService.log(account.userId, {
       type: "dm_sent",
-      title: "DM sent",
-      description: `Private reply sent to ${commenter} for keyword "${matchedRule.keyword}".`,
+      title: matchedRule.requireFollow ? "Follow request sent" : "DM sent",
+      description: matchedRule.requireFollow
+        ? `Follow request sent to ${commenter}. The offer is held until their follow is verified.`
+        : `Private reply sent to ${commenter} for keyword "${matchedRule.keyword}".`,
       metadata: buildActivityMetadata({
         keyword: matchedRule.keyword,
         ruleId: matchedRule.id,

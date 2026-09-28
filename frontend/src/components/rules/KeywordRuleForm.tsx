@@ -22,6 +22,7 @@ interface KeywordRuleFormProps {
     triggerType: "keyword" | "any_comment";
     dmMessage: string;
     isActive: boolean;
+    requireFollow: boolean;
     publicReplyEnabled: boolean;
     publicReplyMessage: string | null;
     instagramMediaId: string | null;
@@ -63,6 +64,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
   );
   const [dmMessage, setDmMessage] = useState(initial?.dmMessage ?? "");
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
+  const [requireFollow, setRequireFollow] = useState(initial?.requireFollow ?? false);
   const [publicReplyEnabled, setPublicReplyEnabled] = useState(initial?.publicReplyEnabled ?? false);
   const [publicReplyMessage, setPublicReplyMessage] = useState(
     initial?.publicReplyMessage ?? "Thanks! We sent the details to your DM 📩",
@@ -83,6 +85,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     setDmMessage(initial?.dmMessage ?? "");
     setIsActive(initial?.isActive ?? true);
     setPublicReplyEnabled(initial?.publicReplyEnabled ?? false);
+    setRequireFollow(initial?.requireFollow ?? false);
     setPublicReplyMessage(initial?.publicReplyMessage ?? "Thanks! We sent the details to your DM 📩");
     setInstagramMediaId(initial?.instagramMediaId ?? null);
     setErrors({});
@@ -94,6 +97,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     initial?.dmMessage,
     initial?.isActive,
     initial?.publicReplyEnabled,
+    initial?.requireFollow,
     initial?.publicReplyMessage,
     initial?.instagramMediaId,
   ]);
@@ -162,6 +166,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         triggerType,
         dmMessage,
         isActive,
+        requireFollow,
         publicReplyEnabled,
         publicReplyMessage: publicReplyEnabled ? publicReplyMessage : null,
         instagramMediaId,
@@ -246,8 +251,23 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
         )}
       </div>
 
+      <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+        <label className="flex items-center gap-3 text-sm font-medium text-slate-900">
+          <input type="checkbox" checked={requireFollow} onChange={(e) => setRequireFollow(e.target.checked)} />
+          Require a follow before sending the offer (Beta)
+        </label>
+        <p className="mt-2 text-xs text-slate-600">
+          Send a follow request first. When the recipient taps “I've followed” or replies DONE,
+          we check their follow and send the message below. Each sent DM uses your monthly allowance.
+        </p>
+        {requireFollow && <p className="mt-2 text-xs text-slate-600">
+          Test this with another Instagram account before using it in a campaign.
+          Following alone does not trigger delivery.
+        </p>}
+      </div>
+
       <Textarea
-        label="DM Message"
+        label={requireFollow ? "DM sent after follow verification" : "DM Message"}
         placeholder="Message sent when someone comments this keyword..."
         value={dmMessage}
         onChange={(e) => {
