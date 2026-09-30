@@ -71,8 +71,23 @@ export async function processFollowInteractions(body: unknown) {
       const follows = await metaGraphService.getFollowerStatus(event.senderId, accessToken);
       const quota = await reserveMonthlyDm(account.userId);
       if (!quota.allowed) {
-        await prisma.dmEvent.update({ where: { id: gate.id }, data: { followGateStatus: "waiting", errorSummary: "Monthly DM limit reached during follow check" } });
-        await activityService.log(account.userId, { type: "dm_quota_blocked", title: "Follow check — monthly DM limit reached", description: "The follow-up was not sent. Each follow-up DM counts toward your monthly allowance." });
+        const inactive = quota.reason === "inactive_subscription";
+        await prisma.dmEvent.update({
+          where: { id: gate.id },
+          data: {
+            followGateStatus: "waiting",
+            errorSummary: inactive
+              ? "Active subscription required during follow check"
+              : "Monthly DM limit reached during follow check",
+          },
+        });
+        await activityService.log(account.userId, {
+          type: "dm_quota_blocked",
+          title: inactive ? "Follow check — active subscription required" : "Follow check — monthly DM limit reached",
+          description: inactive
+            ? "The follow-up was not sent because this Comment2DM account does not have an active paid subscription."
+            : "The follow-up was not sent. Each follow-up DM counts toward your monthly allowance.",
+        });
         continue;
       }
       quotaReserved = true;
