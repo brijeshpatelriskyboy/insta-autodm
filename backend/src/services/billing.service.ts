@@ -9,8 +9,19 @@ export function buildCheckoutSessionParams(params: {
   userId: string;
   plan: NonNullable<ReturnType<typeof getPlan>>;
   frontendUrl: string;
+  allowPromotionCodes?: boolean;
+  launchOfferInstagramUserId?: string;
+  expiresAt?: Date;
 }): Stripe.Checkout.SessionCreateParams {
-  const { customerId, userId, plan, frontendUrl } = params;
+  const {
+    customerId,
+    userId,
+    plan,
+    frontendUrl,
+    allowPromotionCodes = false,
+    launchOfferInstagramUserId,
+    expiresAt,
+  } = params;
   if (!plan.priceId) {
     throw new AppError(503, "Stripe price is not configured");
   }
@@ -19,14 +30,27 @@ export function buildCheckoutSessionParams(params: {
     customer: customerId,
     mode: "subscription",
     line_items: [{ price: plan.priceId, quantity: 1 }],
-    allow_promotion_codes: true,
+    allow_promotion_codes: allowPromotionCodes,
     client_reference_id: userId,
     success_url: `${frontendUrl}/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${frontendUrl}/dashboard/billing?checkout=canceled`,
-    metadata: { userId, plan: plan.slug },
-    subscription_data: {
-      metadata: { userId, plan: plan.slug },
+    metadata: {
+      userId,
+      plan: plan.slug,
+      ...(launchOfferInstagramUserId
+        ? { launchOfferInstagramUserId }
+        : {}),
     },
+    subscription_data: {
+      metadata: {
+        userId,
+        plan: plan.slug,
+        ...(launchOfferInstagramUserId
+          ? { launchOfferInstagramUserId }
+          : {}),
+      },
+    },
+    ...(expiresAt ? { expires_at: Math.floor(expiresAt.getTime() / 1000) } : {}),
   };
 }
 
@@ -79,6 +103,145 @@ async function getOrCreateSubscriptionRecord(userId: string) {
 
 function stripeId(value: string | { id: string } | null | undefined) {
   return typeof value === "string" ? value : value?.id;
+}
+
+const LAUNCH_OFFER_RESERVATION_MS = 31 * 60 * 1000;
+
+type LaunchOfferCheckout = {
+  eligible: boolean;
+  instagramUserId?: string;
+  reservedUntil?: Date;
+  existingUrl?: string;
+};
+
+async function prepareLaunchOfferCheckout(
+  userId: string,
+  stripe: Stripe,
+): Promise<LaunchOfferCheckout> {
+  const account = await prisma.instagramAccount.findUnique({
+    where: { userId },
+    select: {
+      instagramUserId: true,
+      connectionStatus: true,
+    },
+  });
+
+  if (!account || account.connectionStatus !== "connected") {
+    return { eligible: false };
+  }
+
+  const instagramUserId = account.instagramUserId;
+  const now = new Date();
+  const existing = await prisma.launchOfferClaim.findUnique({
+    where: { instagramUserId },
+  });
+
+  if (existing?.status === "redeemed") {
+    return { eligible: false, instagramUserId };
+  }
+
+  if (
+    existing?.status === "reserved" &&
+    existing.reservedUntil &&
+    existing.reservedUntil > now
+  ) {
+    if (existing.userId === userId && existing.checkoutSessionId) {
+      try {
+        const checkout = await stripe.checkout.sessions.retrieve(existing.checkoutSessionId);
+        if (checkout.status === "open" && checkout.url) {
+          return {
+            eligible: true,
+            instagramUserId,
+            reservedUntil: existing.reservedUntil,
+            existingUrl: checkout.url,
+          };
+        }
+
+        if (
+          checkout.status === "complete" &&
+          (checkout.total_details?.amount_discount ?? 0) > 0
+        ) {
+          await prisma.launchOfferClaim.update({
+            where: { instagramUserId },
+            data: {
+              status: "redeemed",
+              redeemedAt: existing.redeemedAt ?? now,
+              stripeSubscriptionId: stripeId(checkout.subscription),
+              reservedUntil: null,
+            },
+          });
+          return { eligible: false, instagramUserId };
+        }
+      } catch {
+        // Fail closed while the reservation is still active. A transient Stripe
+        // lookup failure must not create a second discounted checkout.
+        return { eligible: false, instagramUserId };
+      }
+    } else {
+      return { eligible: false, instagramUserId };
+    }
+  }
+
+  const reservedUntil = new Date(now.getTime() + LAUNCH_OFFER_RESERVATION_MS);
+
+  if (!existing) {
+    try {
+      await prisma.launchOfferClaim.create({
+        data: {
+          instagramUserId,
+          userId,
+          status: "reserved",
+          reservedUntil,
+        },
+      });
+      return { eligible: true, instagramUserId, reservedUntil };
+    } catch {
+      // A concurrent checkout may have claimed this Instagram id first.
+      return { eligible: false, instagramUserId };
+    }
+  }
+
+  const refreshed = await prisma.launchOfferClaim.updateMany({
+    where: {
+      instagramUserId,
+      status: "reserved",
+      OR: [
+        { reservedUntil: null },
+        { reservedUntil: { lte: now } },
+        { userId },
+      ],
+    },
+    data: {
+      userId,
+      status: "reserved",
+      checkoutSessionId: null,
+      stripeSubscriptionId: null,
+      reservedUntil,
+      redeemedAt: null,
+    },
+  });
+
+  return refreshed.count === 1
+    ? { eligible: true, instagramUserId, reservedUntil }
+    : { eligible: false, instagramUserId };
+}
+
+async function releaseLaunchOfferReservation(params: {
+  instagramUserId?: string;
+  userId: string;
+  checkoutSessionId?: string;
+}) {
+  if (!params.instagramUserId) return;
+  await prisma.launchOfferClaim.deleteMany({
+    where: {
+      instagramUserId: params.instagramUserId,
+      userId: params.userId,
+      status: "reserved",
+      ...(params.checkoutSessionId
+        ? { checkoutSessionId: params.checkoutSessionId }
+        : { checkoutSessionId: null }),
+    },
+  });
 }
 
 export function subscriptionPeriodEnd(subscription: {
@@ -292,16 +455,86 @@ export const billingService = {
       });
     }
 
-    const session = await stripe.checkout.sessions.create(
-      buildCheckoutSessionParams({
-        customerId,
-        userId,
-        plan,
-        frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
-      }),
-    );
+    const launchOffer = await prepareLaunchOfferCheckout(userId, stripe);
+    if (launchOffer.existingUrl) {
+      return {
+        url: launchOffer.existingUrl,
+        launchOfferEligible: true,
+      };
+    }
 
-    return { url: session.url };
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create(
+        buildCheckoutSessionParams({
+          customerId,
+          userId,
+          plan,
+          frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
+          allowPromotionCodes: launchOffer.eligible,
+          launchOfferInstagramUserId: launchOffer.eligible
+            ? launchOffer.instagramUserId
+            : undefined,
+          expiresAt: launchOffer.eligible ? launchOffer.reservedUntil : undefined,
+        }),
+      );
+    } catch (error) {
+      await releaseLaunchOfferReservation({
+        instagramUserId: launchOffer.eligible
+          ? launchOffer.instagramUserId
+          : undefined,
+        userId,
+      });
+      throw error;
+    }
+
+    if (launchOffer.eligible && launchOffer.instagramUserId) {
+      const attached = await prisma.launchOfferClaim.updateMany({
+        where: {
+          instagramUserId: launchOffer.instagramUserId,
+          userId,
+          status: "reserved",
+        },
+        data: {
+          checkoutSessionId: session.id,
+        },
+      });
+
+      if (attached.count !== 1) {
+        try {
+          await stripe.checkout.sessions.expire(session.id);
+        } catch {
+          // Do not return an untracked discounted Checkout URL.
+        }
+        session = await stripe.checkout.sessions.create(
+          buildCheckoutSessionParams({
+            customerId,
+            userId,
+            plan,
+            frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
+            allowPromotionCodes: false,
+          }),
+        );
+        return {
+          url: session.url,
+          launchOfferEligible: false,
+          launchOfferMessage:
+            "This Instagram account has already used the 50% launch offer. You can continue at the standard price.",
+        };
+      }
+    }
+
+    return {
+      url: session.url,
+      launchOfferEligible: launchOffer.eligible,
+      ...(launchOffer.eligible
+        ? {}
+        : {
+            launchOfferMessage: launchOffer.instagramUserId
+              ? "This Instagram account has already used the 50% launch offer. You can continue at the standard price."
+              : "Connect your Instagram account to use the 50% launch offer. You can continue at the standard price.",
+          }),
+    };
   },
 
   async cancelSubscription(userId: string) {
@@ -435,6 +668,38 @@ export const billingService = {
 
         if (userId && subscriptionId) {
           const stripeSubscription = await stripe.subscriptions.retrieve(subscriptionId);
+          const launchOfferInstagramUserId =
+            session.metadata?.launchOfferInstagramUserId;
+          if (launchOfferInstagramUserId) {
+            if ((session.total_details?.amount_discount ?? 0) > 0) {
+              await prisma.launchOfferClaim.upsert({
+                where: { instagramUserId: launchOfferInstagramUserId },
+                create: {
+                  instagramUserId: launchOfferInstagramUserId,
+                  userId,
+                  status: "redeemed",
+                  checkoutSessionId: session.id,
+                  stripeSubscriptionId: subscriptionId,
+                  redeemedAt: new Date(),
+                  reservedUntil: null,
+                },
+                update: {
+                  userId,
+                  status: "redeemed",
+                  checkoutSessionId: session.id,
+                  stripeSubscriptionId: subscriptionId,
+                  redeemedAt: new Date(),
+                  reservedUntil: null,
+                },
+              });
+            } else {
+              await releaseLaunchOfferReservation({
+                instagramUserId: launchOfferInstagramUserId,
+                userId,
+                checkoutSessionId: session.id,
+              });
+            }
+          }
           await prisma.subscription.upsert({
             where: { userId },
             create: {

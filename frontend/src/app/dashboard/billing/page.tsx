@@ -94,9 +94,12 @@ export default function BillingPage() {
         return;
       }
 
-      const { url } = await api.createCheckout(token, plan);
-      if (url) {
-        window.location.href = url;
+      const result = await api.createCheckout(token, plan);
+      if (result.launchOfferEligible === false && result.launchOfferMessage) {
+        window.alert(result.launchOfferMessage);
+      }
+      if (result.url) {
+        window.location.href = result.url;
       } else {
         toast.error("No checkout URL returned");
       }
