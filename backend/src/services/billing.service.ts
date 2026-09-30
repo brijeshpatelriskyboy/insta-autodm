@@ -105,7 +105,7 @@ function stripeId(value: string | { id: string } | null | undefined) {
   return typeof value === "string" ? value : value?.id;
 }
 
-const LAUNCH_OFFER_RESERVATION_MS = 30 * 60 * 1000;
+const LAUNCH_OFFER_RESERVATION_MS = 31 * 60 * 1000;
 
 type LaunchOfferCheckout = {
   eligible: boolean;
@@ -505,8 +505,9 @@ export const billingService = {
       ...(launchOffer.eligible
         ? {}
         : {
-            launchOfferMessage:
-              "This Instagram account has already used the 50% launch offer, or is not eligible. You can continue at the standard price.",
+            launchOfferMessage: launchOffer.instagramUserId
+              ? "This Instagram account has already used the 50% launch offer. You can continue at the standard price."
+              : "Connect your Instagram account to use the 50% launch offer. You can continue at the standard price.",
           }),
     };
   },
