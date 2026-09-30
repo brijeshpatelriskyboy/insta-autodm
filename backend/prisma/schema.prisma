@@ -38,6 +38,7 @@ model User {
   billingEvents              BillingEvent[]
   passwordResetTokens        PasswordResetToken[]
   planUsage                  PlanUsage[]
+  launchOfferClaims          LaunchOfferClaim[]
 
   @@map("users")
 }
@@ -236,4 +237,27 @@ model PlanUsage {
 
   @@unique([userId, monthKey])
   @@map("plan_usage")
+}
+
+
+/**
+ * Permanent eligibility history for the launch discount.
+ * Keyed by Instagram's stable user id so a new Comment2DM email cannot reuse it.
+ * Reserved claims expire; redeemed claims are retained even after Instagram disconnects.
+ */
+model LaunchOfferClaim {
+  id                   String    @id @default(cuid())
+  instagramUserId      String    @unique
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               String    @default("reserved")
+  checkoutSessionId    String?   @unique
+  stripeSubscriptionId String?   @unique
+  reservedUntil        DateTime?
+  redeemedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("launch_offer_claims")
 }
