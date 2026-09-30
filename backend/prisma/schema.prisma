@@ -248,8 +248,8 @@ model PlanUsage {
 model LaunchOfferClaim {
   id                   String    @id @default(cuid())
   instagramUserId      String    @unique
-  userId               String
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   status               String    @default("reserved")
   checkoutSessionId    String?   @unique
   stripeSubscriptionId String?   @unique
