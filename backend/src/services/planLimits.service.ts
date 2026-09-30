@@ -2,15 +2,29 @@ import { getPlan, type PlanSlug } from "../config/plans";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 
-export async function getUserPlan(userId: string) {
+async function getSubscriptionState(userId: string) {
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
-    select: { plan: true },
+    select: { plan: true, status: true },
   });
-  return getPlan(subscription?.plan ?? "starter") ?? getPlan("starter")!;
+  const plan = getPlan(subscription?.plan ?? "starter") ?? getPlan("starter")!;
+  const active = subscription?.status === "active" || subscription?.status === "trialing";
+  return { plan, active };
+}
+
+export async function getUserPlan(userId: string) {
+  return (await getSubscriptionState(userId)).plan;
+}
+
+export async function assertHasActiveSubscription(userId: string): Promise<void> {
+  const { active } = await getSubscriptionState(userId);
+  if (!active) {
+    throw new AppError(402, "An active subscription is required to use automations");
+  }
 }
 
 export async function assertCanCreateKeywordRule(userId: string): Promise<void> {
+  await assertHasActiveSubscription(userId);
   const plan = await getUserPlan(userId);
   if (plan.limits.keywordRules === null) return;
 
@@ -52,8 +66,17 @@ export async function reserveMonthlyDm(userId: string): Promise<{
   allowed: boolean;
   plan: PlanSlug;
   limit: number;
+  reason?: "inactive_subscription" | "monthly_limit";
 }> {
-  const plan = await getUserPlan(userId);
+  const { plan, active } = await getSubscriptionState(userId);
+  if (!active) {
+    return {
+      allowed: false,
+      plan: plan.slug,
+      limit: plan.limits.monthlyDms,
+      reason: "inactive_subscription",
+    };
+  }
   const monthKey = currentMonthKey();
 
   await prisma.planUsage.upsert({
@@ -71,7 +94,12 @@ export async function reserveMonthlyDm(userId: string): Promise<{
   });
   const allowed = reserved.count === 1;
 
-  return { allowed, plan: plan.slug, limit: plan.limits.monthlyDms };
+  return {
+    allowed,
+    plan: plan.slug,
+    limit: plan.limits.monthlyDms,
+    ...(allowed ? {} : { reason: "monthly_limit" as const }),
+  };
 }
 
 export async function releaseMonthlyDm(userId: string): Promise<void> {
