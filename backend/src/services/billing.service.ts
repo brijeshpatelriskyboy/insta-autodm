@@ -173,7 +173,9 @@ async function prepareLaunchOfferCheckout(
           return { eligible: false, instagramUserId };
         }
       } catch {
-        // Treat an inaccessible/expired Stripe session like an expired reservation.
+        // Fail closed while the reservation is still active. A transient Stripe
+        // lookup failure must not create a second discounted checkout.
+        return { eligible: false, instagramUserId };
       }
     } else {
       return { eligible: false, instagramUserId };
@@ -487,7 +489,7 @@ export const billingService = {
     }
 
     if (launchOffer.eligible && launchOffer.instagramUserId) {
-      await prisma.launchOfferClaim.updateMany({
+      const attached = await prisma.launchOfferClaim.updateMany({
         where: {
           instagramUserId: launchOffer.instagramUserId,
           userId,
@@ -497,6 +499,29 @@ export const billingService = {
           checkoutSessionId: session.id,
         },
       });
+
+      if (attached.count !== 1) {
+        try {
+          await stripe.checkout.sessions.expire(session.id);
+        } catch {
+          // Do not return an untracked discounted Checkout URL.
+        }
+        session = await stripe.checkout.sessions.create(
+          buildCheckoutSessionParams({
+            customerId,
+            userId,
+            plan,
+            frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
+            allowPromotionCodes: false,
+          }),
+        );
+        return {
+          url: session.url,
+          launchOfferEligible: false,
+          launchOfferMessage:
+            "This Instagram account has already used the 50% launch offer. You can continue at the standard price.",
+        };
+      }
     }
 
     return {
