@@ -36,7 +36,26 @@ import {
 describe("plan limits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active" });
+  });
+
+  it("blocks automation setup without an active subscription", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "inactive" });
+    await expect(assertCanCreateKeywordRule("user-1")).rejects.toMatchObject({
+      statusCode: 402,
+      message: expect.stringContaining("active subscription"),
+    });
+  });
+
+  it("does not reserve a DM for an inactive subscription", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "canceled" });
+    await expect(reserveMonthlyDm("user-1")).resolves.toEqual({
+      allowed: false,
+      plan: "starter",
+      limit: 1_000,
+      reason: "inactive_subscription",
+    });
+    expect(mockUsageUpsert).not.toHaveBeenCalled();
   });
 
   it("blocks a sixth Starter keyword rule", async () => {
@@ -48,13 +67,13 @@ describe("plan limits", () => {
   });
 
   it("allows unlimited Creator keyword rules", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active" });
     await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
     expect(mockKeywordCount).not.toHaveBeenCalled();
   });
 
   it("allows unlimited Pro keyword rules", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active" });
     await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
     expect(mockKeywordCount).not.toHaveBeenCalled();
   });
