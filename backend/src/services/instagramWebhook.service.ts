@@ -426,7 +426,7 @@ function buildActivityMetadata(params: {
   ruleId?: string | null;
   comment: ParsedComment;
   dmStatus: "sent" | "failed" | "pending_match" | "skipped";
-  skipReason?: "blank_comment" | "duplicate_trigger" | "monthly_limit" | null;
+  skipReason?: "blank_comment" | "duplicate_trigger" | "monthly_limit" | "inactive_subscription" | null;
   messageId?: string | null;
   errorSummary?: string | null;
   attemptCount?: number;
@@ -689,24 +689,29 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     };
   }
   if (!quota.allowed) {
+    const inactive = quota.reason === "inactive_subscription";
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
       data: {
         status: DmEventStatus.skipped,
         duplicateTriggerKey: null,
-        errorSummary: `Monthly DM limit reached (${quota.limit})`,
+        errorSummary: inactive
+          ? "Active subscription required"
+          : `Monthly DM limit reached (${quota.limit})`,
       },
     });
     await activityService.log(account.userId, {
       type: "dm_quota_blocked",
-      title: "Monthly DM limit reached",
-      description: `No DM was sent. The ${quota.plan} plan includes ${quota.limit.toLocaleString()} DMs per month.`,
+      title: inactive ? "Active subscription required" : "Monthly DM limit reached",
+      description: inactive
+        ? "No DM was sent because this Comment2DM account does not have an active paid subscription."
+        : `No DM was sent. The ${quota.plan} plan includes ${quota.limit.toLocaleString()} DMs per month.`,
       metadata: buildActivityMetadata({
         keyword: matchedRule.keyword,
         ruleId: matchedRule.id,
         comment,
         dmStatus: "skipped",
-        skipReason: "monthly_limit",
+        skipReason: inactive ? "inactive_subscription" : "monthly_limit",
       }),
     });
     return { matched: true, sent: false, failed: false, duplicate: false, eventsCreated: eventsCreated + 1 };
