@@ -62,11 +62,11 @@ export default function TermsPage() {
           <h2 className="text-lg font-semibold text-slate-900">4. Billing</h2>
           <p>
             Creating an account does not start a paid subscription. Billing begins
-            only after a paid plan is selected and Stripe checkout is completed
-            when billing is enabled. There is no 14-day free trial. Plan names and
-            listed prices on the marketing site describe intended commercial
-            offerings; they do not by themselves charge your card. Refunds, if
-            any, are handled case by case and are not guaranteed.
+            only after you select a paid plan and complete Stripe checkout. An
+            active paid subscription is required for live automation sends. There
+            is no 14-day free trial. Plan names and listed prices do not by
+            themselves charge your card. Refunds, if any, are handled case by case
+            and are not guaranteed.
           </p>
           <p>
             The Instagram launch promotion provides 50% off an eligible
