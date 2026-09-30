@@ -39,6 +39,9 @@ describe("billing checkout configuration", () => {
       customerId: "cus_test",
       userId: "user-1",
       frontendUrl: "https://comment2dm.example",
+      allowPromotionCodes: true,
+      launchOfferInstagramUserId: "ig-123",
+      expiresAt: new Date("2026-10-01T00:30:00.000Z"),
       plan: {
         slug: "starter",
         name: "Starter",
@@ -56,14 +59,48 @@ describe("billing checkout configuration", () => {
       mode: "subscription",
       line_items: [{ price: "price_9_usd_monthly", quantity: 1 }],
       allow_promotion_codes: true,
-      metadata: { userId: "user-1", plan: "starter" },
-      subscription_data: {
-        metadata: { userId: "user-1", plan: "starter" },
+      metadata: {
+        userId: "user-1",
+        plan: "starter",
+        launchOfferInstagramUserId: "ig-123",
       },
+      subscription_data: {
+        metadata: {
+          userId: "user-1",
+          plan: "starter",
+          launchOfferInstagramUserId: "ig-123",
+        },
+      },
+      expires_at: 1790814600,
       success_url:
         "https://comment2dm.example/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}",
       cancel_url: "https://comment2dm.example/dashboard/billing?checkout=canceled",
     });
+  });
+
+  it("disables promotion codes when the Instagram account is not eligible", () => {
+    const params = buildCheckoutSessionParams({
+      customerId: "cus_test",
+      userId: "user-1",
+      frontendUrl: "https://comment2dm.example",
+      allowPromotionCodes: false,
+      plan: {
+        slug: "starter",
+        name: "Starter",
+        price: 9,
+        priceId: "price_9_usd_monthly",
+        couponId: undefined,
+        limits: { instagramAccounts: 1, keywordRules: 5, monthlyDms: 1_000 },
+      },
+    });
+
+    expect(params.allow_promotion_codes).toBe(false);
+    expect(params.metadata).toEqual({ userId: "user-1", plan: "starter" });
+    expect(params.subscription_data?.metadata).toEqual({
+      userId: "user-1",
+      plan: "starter",
+    });
+    expect(params.expires_at).toBeUndefined();
   });
 
   it("does not require an automatically applied Starter coupon", () => {
@@ -90,6 +127,7 @@ describe("billing checkout configuration", () => {
       customerId: "cus_test",
       userId: "user-1",
       frontendUrl: "https://comment2dm.example",
+      allowPromotionCodes: true,
       plan: {
         slug: "creator",
         name: "Creator",
