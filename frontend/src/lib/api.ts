@@ -449,7 +449,11 @@ export const api = {
     request<BillingHistoryItem[]>("/api/billing/history", {}, token),
 
   createCheckout: (token: string, plan: "starter" | "creator" | "pro") =>
-    request<{ url: string | null }>("/api/billing/checkout", {
+    request<{
+      url: string | null;
+      launchOfferEligible?: boolean;
+      launchOfferMessage?: string;
+    }>("/api/billing/checkout", {
       method: "POST",
       body: JSON.stringify({ plan }),
     }, token),
