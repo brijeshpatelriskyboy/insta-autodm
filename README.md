@@ -137,7 +137,7 @@ App runs at **http://localhost:3000**
 
 ## API Endpoints
 
-### Auth (placeholder — Meta OAuth coming later)
+### Authentication
 
 | Method | Endpoint            | Description        |
 |--------|---------------------|--------------------|
@@ -161,7 +161,7 @@ App runs at **http://localhost:3000**
 |--------|---------------------------|--------------------------|
 | GET    | `/api/analytics/summary`  | Rules, DM events, leads  |
 
-### Webhooks (Meta placeholder)
+### Instagram webhooks
 
 | Method | Endpoint                    | Description                    |
 |--------|-----------------------------|--------------------------------|
@@ -210,20 +210,26 @@ App runs at **http://localhost:3000**
 
 ## MVP Features
 
-- [x] Email/password auth (placeholder for Meta OAuth)
+- [x] Email/password auth and Instagram sign-in
 - [x] Dashboard after login
 - [x] Keyword rule CRUD (keyword, DM message, active/inactive)
 - [x] PostgreSQL storage via Prisma
 - [x] Keyword rules table UI
-- [x] Analytics page (rules count live; DM events & leads are placeholders)
+- [x] Live analytics from keyword rules, DM events and unique recipients
 - [x] REST API for keyword CRUD
-- [x] Meta Instagram webhook placeholder endpoint
+- [x] Meta Instagram webhook verification and live comment processing
 
 ---
 
-## Next Phase (not yet implemented)
+## Production status
 
-- Meta OAuth / Instagram Business account connection
-- Real webhook processing (comment → keyword match → send DM)
-- DM event logging and lead capture
-- Production auth hardening (refresh tokens, rate limiting)
+- Instagram Business / Creator OAuth connection
+- Live comment and keyword processing
+- Private replies with duplicate-send guard and monthly plan limits
+- Optional public comment reply
+- Optional verified-follow gate (beta; requires live-account Meta support)
+- Stripe subscriptions and billing history
+- Password reset email delivery through Resend
+- Activity logging and analytics
+
+Production deploys use Vercel for the frontend and Railway + PostgreSQL for the backend.
