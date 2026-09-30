@@ -188,12 +188,12 @@ export const faqs = [
   {
     question: "Does creating an account start billing?",
     answer:
-      "Creating an account does not start a paid subscription. Billing begins only after a paid plan is selected and Stripe checkout is completed when billing is enabled.",
+      "Creating an account does not start a paid subscription. Billing begins only after you select a paid plan and complete Stripe checkout.",
   },
   {
     question: "Is there a free trial?",
     answer:
-      "There is no 14-day free trial. You can create an account and use the product according to the plan you select when billing is enabled.",
+      "There is no 14-day free trial. You can create an account before subscribing, but live automations require an active paid subscription.",
   },
   {
     question: "Can I track leads and conversions?",
