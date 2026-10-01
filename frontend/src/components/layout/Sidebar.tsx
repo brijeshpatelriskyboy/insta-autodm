@@ -32,7 +32,7 @@ const platformNav = [
   { href: "/dashboard/integrations", label: "Instagram", icon: Plug },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
-  { href: "/dashboard/help", label: "Help Center", icon: HelpCircle },
+  { href: "/dashboard/help", label: "Help & Videos", icon: HelpCircle },
 ];
 
 interface SidebarProps {
