@@ -22,6 +22,8 @@ import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 import { api } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import {
@@ -160,7 +162,7 @@ export default function ActivityPage() {
         description="Live automation events from your connected Instagram account."
       />
 
-      <Card padding="sm">
+      <VideoGuideCard {...VIDEO_GUIDES.activity} />\n\n      <Card padding="sm">
         <div className="flex flex-col gap-4 p-2 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label
