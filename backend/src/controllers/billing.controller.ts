@@ -8,7 +8,22 @@ const checkoutSchema = z.object({
   billingInterval: z.enum(["monthly", "annual"]).default("monthly"),
 });
 
+const liteActivationSchema = z.object({
+  code: z.string().trim().min(1).max(64),
+});
+
 export class BillingController {
+  async activateLite(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const body = liteActivationSchema.parse(req.body);
+      const result = await billingService.activateLite(req.user.id, body.code);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getSubscription(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) throw new AppError(401, "Authentication required");
