@@ -396,9 +396,9 @@ export const api = {
   deleteKeywordRule: (token: string, id: string) =>
     request<void>(`/api/keyword-rules/${id}`, { method: "DELETE" }, token),
 
-  getInstagramMedia: (token: string, limit = 25) =>
+  getInstagramMedia: (token: string, limit = 25, accountId?: string) =>
     request<InstagramMediaListResponse>(
-      `/api/integrations/instagram/media?limit=${limit}`,
+      `/api/integrations/instagram/media?limit=${limit}${accountId ? `&accountId=${encodeURIComponent(accountId)}` : ""}`,
       {},
       token,
     ),
