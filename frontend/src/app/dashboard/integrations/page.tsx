@@ -3,17 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import {
-  Camera,
-  Webhook,
-  Server,
-  RefreshCw,
-  Shield,
-  CheckCircle2,
-  Circle,
-  Loader2,
-  BookOpen,
-} from "lucide-react";
+import { Camera, CheckCircle2, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -22,39 +12,15 @@ import { useToast } from "@/components/providers/ToastProvider";
 import {
   api,
   ApiError,
-  getApiBaseUrl,
   type InstagramIntegrationStatus,
   type MetaOAuthConfig,
 } from "@/lib/api";
 import { getToken, getStoredUser } from "@/lib/auth";
 import { isOnboardingComplete } from "@/lib/onboarding";
-import { useMounted } from "@/hooks/useMounted";
-
-const SETUP_ITEMS = [
-  { key: "professionalAccount" as const, label: "Instagram Professional account" },
-  {
-    key: "facebookPageLinked" as const,
-    label: "Facebook Page (optional for Instagram Login)",
-  },
-  { key: "metaDeveloperApp" as const, label: "Meta Developer app" },
-  { key: "webhookConfigured" as const, label: "Webhook configured" },
-];
-
-function formatLastSync(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  }).format(new Date(iso));
-}
 
 export default function IntegrationsPage() {
   const toast = useToast();
   const searchParams = useSearchParams();
-  const mounted = useMounted();
   const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
   const [metaConfig, setMetaConfig] = useState<MetaOAuthConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,55 +35,53 @@ export default function IntegrationsPage() {
       return;
     }
 
-    // Load Meta OAuth config and connection status independently so a failing
-    // status call cannot hide OAuth detection (and vice versa).
     const [statusResult, configResult] = await Promise.allSettled([
       api.getInstagramIntegrationStatus(token),
       api.getMetaOAuthConfig(),
     ]);
 
-    if (statusResult.status === "fulfilled") {
-      setStatus(statusResult.value);
-    } else {
-      console.error("Failed to load Instagram status", statusResult.reason);
-    }
-
-    if (configResult.status === "fulfilled") {
-      setMetaConfig(configResult.value);
-    } else {
-      console.error("Failed to load Meta OAuth config", configResult.reason);
-      toast.error(
-        configResult.reason instanceof ApiError
-          ? configResult.reason.message
-          : "Failed to load Meta OAuth configuration",
-      );
-    }
-
+    if (statusResult.status === "fulfilled") setStatus(statusResult.value);
+    if (configResult.status === "fulfilled") setMetaConfig(configResult.value);
     setLoading(false);
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
 
   useEffect(() => {
-    const oauthStatus = searchParams.get("oauth");
-    const oauthMessage = searchParams.get("message");
-    if (!oauthStatus || !oauthMessage) {
-      return;
-    }
+    const result = searchParams.get("oauth");
+    const message = searchParams.get("message");
+    if (!result || !message) return;
 
-    if (oauthStatus === "success") {
-      toast.success(oauthMessage);
+    if (result === "success") {
+      toast.success(message);
       loadStatus();
       const user = getStoredUser();
-      if (user?.id && !isOnboardingComplete(user.id)) {
-        setResumeOnboarding(true);
-      }
-    } else if (oauthStatus === "error") {
-      toast.error(oauthMessage);
+      if (user?.id && !isOnboardingComplete(user.id)) setResumeOnboarding(true);
+    } else if (result === "error") {
+      toast.error(message);
     }
   }, [searchParams, toast, loadStatus]);
+
+  async function handleConnectInstagram() {
+    const token = getToken();
+    if (!token) return;
+
+    setConnectLoading(true);
+    try {
+      const result = await api.getInstagramOAuthUrl(token);
+      if (!result.url) {
+        toast.error("Instagram connection is temporarily unavailable. Please try again shortly.");
+        return;
+      }
+      window.location.href = result.url;
+    } catch {
+      toast.error("Could not start Instagram connection. Please try again.");
+    } finally {
+      setConnectLoading(false);
+    }
+  }
 
   async function handleDisconnect() {
     const token = getToken();
@@ -137,425 +101,116 @@ export default function IntegrationsPage() {
     }
   }
 
-  async function handleSubscribeWebhooks() {
-    const token = getToken();
-    if (!token) return;
-
-    setActionLoading(true);
-    try {
-      const result = await api.subscribeInstagramWebhooks(token);
-      setStatus(result);
-      toast.success(
-        result.webhookSubscribedFields
-          ? `Comment webhooks enabled (${result.webhookSubscribedFields})`
-          : "Comment webhooks enabled",
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError
-          ? error.message
-          : "Failed to subscribe Instagram webhooks via subscribed_apps",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleSyncPageId() {
-    const token = getToken();
-    if (!token) return;
-
-    setActionLoading(true);
-    try {
-      const result = await api.syncInstagramFacebookPageId(token);
-      setStatus(result);
-      if (result.pageId) {
-        toast.success(`Facebook Page ID saved: ${result.pageId}`);
-      } else {
-        toast.info(
-          "Meta did not return a Facebook Page ID for this Instagram Login token (Page is optional).",
-        );
-      }
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError
-          ? error.message
-          : "Failed to sync Facebook Page ID from Meta Graph",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleMockConnect() {
-    const token = getToken();
-    if (!token) return;
-
-    setActionLoading(true);
-    try {
-      await api.connectInstagramMock(token);
-      await loadStatus();
-      toast.success("Instagram connected (demo mode)");
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Failed to connect Instagram demo",
-      );
-    } finally {
-      setActionLoading(false);
-    }
-  }
-
-  async function handleConnectInstagram() {
-    const token = getToken();
-    if (!token) return;
-
-    if (!metaConfig?.oauthEnabled) {
-      toast.error("Meta setup required. Complete the setup guide and enable OAuth on the server.");
-      return;
-    }
-
-    setConnectLoading(true);
-    try {
-      const oauth = await api.getInstagramOAuthUrl(token);
-
-      if (oauth.setupError) {
-        toast.error(oauth.setupError.message);
-        return;
-      }
-
-      if (!oauth.url) {
-        toast.error(oauth.message || "Meta setup required");
-        return;
-      }
-
-      window.location.href = oauth.url;
-    } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : "Failed to start Meta OAuth",
-      );
-    } finally {
-      setConnectLoading(false);
-    }
-  }
-
   const connected = status?.connected ?? false;
-  const oauthReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
-  const webhookConfigured = status?.setupChecklist.webhookConfigured ?? false;
-  const graphApiStatus =
-    status?.graphApiStatus ?? (connected ? ("pending" as const) : ("disconnected" as const));
-
-  const integrations = [
-    {
-      id: "instagram",
-      name: "Instagram Business",
-      description:
-        "Connect your Instagram Business or Creator account to enable comment monitoring and DM automation.",
-      status: connected ? ("active" as const) : ("disconnected" as const),
-      icon: Camera,
-      iconGradient: "from-purple-500 via-pink-500 to-orange-400",
-      details: [
-        {
-          label: "Account",
-          value: connected && status?.username ? `@${status.username}` : "Not connected",
-        },
-        {
-          label: "Account type",
-          value: status?.accountType ?? "—",
-        },
-        {
-          label: "Last sync",
-          value: status?.lastSyncAt ? formatLastSync(status.lastSyncAt) : "—",
-        },
-      ],
-    },
-    {
-      id: "meta",
-      name: "Meta Graph API",
-      description:
-        "Active when the stored Instagram Login token can read the connected professional account. A Facebook Page ID is not required.",
-      status: graphApiStatus,
-      icon: Server,
-      iconGradient: "from-blue-500 to-blue-600",
-      details: [
-        { label: "API version", value: metaConfig?.graphApiVersion ?? "v21.0" },
-        { label: "IG User ID", value: status?.instagramUserId ?? "—" },
-        {
-          label: "Page ID",
-          // Instagram Login does not require a Facebook Page; null means Meta did not return one.
-          value: status?.pageId
-            ? status.pageId
-            : connected
-              ? "Not returned — Instagram Login"
-              : "—",
-        },
-      ],
-    },
-    {
-      id: "webhook",
-      name: "Instagram Webhooks",
-      description:
-        "Receives real-time comment events from Meta when followers interact with your posts. Requires app-level Webhooks setup plus a per-account subscribed_apps Graph call after OAuth.",
-      status: webhookConfigured ? ("active" as const) : ("pending" as const),
-      icon: Webhook,
-      iconGradient: "from-brand-500 to-brand-600",
-      details: [
-        {
-          label: "Endpoint",
-          // Defer env-based API host until after mount to avoid SSR/client mismatch.
-          value: mounted
-            ? `${getApiBaseUrl()}/api/webhooks/instagram`
-            : "/api/webhooks/instagram",
-        },
-        { label: "Verify token", value: "Configured" },
-        {
-          label: "Account subscription",
-          value: !connected
-            ? "Not connected"
-            : webhookConfigured
-              ? status?.webhookSubscribedFields ?? "subscribed_apps OK"
-              : "Missing subscribed_apps",
-        },
-      ],
-    },
-  ];
+  const commentActive = Boolean(status?.webhookSubscribedAt);
+  const dmActive = connected && status?.graphApiStatus === "active";
+  const connectReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
+  const displayName = status?.username ? `@${status.username}` : "Instagram";
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Integrations"
-        description="Connect Instagram and Meta services to power your DM automations."
+        title="Instagram"
+        description="Connect your account and check automation status."
       />
 
       {resumeOnboarding && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-900">
           <span>Instagram connected. Continue setting up your first automation.</span>
-          <Link
-            href="/onboarding"
-            className="font-medium text-emerald-800 underline-offset-2 hover:underline"
-          >
+          <Link href="/onboarding" className="font-medium underline-offset-2 hover:underline">
             Resume setup
           </Link>
         </div>
       )}
 
-      <Card title="Instagram Connection" padding="lg">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-sm">
-              <Camera className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h3 className="text-lg font-semibold text-slate-900">Instagram</h3>
-                <StatusPill status={connected ? "active" : "disconnected"} />
-              </div>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-                {connected && status?.username
-                  ? `Connected as @${status.username}${metaConfig?.oauthEnabled ? "" : " (demo mode)"}.`
-                  : metaConfig?.oauthEnabled
-                    ? "Connect your Instagram Professional account with Meta OAuth when credentials are configured."
-                    : "Complete the Meta setup guide, then enable OAuth on the server when verification is complete."}
-              </p>
-            </div>
+      <Card padding="lg">
+        {loading ? (
+          <div className="flex items-center gap-2 text-sm text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading...
           </div>
+        ) : (
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              {status?.profilePictureUrl ? (
+                <img
+                  src={status.profilePictureUrl}
+                  alt={displayName}
+                  className="h-14 w-14 rounded-2xl object-cover shadow-sm"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-sm">
+                  <Camera className="h-7 w-7" />
+                </div>
+              )}
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {connected ? displayName : "Instagram account"}
+                  </h3>
+                  <StatusPill status={connected ? "connected" : "disconnected"} />
+                </div>
+                <p className="mt-1 text-sm text-slate-500">
+                  {connected
+                    ? "Your Instagram Professional account is connected."
+                    : "Connect an Instagram Business or Creator account to start automating DMs."}
+                </p>
+              </div>
+            </div>
 
-          <div className="flex shrink-0 flex-wrap gap-3 self-start">
-            {!connected &&
-              (oauthReady ? (
+            <div className="flex flex-wrap gap-3">
+              {!connected ? (
                 <Button
-                  variant="primary"
                   onClick={handleConnectInstagram}
-                  disabled={connectLoading || loading}
+                  disabled={!connectReady || connectLoading}
                 >
-                  {connectLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
+                  {connectLoading && <Loader2 className="h-4 w-4 animate-spin" />}
                   Connect Instagram
                 </Button>
               ) : (
-                <Button
-                  variant="secondary"
-                  onClick={handleMockConnect}
-                  disabled={actionLoading || loading}
-                >
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
-                  Connect (Demo)
-                </Button>
-              ))}
-            <Link href="/dashboard/integrations/instagram-setup">
-              <Button variant="secondary">
-                <BookOpen className="h-4 w-4" />
-                Setup Guide
-              </Button>
-            </Link>
-            {connected && !webhookConfigured && (
-              <Button
-                variant="primary"
-                onClick={handleSubscribeWebhooks}
-                disabled={actionLoading || loading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Webhook className="h-4 w-4" />
-                )}
-                Enable comment webhooks
-              </Button>
-            )}
-            {connected && !status?.pageId && (
-              <Button
-                variant="secondary"
-                onClick={handleSyncPageId}
-                disabled={actionLoading || loading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4" />
-                )}
-                Sync Page ID
-              </Button>
-            )}
-            {connected && (
-              <Button
-                variant="secondary"
-                onClick={handleDisconnect}
-                disabled={actionLoading || loading}
-              >
-                {actionLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
-                Disconnect
-              </Button>
-            )}
+                <>
+                  <Link href="/dashboard/integrations/instagram-setup">
+                    <Button variant="secondary">Manage</Button>
+                  </Link>
+                  <Button
+                    variant="secondary"
+                    onClick={handleDisconnect}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Disconnect
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
-
-        <div className="mt-6 rounded-xl border border-slate-100 bg-slate-50/80 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Setup checklist
-          </p>
-          <ul className="mt-3 space-y-2">
-            {SETUP_ITEMS.map((item) => {
-              const done = status?.setupChecklist[item.key] ?? false;
-              return (
-                <li key={item.key} className="flex items-center gap-2 text-sm text-slate-700">
-                  {done ? (
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  ) : (
-                    <Circle className="h-4 w-4 text-slate-300" />
-                  )}
-                  {item.label}
-                </li>
-              );
-            })}
-          </ul>
-          <Link
-            href="/dashboard/integrations/instagram-setup"
-            className="mt-4 inline-flex text-sm font-medium text-brand-600 hover:text-brand-700"
-          >
-            Open Instagram Setup guide →
-          </Link>
-        </div>
+        )}
       </Card>
 
-      <div className="grid gap-6">
-        {integrations.map((integration) => {
-          const Icon = integration.icon ?? Circle;
-          return (
-            <Card key={integration.id} padding="lg">
-              <div className="flex gap-4">
-                <div
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${integration.iconGradient} text-white shadow-sm`}
-                >
-                  <Icon className="h-6 w-6" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                      {integration.name}
-                    </h3>
-                    <StatusPill status={integration.status} />
-                  </div>
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">
-                    {integration.description}
-                  </p>
-                  <div className="mt-4 grid gap-3 rounded-xl border border-slate-100 bg-slate-50/80 p-4 sm:grid-cols-3">
-                    {integration.details.map((detail) => (
-                      <div key={detail.label}>
-                        <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
-                          {detail.label}
-                        </p>
-                        <p className="mt-1 truncate text-sm font-medium text-slate-700">
-                          {detail.value}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      <Card
-        title="Integration Health"
-        description="System checks for your connected services."
-      >
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            {
-              icon: Shield,
-              label: "OAuth",
-              status: oauthReady
-                ? "Ready — real Meta OAuth enabled"
-                : metaConfig?.oauthEnabled
-                  ? "Enabled — add Meta App ID, Secret, Redirect URI"
-                  : "Meta setup required — OAuth disabled",
-            },
-            {
-              icon: RefreshCw,
-              label: "Webhook listener",
-              status: !connected
-                ? "Endpoint ready — connect Instagram"
-                : webhookConfigured
-                  ? "Endpoint ready — account subscribed"
-                  : "Endpoint ready — run Enable comment webhooks",
-            },
-            {
-              icon: Server,
-              label: "Meta Graph API",
-              status:
-                graphApiStatus === "active"
-                  ? "Active — Instagram profile reachable"
-                  : graphApiStatus === "error"
-                    ? status?.graphApiError ?? "Graph token check failed"
-                    : connected
-                      ? "Pending verification"
-                      : "Connect Instagram to verify",
-            },
-          ].map((item) => {
-            const Icon = item.icon ?? Circle;
-            return (
+      {connected && (
+        <Card title="Automation Status" padding="lg">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { label: "Instagram", value: "Connected", active: true },
+              { label: "Comments", value: commentActive ? "Active" : "Checking", active: commentActive },
+              { label: "DMs", value: dmActive ? "Active" : "Checking", active: dmActive },
+            ].map((item) => (
               <div
                 key={item.label}
                 className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-                  <Icon className="h-5 w-5" />
-                </div>
+                <CheckCircle2
+                  className={`h-5 w-5 ${item.active ? "text-emerald-500" : "text-amber-500"}`}
+                />
                 <div>
-                  <p className="text-sm font-medium text-slate-900">{item.label}</p>
-                  <p className="text-xs text-slate-500">{item.status}</p>
+                  <p className="text-sm font-semibold text-slate-900">{item.label}</p>
+                  <p className="text-xs text-slate-500">{item.value}</p>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
