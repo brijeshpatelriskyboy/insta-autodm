@@ -47,6 +47,7 @@ export function HowItWorksSection() {
                 muted
                 loop
                 controls
+                poster={"poster" in reel ? reel.poster : undefined}
                 preload="metadata"
                 playsInline
                 aria-label={reel.title}
