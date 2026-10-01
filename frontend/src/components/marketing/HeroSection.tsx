@@ -23,17 +23,17 @@ export function HeroSection() {
             Instagram DM automation
           </div>
 
-          <h1 className="animate-slide-up mt-8 text-4xl font-extrabold tracking-[-0.045em] text-[#151c30] sm:text-6xl lg:text-7xl">
-            Turn Instagram Comments Into{" "}
-            <span className="text-[#6a2fd0]">Conversations Automatically</span>
-          </h1>
-
           <div className="mt-8 overflow-hidden border-y border-[#d8c8ff] bg-white/65 py-3 backdrop-blur">
             <div className="claude-marquee whitespace-nowrap text-sm font-semibold text-[#4b1fa0] sm:text-base">
               <span className="mx-8">{promo}</span>
               <span className="mx-8" aria-hidden="true">{promo}</span>
             </div>
           </div>
+
+          <h1 className="animate-slide-up mt-8 text-4xl font-extrabold tracking-[-0.045em] text-[#151c30] sm:text-6xl lg:text-7xl">
+            Turn Instagram Comments Into{" "}
+            <span className="text-[#6a2fd0]">Conversations Automatically</span>
+          </h1>
 
           <p
             className="animate-slide-up mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-[#5b6378] sm:text-xl"
