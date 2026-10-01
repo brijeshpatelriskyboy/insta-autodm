@@ -1,5 +1,6 @@
 import { DmEventStatus, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import { env } from "../config/env";
 import { AppError, getMetaErrorDetails } from "../utils/errors";
 import { decryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
@@ -495,6 +496,52 @@ function buildDmFailedActivity(params: {
   };
 }
 
+async function ensureInternalLitePromoRule(account: { userId: string; username: string }) {
+  if (!env.LITE_ACCESS_CODE) return;
+  if (account.username.trim().toLowerCase() !== "comment2dm.ai") return;
+
+  const dmMessage =
+    `Your Comment2DM Lite access code is ${env.LITE_ACCESS_CODE}. ` +
+    "Use it in Comment2DM to activate 30 days free with 1 Instagram account, 2 keyword rules and 200 DMs. No payment details required.";
+
+  const existing = await prisma.keywordRule.findFirst({
+    where: {
+      userId: account.userId,
+      keyword: "LITE",
+      mediaScopeKey: "__GLOBAL__",
+    },
+  });
+
+  if (existing) {
+    if (!existing.isActive || existing.dmMessage !== dmMessage || existing.requireFollow) {
+      await prisma.keywordRule.update({
+        where: { id: existing.id },
+        data: {
+          dmMessage,
+          isActive: true,
+          requireFollow: false,
+          publicReplyEnabled: false,
+          publicReplyMessage: null,
+        },
+      });
+    }
+    return;
+  }
+
+  await prisma.keywordRule.create({
+    data: {
+      userId: account.userId,
+      keyword: "LITE",
+      dmMessage,
+      isActive: true,
+      requireFollow: false,
+      publicReplyEnabled: false,
+      publicReplyMessage: null,
+      instagramMediaId: null,
+      mediaScopeKey: "__GLOBAL__",
+    },
+  });
+}
 async function matchAndProcessComment(comment: ParsedComment): Promise<{
   matched: boolean;
   sent: boolean;
@@ -565,6 +612,8 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     });
     return { matched: false, sent: false, failed: false, duplicate: false, eventsCreated: 1 };
   }
+
+  await ensureInternalLitePromoRule(account);
 
   const rules = await prisma.keywordRule.findMany({
     where: { userId: account.userId, isActive: true },
