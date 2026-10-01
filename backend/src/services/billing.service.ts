@@ -457,17 +457,18 @@ export const billingService = {
       throw new AppError(400, "Lite supports exactly one connected Instagram account");
     }
 
-    const [userClaim, instagramClaim, existingSubscription] = await Promise.all([
+    const [userClaim, instagramClaim, existingSubscription, priorPaidEvent] = await Promise.all([
       prisma.liteOfferClaim.findUnique({ where: { userId } }),
       prisma.liteOfferClaim.findUnique({ where: { instagramUserId: account.instagramUserId } }),
       prisma.subscription.findUnique({ where: { userId } }),
+      prisma.billingEvent.findFirst({ where: { userId, status: "paid" }, select: { id: true } }),
     ]);
 
     if (userClaim || instagramClaim) {
       throw new AppError(409, "The one-month Lite offer has already been used");
     }
-    if (existingSubscription?.stripeCustomerId || existingSubscription?.stripeSubscriptionId) {
-      throw new AppError(409, "Lite is available only to first-time users who have not previously started paid billing");
+    if (existingSubscription?.stripeSubscriptionId || priorPaidEvent) {
+      throw new AppError(409, "Lite is available only to first-time users who have not previously had a paid subscription");
     }
 
     const activatedAt = new Date();
