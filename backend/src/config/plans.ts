@@ -1,6 +1,6 @@
 import { env } from "../config/env";
 
-export type PlanSlug = "starter" | "creator" | "pro";
+export type PlanSlug = "lite" | "starter" | "creator" | "pro";
 
 export type BillingInterval = "monthly" | "annual";
 
@@ -22,6 +22,16 @@ export interface PlanConfig {
 }
 
 export const PLANS: Record<PlanSlug, PlanConfig> = {
+  lite: {
+    slug: "lite",
+    name: "Lite",
+    price: 0,
+    annualPrice: 0,
+    priceId: undefined,
+    annualPriceId: undefined,
+    couponId: undefined,
+    limits: { instagramAccounts: 1, keywordRules: 2, monthlyDms: 200 },
+  },
   starter: {
     slug: "starter",
     name: "Starter",

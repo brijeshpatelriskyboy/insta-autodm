@@ -27,6 +27,32 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
           />
         )}
 
+        <div className="mx-auto mt-10 max-w-4xl rounded-2xl border border-brand-200 bg-brand-50/70 p-6 sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="inline-flex rounded-full bg-brand-600 px-3 py-1 text-xs font-semibold text-white">
+                LITE — FREE FOR 30 DAYS
+              </span>
+              <h3 className="mt-3 text-xl font-semibold text-slate-900">
+                Start with no card and no payment details
+              </h3>
+              <p className="mt-2 text-sm text-slate-600">
+                Follow @comment2dm.ai and comment <strong>LITE</strong> on our Lite offer post to receive code <strong>LITEFREE</strong>.
+                First-time users get 1 Instagram account, 2 keyword rules and 200 DMs for 30 days.
+              </p>
+              <p className="mt-2 text-xs text-slate-500">
+                One Lite month per Comment2DM user and Instagram account. After 30 days, upgrade to continue automations.
+              </p>
+            </div>
+            <Link href="/register" className="shrink-0">
+              <Button>
+                Start Lite free
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+
         <div className="mx-auto mt-6 flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 p-1">
           <button
             type="button"

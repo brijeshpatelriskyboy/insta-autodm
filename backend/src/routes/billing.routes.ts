@@ -5,6 +5,7 @@ import { authenticate } from "../middleware/auth";
 const router = Router();
 
 router.use(authenticate);
+router.post("/lite/activate", (req, res, next) => billingController.activateLite(req, res, next));
 router.get("/subscription", (req, res, next) =>
   billingController.getSubscription(req, res, next),
 );

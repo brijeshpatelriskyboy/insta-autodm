@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import Stripe from "stripe";
 import { env, isStripeConfigured } from "../config/env";
 import { getPlan, type BillingInterval, type PlanSlug } from "../config/plans";
@@ -435,10 +436,104 @@ async function reconcileStripeBillingForDashboard(userId: string) {
 }
 
 export const billingService = {
+  async activateLite(userId: string, code: string) {
+    if (code.trim().toUpperCase() !== "LITEFREE") {
+      throw new AppError(400, "Invalid Lite access code");
+    }
+
+    const account = await prisma.instagramAccount.findFirst({
+      where: { userId, connectionStatus: "connected" },
+      orderBy: { connectedAt: "asc" },
+      select: { instagramUserId: true },
+    });
+    if (!account) {
+      throw new AppError(400, "Connect one Instagram account before activating Lite");
+    }
+
+    const connectedAccounts = await prisma.instagramAccount.count({
+      where: { userId, connectionStatus: "connected" },
+    });
+    if (connectedAccounts !== 1) {
+      throw new AppError(400, "Lite supports exactly one connected Instagram account");
+    }
+
+    const [userClaim, instagramClaim, existingSubscription, priorPaidEvent] = await Promise.all([
+      prisma.liteOfferClaim.findUnique({ where: { userId } }),
+      prisma.liteOfferClaim.findUnique({ where: { instagramUserId: account.instagramUserId } }),
+      prisma.subscription.findUnique({ where: { userId } }),
+      prisma.billingEvent.findFirst({ where: { userId, status: "paid" }, select: { id: true } }),
+    ]);
+
+    if (userClaim || instagramClaim) {
+      throw new AppError(409, "The one-month Lite offer has already been used");
+    }
+    if (existingSubscription?.stripeSubscriptionId || priorPaidEvent) {
+      throw new AppError(409, "Lite is available only to first-time users who have not previously had a paid subscription");
+    }
+
+    const activatedAt = new Date();
+    const expiresAt = new Date(activatedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    try {
+      await prisma.$transaction([
+        prisma.liteOfferClaim.create({
+          data: {
+            instagramUserId: account.instagramUserId,
+            userId,
+            activatedAt,
+            expiresAt,
+          },
+        }),
+        prisma.subscription.upsert({
+          where: { userId },
+          create: {
+            userId,
+            plan: "lite",
+            billingInterval: "monthly",
+            status: "active",
+            currentPeriodEnd: expiresAt,
+            cancelAtPeriodEnd: false,
+          },
+          update: {
+            plan: "lite",
+            billingInterval: "monthly",
+            status: "active",
+            currentPeriodEnd: expiresAt,
+            cancelAtPeriodEnd: false,
+            stripeSubscriptionId: null,
+          },
+        }),
+      ]);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new AppError(409, "The one-month Lite offer has already been used");
+      }
+      throw error;
+    }
+
+    return {
+      message: "Lite activated for 30 days — no payment details required",
+      plan: "lite" as const,
+      status: "active",
+      activatedAt: activatedAt.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      limits: {
+        instagramAccounts: 1,
+        keywordRules: 2,
+        monthlyDms: 200,
+      },
+    };
+  },
+
   async getSubscription(userId: string) {
     await reconcileStripeBillingForDashboard(userId);
     const sub = await prisma.subscription.findUnique({ where: { userId } });
     const plan = getPlan(sub?.plan ?? "starter");
+
+    const liteExpired =
+      sub?.plan === "lite" &&
+      Boolean(sub.currentPeriodEnd && sub.currentPeriodEnd.getTime() <= Date.now());
+    const effectiveStatus = liteExpired ? "expired" : sub?.status ?? "inactive";
 
     return {
       plan: sub?.plan ?? null,
@@ -448,7 +543,7 @@ export const billingService = {
       billingInterval: (sub?.billingInterval as BillingInterval | undefined) ?? "monthly",
       standardPrice: plan?.standardPrice ?? null,
       introductoryMonths: plan?.introductoryMonths ?? null,
-      status: sub?.status ?? "inactive",
+      status: effectiveStatus,
       currentPeriodEnd: sub?.currentPeriodEnd?.toISOString() ?? null,
       cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
       stripeConfigured: isStripeConfigured(),

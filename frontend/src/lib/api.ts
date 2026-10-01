@@ -154,7 +154,7 @@ export interface AnalyticsSummary {
   monthlyDmUsed: number;
   monthlyDmLimit: number;
   monthlyDmRemaining: number;
-  plan: "starter" | "creator" | "pro";
+  plan: "lite" | "starter" | "creator" | "pro";
 }
 
 export interface InstagramStatus {
@@ -218,7 +218,7 @@ export interface InstagramAccountsResponse {
   used: number;
   limit: number;
   remaining: number;
-  plan: "starter" | "creator" | "pro";
+  plan: "lite" | "starter" | "creator" | "pro";
 }
 
 export interface ActivityEventRecord {
@@ -255,7 +255,7 @@ export interface MetaOAuthUrlPreview {
 }
 
 export interface SubscriptionInfo {
-  plan: "starter" | "creator" | "pro" | null;
+  plan: "lite" | "starter" | "creator" | "pro" | null;
   planName: string | null;
   price: number | null;
   annualPrice: number | null;
@@ -465,6 +465,19 @@ export const api = {
 
   getActivityEvents: (token: string) =>
     request<ActivityEventRecord[]>("/api/activity/events", {}, token),
+
+  activateLite: (token: string, code: string) =>
+    request<{
+      message: string;
+      plan: "lite";
+      status: "active";
+      activatedAt: string;
+      expiresAt: string;
+      limits: { instagramAccounts: number; keywordRules: number; monthlyDms: number };
+    }>("/api/billing/lite/activate", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    }, token),
 
   getSubscription: (token: string) =>
     request<SubscriptionInfo>("/api/billing/subscription", {}, token),
