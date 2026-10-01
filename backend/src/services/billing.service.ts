@@ -80,6 +80,7 @@ export function buildPlanChangeParams(params: {
     cancel_at_period_end: false,
     proration_behavior: "always_invoice",
     payment_behavior: "error_if_incomplete",
+    ...(billingInterval === "annual" ? { discounts: [] } : {}),
   };
 }
 
@@ -684,6 +685,16 @@ export const billingService = {
     }
     if (record.plan === plan.slug && record.billingInterval === billingInterval) {
       throw new AppError(409, `You are already on the ${plan.name} ${billingInterval} plan`);
+    }
+
+    const connectedAccounts = await prisma.instagramAccount.count({
+      where: { userId, connectionStatus: "connected" },
+    });
+    if (connectedAccounts > plan.limits.instagramAccounts) {
+      throw new AppError(
+        409,
+        `Disconnect ${connectedAccounts - plan.limits.instagramAccounts} Instagram account(s) before changing to ${plan.name}. ${plan.name} allows ${plan.limits.instagramAccounts}.`,
+      );
     }
 
     const stripe = getStripe();
