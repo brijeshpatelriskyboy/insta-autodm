@@ -40,6 +40,9 @@ export function HowItWorksSection() {
             >
               <video
                 className="aspect-[9/16] w-full rounded-[20px] bg-[#f6f3ff] object-cover"
+                autoPlay
+                muted
+                loop
                 controls
                 preload="metadata"
                 playsInline
