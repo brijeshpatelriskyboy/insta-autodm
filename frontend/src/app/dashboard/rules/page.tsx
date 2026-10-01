@@ -192,7 +192,7 @@ export default function RulesPage() {
 
       <details className="rounded-2xl border border-purple-200 bg-purple-50/50">
         <summary className="cursor-pointer list-none px-5 py-4 font-semibold text-slate-900">
-          Video instructions · 5 quick guides
+          Video instructions · 8 quick guides
         </summary>
         <div className="grid gap-4 border-t border-purple-100 p-4 lg:grid-cols-2">
           <VideoGuideCard {...VIDEO_GUIDES.keywordTriggers} />
@@ -200,6 +200,9 @@ export default function RulesPage() {
           <VideoGuideCard {...VIDEO_GUIDES.automaticDms} />
           <VideoGuideCard {...VIDEO_GUIDES.publicReplies} />
           <VideoGuideCard {...VIDEO_GUIDES.followToUnlock} />
+          <VideoGuideCard {...VIDEO_GUIDES.keywordOnePostOrReel} />
+          <VideoGuideCard {...VIDEO_GUIDES.keywordOneReelVoice} />
+          <VideoGuideCard {...VIDEO_GUIDES.readKeywordRule} />
         </div>
       </details>
 

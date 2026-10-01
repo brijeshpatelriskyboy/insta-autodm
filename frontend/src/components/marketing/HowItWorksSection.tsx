@@ -10,6 +10,9 @@ const reels = [
   VIDEO_GUIDES.analytics,
   VIDEO_GUIDES.activity,
   VIDEO_GUIDES.billing,
+  VIDEO_GUIDES.keywordOnePostOrReel,
+  VIDEO_GUIDES.keywordOneReelVoice,
+  VIDEO_GUIDES.readKeywordRule,
 ];
 
 export function HowItWorksSection() {
