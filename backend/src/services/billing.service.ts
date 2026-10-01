@@ -8,8 +8,8 @@ export function buildCheckoutSessionParams(params: {
   customerId: string;
   userId: string;
   plan: NonNullable<ReturnType<typeof getPlan>>;
-  priceId: string;
-  billingInterval: BillingInterval;
+  priceId?: string;
+  billingInterval?: BillingInterval;
   frontendUrl: string;
   allowPromotionCodes?: boolean;
   launchOfferInstagramUserId?: string;
@@ -19,13 +19,15 @@ export function buildCheckoutSessionParams(params: {
     customerId,
     userId,
     plan,
-    priceId,
-    billingInterval,
+    priceId = plan.priceId,
+    billingInterval = "monthly",
     frontendUrl,
     allowPromotionCodes = false,
     launchOfferInstagramUserId,
     expiresAt,
   } = params;
+  if (!priceId) throw new AppError(503, "Stripe price is not configured");
+
   return {
     customer: customerId,
     mode: "subscription",
@@ -60,10 +62,17 @@ export function buildPlanChangeParams(params: {
   itemId: string;
   userId: string;
   plan: NonNullable<ReturnType<typeof getPlan>>;
-  priceId: string;
-  billingInterval: BillingInterval;
+  priceId?: string;
+  billingInterval?: BillingInterval;
 }): Stripe.SubscriptionUpdateParams {
-  const { itemId, userId, plan, priceId, billingInterval } = params;
+  const {
+    itemId,
+    userId,
+    plan,
+    priceId = plan.priceId,
+    billingInterval = "monthly",
+  } = params;
+  if (!priceId) throw new AppError(503, "Stripe price is not configured for this plan");
 
   return {
     items: [{ id: itemId, price: priceId, quantity: 1 }],
