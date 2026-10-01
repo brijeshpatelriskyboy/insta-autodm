@@ -58,6 +58,7 @@ export default function BillingPage() {
       api.getBillingHistory(token),
     ]);
     setSubscription(sub);
+    setBillingInterval(sub.billingInterval ?? "monthly");
     setHistory(hist);
     setLoading(false);
   }, []);
