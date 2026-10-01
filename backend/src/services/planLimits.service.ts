@@ -23,6 +23,34 @@ export async function assertHasActiveSubscription(userId: string): Promise<void>
   }
 }
 
+export async function getInstagramAccountUsage(userId: string) {
+  const plan = await getUserPlan(userId);
+  const used = await prisma.instagramAccount.count({
+    where: { userId, connectionStatus: "connected" },
+  });
+  return {
+    used,
+    limit: plan.limits.instagramAccounts,
+    remaining: Math.max(0, plan.limits.instagramAccounts - used),
+    plan: plan.slug,
+  };
+}
+
+export async function assertCanConnectInstagramAccount(userId: string, instagramUserId?: string): Promise<void> {
+  const plan = await getUserPlan(userId);
+  if (instagramUserId) {
+    const existing = await prisma.instagramAccount.findUnique({
+      where: { instagramUserId },
+      select: { userId: true },
+    });
+    if (existing && existing.userId !== userId) throw new AppError(409, "Instagram account already connected elsewhere");
+    if (existing?.userId === userId) return;
+  }
+  const used = await prisma.instagramAccount.count({ where: { userId, connectionStatus: "connected" } });
+  if (used >= plan.limits.instagramAccounts) {
+    throw new AppError(403, `${plan.name} allows up to ${plan.limits.instagramAccounts} Instagram accounts. Upgrade your plan to connect another account.`);
+  }
+}
 export async function assertCanCreateKeywordRule(userId: string): Promise<void> {
   await assertHasActiveSubscription(userId);
   const plan = await getUserPlan(userId);
