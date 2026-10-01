@@ -46,6 +46,8 @@ describe("billing checkout configuration", () => {
         slug: "starter",
         name: "Starter",
         price: 5,
+        annualPrice: 86.4,
+        annualPriceId: undefined,
         standardPrice: 9,
         introductoryMonths: 3,
         priceId: "price_9_usd_monthly",
@@ -62,6 +64,7 @@ describe("billing checkout configuration", () => {
       metadata: {
         userId: "user-1",
         plan: "starter",
+        billingInterval: "monthly",
         launchOfferInstagramUserId: "ig-123",
       },
       subscription_data: {
@@ -88,6 +91,8 @@ describe("billing checkout configuration", () => {
         slug: "starter",
         name: "Starter",
         price: 9,
+        annualPrice: 86.4,
+        annualPriceId: undefined,
         priceId: "price_9_usd_monthly",
         couponId: undefined,
         limits: { instagramAccounts: 1, keywordRules: 5, monthlyDms: 1_000 },
@@ -95,10 +100,11 @@ describe("billing checkout configuration", () => {
     });
 
     expect(params.allow_promotion_codes).toBe(false);
-    expect(params.metadata).toEqual({ userId: "user-1", plan: "starter" });
+    expect(params.metadata).toEqual({ userId: "user-1", plan: "starter", billingInterval: "monthly" });
     expect(params.subscription_data?.metadata).toEqual({
       userId: "user-1",
       plan: "starter",
+      billingInterval: "monthly",
     });
     expect(params.expires_at).toBeUndefined();
   });
@@ -132,6 +138,8 @@ describe("billing checkout configuration", () => {
         slug: "creator",
         name: "Creator",
         price: 19,
+        annualPrice: 182.4,
+        annualPriceId: undefined,
         priceId: "price_creator_monthly",
         couponId: undefined,
       },
@@ -152,15 +160,17 @@ describe("billing plan changes", () => {
         slug: "creator",
         name: "Creator",
         price: 19,
+        annualPrice: 182.4,
+        annualPriceId: undefined,
         priceId: "price_creator_monthly",
         couponId: undefined,
-        limits: { instagramAccounts: 1, keywordRules: 15, monthlyDms: 5_000 },
+        limits: { instagramAccounts: 3, keywordRules: 15, monthlyDms: 5_000 },
       },
     });
 
     expect(params).toEqual({
       items: [{ id: "si_current", price: "price_creator_monthly", quantity: 1 }],
-      metadata: { userId: "user-1", plan: "creator" },
+      metadata: { userId: "user-1", plan: "creator", billingInterval: "monthly" },
       cancel_at_period_end: false,
       proration_behavior: "always_invoice",
       payment_behavior: "error_if_incomplete",
@@ -176,9 +186,11 @@ describe("billing plan changes", () => {
           slug: "pro",
           name: "Pro",
           price: 49,
+          annualPrice: 470.4,
+          annualPriceId: undefined,
           priceId: undefined,
           couponId: undefined,
-          limits: { instagramAccounts: 1, keywordRules: null, monthlyDms: 25_000 },
+          limits: { instagramAccounts: 15, keywordRules: null, monthlyDms: 25_000 },
         },
       }),
     ).toThrow("Stripe price is not configured for this plan");
