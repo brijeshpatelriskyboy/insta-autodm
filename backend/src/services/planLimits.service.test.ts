@@ -6,18 +6,26 @@ const {
   mockUsageUpsert,
   mockUsageUpdateMany,
   mockUsageFindUnique,
+  mockInstagramCount,
+  mockInstagramFindUnique,
 } = vi.hoisted(() => ({
   mockSubscriptionFindUnique: vi.fn(),
   mockKeywordCount: vi.fn(),
   mockUsageUpsert: vi.fn(),
   mockUsageUpdateMany: vi.fn(),
   mockUsageFindUnique: vi.fn(),
+  mockInstagramCount: vi.fn(),
+  mockInstagramFindUnique: vi.fn(),
 }));
 
 vi.mock("../lib/prisma", () => ({
   prisma: {
     subscription: { findUnique: mockSubscriptionFindUnique },
     keywordRule: { count: mockKeywordCount },
+    instagramAccount: {
+      count: mockInstagramCount,
+      findUnique: mockInstagramFindUnique,
+    },
     planUsage: {
       findUnique: mockUsageFindUnique,
       upsert: mockUsageUpsert,
@@ -27,7 +35,9 @@ vi.mock("../lib/prisma", () => ({
 }));
 
 import {
+  assertCanConnectInstagramAccount,
   assertCanCreateKeywordRule,
+  getInstagramAccountUsage,
   getMonthlyDmUsage,
   releaseMonthlyDm,
   reserveMonthlyDm,
@@ -37,6 +47,8 @@ describe("plan limits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active" });
+    mockInstagramCount.mockResolvedValue(0);
+    mockInstagramFindUnique.mockResolvedValue(null);
   });
 
   it("blocks automation setup without an active subscription", async () => {
@@ -76,6 +88,29 @@ describe("plan limits", () => {
     mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active" });
     await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
     expect(mockKeywordCount).not.toHaveBeenCalled();
+  });
+
+  it("allows Creator to connect up to 3 Instagram accounts", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active" });
+    mockInstagramCount.mockResolvedValue(2);
+
+    await expect(assertCanConnectInstagramAccount("user-1", "ig-new")).resolves.toBeUndefined();
+    await expect(getInstagramAccountUsage("user-1")).resolves.toEqual({
+      used: 2,
+      limit: 3,
+      remaining: 1,
+      plan: "creator",
+    });
+  });
+
+  it("blocks another Instagram account when the Pro 15-account limit is reached", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active" });
+    mockInstagramCount.mockResolvedValue(15);
+
+    await expect(assertCanConnectInstagramAccount("user-1", "ig-new")).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("up to 15 Instagram accounts"),
+    });
   });
 
   it("atomically reserves an available monthly DM", async () => {

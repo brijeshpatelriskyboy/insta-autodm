@@ -32,7 +32,7 @@ model User {
   dmEvents                   DmEvent[]
   leads                      Lead[]
   instagramConnectionRequest InstagramConnectionRequest?
-  instagramAccount           InstagramAccount?
+  instagramAccounts          InstagramAccount[]
   activityEvents             ActivityEvent[]
   subscription               Subscription?
   billingEvents              BillingEvent[]
@@ -160,7 +160,7 @@ model InstagramConnectionRequest {
 
 model InstagramAccount {
   id                      String    @id @default(cuid())
-  userId                  String    @unique
+  userId                  String
   user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   instagramUserId         String    @unique
   username                String
@@ -178,6 +178,7 @@ model InstagramAccount {
   updatedAt               DateTime  @updatedAt
   dmEvents                DmEvent[]
 
+  @@index([userId])
   @@map("instagram_accounts")
 }
 
@@ -202,6 +203,7 @@ model Subscription {
   stripeCustomerId     String?   @unique
   stripeSubscriptionId String?   @unique
   plan                 String    @default("starter")
+  billingInterval      String    @default("monthly")
   status               String    @default("inactive")
   currentPeriodEnd     DateTime?
   cancelAtPeriodEnd    Boolean   @default(false)

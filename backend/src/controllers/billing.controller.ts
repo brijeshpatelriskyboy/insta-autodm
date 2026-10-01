@@ -5,6 +5,7 @@ import { AppError } from "../utils/errors";
 
 const checkoutSchema = z.object({
   plan: z.enum(["starter", "creator", "pro"]),
+  billingInterval: z.enum(["monthly", "annual"]).default("monthly"),
 });
 
 export class BillingController {
@@ -36,6 +37,7 @@ export class BillingController {
         req.user.id,
         req.user.email,
         body.plan,
+        body.billingInterval,
       );
       res.json(session);
     } catch (error) {
@@ -57,7 +59,7 @@ export class BillingController {
     try {
       if (!req.user) throw new AppError(401, "Authentication required");
       const body = checkoutSchema.parse(req.body);
-      const result = await billingService.changePlan(req.user.id, body.plan);
+      const result = await billingService.changePlan(req.user.id, body.plan, body.billingInterval);
       res.json(result);
     } catch (error) {
       next(error);

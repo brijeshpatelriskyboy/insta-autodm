@@ -38,6 +38,16 @@ export class InstagramIntegrationController {
     }
   }
 
+  async accounts(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      if (!req.user) throw new AppError(401, "Authentication required");
+      const result = await instagramIntegrationService.listAccounts(req.user.id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async metaConfig(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const config = metaOAuthService.getPublicConfig(getApiBaseUrl(req));
@@ -127,7 +137,8 @@ export class InstagramIntegrationController {
   async disconnect(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (!req.user) throw new AppError(401, "Authentication required");
-      const result = await instagramIntegrationService.disconnect(req.user.id);
+      const accountId = readQueryParamOnce(req.query.accountId);
+      const result = await instagramIntegrationService.disconnect(req.user.id, accountId);
       res.json(result);
     } catch (error) {
       next(error);
@@ -159,9 +170,11 @@ export class InstagramIntegrationController {
       if (!req.user) throw new AppError(401, "Authentication required");
       const rawLimit = readQueryParamOnce(req.query.limit);
       const limit = rawLimit ? Number.parseInt(rawLimit, 10) : 25;
+      const accountId = readQueryParamOnce(req.query.accountId);
       const result = await instagramIntegrationService.listMedia(
         req.user.id,
         Number.isFinite(limit) ? limit : 25,
+        accountId,
       );
       res.json(result);
     } catch (error) {

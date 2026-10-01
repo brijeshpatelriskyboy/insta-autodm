@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +14,8 @@ interface PricingSectionProps {
 }
 
 export function PricingSection({ showHeading = true }: PricingSectionProps) {
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
+
   return (
     <section className={showHeading ? "bg-white py-20 sm:py-28" : ""}>
       <div className={showHeading ? "mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" : ""}>
@@ -18,18 +23,34 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
           <SectionHeading
             eyebrow="Pricing"
             title="Simple, transparent pricing"
-            description="Choose a plan when you are ready. Creating an account does not start billing."
+            description="Choose monthly billing or save 20% with annual billing."
           />
         )}
+
+        <div className="mx-auto mt-6 flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+          <button
+            type="button"
+            onClick={() => setBillingInterval("monthly")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${billingInterval === "monthly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingInterval("annual")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${billingInterval === "annual" ? "bg-brand-600 text-white shadow-sm" : "text-slate-500"}`}
+          >
+            Annual · Save 20%
+          </button>
+        </div>
 
         <p
           className={`text-center text-sm text-slate-600 ${
             showHeading ? "mt-6" : "mx-auto max-w-2xl px-4 sm:px-6 lg:px-8"
           }`}
         >
-          Creating an account does not start a paid subscription. Billing begins
-          only after a paid plan is selected and Stripe checkout is completed
-          when billing is enabled.
+          Creating an account does not start billing. The 50% launch offer applies to
+          monthly billing only and does not stack with annual savings.
         </p>
 
         <div
@@ -59,15 +80,21 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
 
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-4xl font-semibold tracking-tight text-slate-900">
-                    USD ${plan.price}
+                    USD ${billingInterval === "annual" ? plan.annualPrice.toFixed(2) : plan.price}
                   </span>
-                  <span className="text-sm text-slate-500">/month</span>
+                  <span className="text-sm text-slate-500">
+                    {billingInterval === "annual" ? "/year" : "/month"}
+                  </span>
                 </div>
-                {plan.introductoryMonths && plan.offerPrice && (
+                {billingInterval === "annual" ? (
+                  <p className="mt-2 text-sm font-semibold text-emerald-700">
+                    20% off · equivalent to USD ${(plan.annualPrice / 12).toFixed(2)}/month
+                  </p>
+                ) : plan.introductoryMonths && plan.offerPrice ? (
                   <p className="mt-2 text-sm font-semibold text-brand-700">
                     Instagram launch offer: 50% off — USD ${plan.offerPrice}/month for your first {plan.introductoryMonths} months
                   </p>
-                )}
+                ) : null}
 
                 <ul className="mt-8 flex-1 space-y-3">
                   {plan.features.map((feature) => (
@@ -78,7 +105,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                   ))}
                 </ul>
 
-                <Link href={getRegisterUrl(plan.slug)} className="mt-8 block">
+                <Link href={`${getRegisterUrl(plan.slug)}&billing=${billingInterval}`} className="mt-8 block">
                   <Button
                     className="w-full"
                     variant={plan.popular ? "primary" : "secondary"}

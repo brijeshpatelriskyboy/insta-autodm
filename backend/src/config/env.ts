@@ -20,6 +20,10 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   /** USD $9/month recurring Price. */
   STRIPE_PRICE_STARTER: z.string().optional(),
+  /** Optional annual recurring Prices. If omitted, the backend derives/creates the 20%-off annual Price from the monthly Stripe product. */
+  STRIPE_PRICE_STARTER_ANNUAL: z.string().optional(),
+  STRIPE_PRICE_CREATOR_ANNUAL: z.string().optional(),
+  STRIPE_PRICE_PRO_ANNUAL: z.string().optional(),
   /** Stripe coupon: USD $4 off, repeating for 3 months. */
   STRIPE_STARTER_COUPON: z.string().optional(),
   STRIPE_PRICE_CREATOR: z.string().optional(),

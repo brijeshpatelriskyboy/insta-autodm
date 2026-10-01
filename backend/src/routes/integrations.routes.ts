@@ -23,6 +23,9 @@ router.use(authenticate);
 router.get("/instagram/status", (req, res, next) =>
   instagramIntegrationController.status(req, res, next),
 );
+router.get("/instagram/accounts", (req, res, next) =>
+  instagramIntegrationController.accounts(req, res, next),
+);
 router.get("/instagram/oauth-url", (req, res, next) =>
   instagramIntegrationController.oauthUrl(req, res, next),
 );
