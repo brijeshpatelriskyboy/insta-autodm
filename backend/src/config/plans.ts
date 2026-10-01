@@ -50,7 +50,7 @@ export const PLANS: Record<PlanSlug, PlanConfig> = {
     priceId: env.STRIPE_PRICE_PRO,
     annualPriceId: env.STRIPE_PRICE_PRO_ANNUAL,
     couponId: undefined,
-    limits: { instagramAccounts: 15, keywordRules: null, monthlyDms: 25_000 },
+    limits: { instagramAccounts: 15, keywordRules: null, monthlyDms: 100_000 },
   },
 };
 
