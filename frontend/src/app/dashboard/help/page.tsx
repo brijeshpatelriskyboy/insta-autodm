@@ -64,6 +64,9 @@ export default function HelpPage() {
           <VideoGuideCard {...VIDEO_GUIDES.analytics} />
           <VideoGuideCard {...VIDEO_GUIDES.activity} />
           <VideoGuideCard {...VIDEO_GUIDES.billing} />
+          <VideoGuideCard {...VIDEO_GUIDES.keywordOnePostOrReel} />
+          <VideoGuideCard {...VIDEO_GUIDES.keywordOneReelVoice} />
+          <VideoGuideCard {...VIDEO_GUIDES.readKeywordRule} />
         </div>
       </Card>
 
