@@ -610,7 +610,7 @@ export const billingService = {
             launchOfferMessage: launchOffer.instagramUserId
               ? "This Instagram account has already used the 50% launch offer. You can continue at the standard price."
               : "Connect your Instagram account to use the 50% launch offer. You can continue at the standard price.",
-          })),
+          }),
     };
   },
 
