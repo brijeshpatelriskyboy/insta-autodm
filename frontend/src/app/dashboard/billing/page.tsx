@@ -45,6 +45,7 @@ export default function BillingPage() {
   const [history, setHistory] = useState<BillingHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
   const [canceling, setCanceling] = useState(false);
   const [resuming, setResuming] = useState(false);
 
@@ -82,7 +83,7 @@ export default function BillingPage() {
     if (isActive) {
       const planName = BILLING_PLANS.find((item) => item.slug === plan)?.name ?? plan;
       const confirmed = window.confirm(
-        `Change to the ${planName} plan? Stripe will apply any prorated charge or credit now.`,
+        `Change to the ${planName} ${billingInterval} plan? Stripe will apply any prorated charge or credit now.`,
       );
       if (!confirmed) return;
     }
@@ -90,13 +91,13 @@ export default function BillingPage() {
     setCheckoutPlan(plan);
     try {
       if (isActive) {
-        const result = await api.changePlan(token, plan);
+        const result = await api.changePlan(token, plan, billingInterval);
         toast.success(result.message);
         await load();
         return;
       }
 
-      const result = await api.createCheckout(token, plan);
+      const result = await api.createCheckout(token, plan, billingInterval);
       if (result.launchOfferEligible === false && result.launchOfferMessage) {
         window.alert(result.launchOfferMessage);
       }
@@ -191,9 +192,11 @@ export default function BillingPage() {
               </div>
               {subscription?.price != null && (
                 <p className="mt-1 text-sm text-slate-500">
-                  {subscription.introductoryMonths && subscription.standardPrice
-                    ? `USD $${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD $${subscription.standardPrice}/month`
-                    : `USD $${subscription.price}/month`}
+                  {subscription.billingInterval === "annual"
+                    ? `USD ${subscription.annualPrice?.toFixed(2) ?? "0.00"}/year`
+                    : subscription.introductoryMonths && subscription.standardPrice
+                      ? `USD ${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD ${subscription.standardPrice}/month`
+                      : `USD ${subscription.price}/month`}
                   {subscription.currentPeriodEnd &&
                     ` · Renews ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
@@ -227,20 +230,41 @@ export default function BillingPage() {
       <div>
         <h2 className="text-lg font-semibold text-slate-900">Plans</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Choose a plan — billed monthly. Plan changes include an immediate prorated charge
-          or credit. Cancel anytime.
+          Choose monthly billing or save 20% with annual billing. Plan changes can include
+          an immediate prorated charge or credit.
         </p>
+        <div className="mt-4 flex w-fit items-center rounded-full border border-slate-200 bg-slate-50 p-1">
+          <button
+            type="button"
+            onClick={() => setBillingInterval("monthly")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${billingInterval === "monthly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingInterval("annual")}
+            className={`rounded-full px-4 py-2 text-sm font-semibold ${billingInterval === "annual" ? "bg-brand-600 text-white shadow-sm" : "text-slate-500"}`}
+          >
+            Annual · Save 20%
+          </button>
+        </div>
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           {BILLING_PLANS.map((plan) => {
-            const isCurrentPlan = isActive && subscription?.plan === plan.slug;
+            const isCurrentPlan =
+              isActive &&
+              subscription?.plan === plan.slug &&
+              subscription?.billingInterval === billingInterval;
             const planOrder = { starter: 0, creator: 1, pro: 2 } as const;
             const currentPlanOrder = subscription?.plan
               ? planOrder[subscription.plan]
               : -1;
             const actionLabel = isActive
-              ? planOrder[plan.slug] > currentPlanOrder
-                ? "Upgrade plan"
-                : "Downgrade plan"
+              ? subscription?.plan === plan.slug
+                ? "Switch billing"
+                : planOrder[plan.slug] > currentPlanOrder
+                  ? "Upgrade plan"
+                  : "Downgrade plan"
               : "Subscribe";
             return (
               <Card
