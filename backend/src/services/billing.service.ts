@@ -437,7 +437,10 @@ async function reconcileStripeBillingForDashboard(userId: string) {
 
 export const billingService = {
   async activateLite(userId: string, code: string) {
-    if (code.trim().toUpperCase() !== "LITEFREE") {
+    if (!env.LITE_ACCESS_CODE) {
+      throw new AppError(503, "Lite access is temporarily unavailable");
+    }
+    if (code.trim().toUpperCase() !== env.LITE_ACCESS_CODE.toUpperCase()) {
       throw new AppError(400, "Invalid Lite access code");
     }
 
