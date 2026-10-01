@@ -50,7 +50,7 @@ interface UpdateKeywordRuleInput {
 }
 
 async function prepareFollowGate(userId: string) {
-  const account = await prisma.instagramAccount.findUnique({ where: { userId } });
+  const account = await prisma.instagramAccount.findFirst({ where: { userId, connectionStatus: "connected" }, orderBy: { connectedAt: "asc" } });
   if (!account || account.connectionStatus !== "connected") {
     throw new AppError(400, "Connect Instagram before enabling the follow requirement");
   }
@@ -97,7 +97,7 @@ async function resolveMediaCache(
     };
   }
 
-  const account = await prisma.instagramAccount.findUnique({ where: { userId } });
+  const account = await prisma.instagramAccount.findFirst({ where: { userId, connectionStatus: "connected" }, orderBy: { connectedAt: "asc" } });
   if (!account || account.connectionStatus !== "connected") {
     throw new AppError(400, "Connect Instagram before attaching a rule to a post");
   }
