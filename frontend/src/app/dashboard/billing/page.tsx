@@ -281,14 +281,20 @@ export default function BillingPage() {
               )}
               <h3 className="text-lg font-semibold text-slate-900">{plan.name}</h3>
               <p className="mt-2 text-3xl font-semibold text-slate-900">
-                USD ${plan.price}
-                <span className="text-sm font-normal text-slate-500">/month</span>
+                USD ${billingInterval === "annual" ? plan.annualPrice.toFixed(2) : plan.price}
+                <span className="text-sm font-normal text-slate-500">
+                  {billingInterval === "annual" ? "/year" : "/month"}
+                </span>
               </p>
-              {plan.introductoryMonths && plan.offerPrice && (
+              {billingInterval === "annual" ? (
+                <p className="mt-1 text-sm font-medium text-emerald-700">
+                  20% off · equivalent to USD ${(plan.annualPrice / 12).toFixed(2)}/month
+                </p>
+              ) : plan.introductoryMonths && plan.offerPrice ? (
                 <p className="mt-1 text-sm font-medium text-brand-700">
                   Follow @comment2dm.ai and comment GREAT on our pinned post to unlock 50% off for your first {plan.introductoryMonths} months
                 </p>
-              )}
+              ) : null}
               <ul className="mt-4 space-y-2">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-sm text-slate-600">
