@@ -7,6 +7,7 @@ import { AppError } from "../utils/errors";
 import { decryptToken, encryptToken } from "../utils/tokenCrypto";
 import { activityService } from "./activity.service";
 import { metaGraphService } from "./metaGraph.service";
+import { assertCanConnectInstagramAccount, getInstagramAccountUsage } from "./planLimits.service";
 
 function mapInstagramSaveError(error: unknown): AppError {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -207,8 +208,9 @@ async function enableAccountWebhookSubscription(params: {
 export const instagramIntegrationService = {
   async getStatus(userId: string) {
     try {
-      const account = await prisma.instagramAccount.findUnique({
+      const account = await prisma.instagramAccount.findFirst({
         where: { userId },
+        orderBy: { connectedAt: "asc" },
       });
 
       if (!account || account.connectionStatus !== "connected") {
@@ -273,6 +275,33 @@ export const instagramIntegrationService = {
     }
   },
 
+  async listAccounts(userId: string) {
+    const [accounts, usage] = await Promise.all([
+      prisma.instagramAccount.findMany({
+        where: { userId },
+        orderBy: { connectedAt: "asc" },
+      }),
+      getInstagramAccountUsage(userId),
+    ]);
+
+    return {
+      accounts: accounts.map((account) => ({
+        id: account.id,
+        username: account.username,
+        instagramUserId: account.instagramUserId,
+        accountType: account.accountType,
+        profilePictureUrl: account.profilePictureUrl,
+        connectionStatus: account.connectionStatus,
+        connectedAt: account.connectedAt?.toISOString() ?? null,
+        webhookSubscribedAt: account.webhookSubscribedAt?.toISOString() ?? null,
+      })),
+      used: usage.used,
+      limit: usage.limit,
+      remaining: usage.remaining,
+      plan: usage.plan,
+    };
+  },
+
   async connectMock(userId: string) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -289,7 +318,7 @@ export const instagramIntegrationService = {
     const pageId = buildMockPageId(user.id);
 
     const account = await prisma.instagramAccount.upsert({
-      where: { userId },
+      where: { instagramUserId },
       create: {
         userId,
         instagramUserId,
@@ -368,6 +397,8 @@ export const instagramIntegrationService = {
     const profilePictureUrl = profile.profile_picture_url ?? null;
     const accessTokenEncrypted = encryptToken(longLived.access_token);
 
+    await assertCanConnectInstagramAccount(userId, instagramUserId);
+
     // Instagram Login may not return a Facebook Page ID (Page is optional for this API).
     // Probe Graph and persist only when Meta actually returns one.
     const pageLookup = await metaGraphService.resolveLinkedFacebookPageId({
@@ -379,7 +410,7 @@ export const instagramIntegrationService = {
     let account;
     try {
       account = await prisma.instagramAccount.upsert({
-        where: { userId },
+        where: { instagramUserId },
         create: {
           userId,
           instagramUserId,
@@ -396,7 +427,7 @@ export const instagramIntegrationService = {
           webhookSubscribedFields: null,
         },
         update: {
-          instagramUserId,
+          userId,
           username,
           accountType,
           profilePictureUrl,
@@ -565,7 +596,7 @@ export const instagramIntegrationService = {
     });
 
     const updated = await prisma.instagramAccount.update({
-      where: { userId },
+      where: { id: account.id },
       data: {
         pageId: pageLookup.pageId,
         lastSyncAt: verifiedAt,
@@ -603,7 +634,7 @@ export const instagramIntegrationService = {
       const now = new Date();
       const fieldsCsv = INSTAGRAM_WEBHOOK_SUBSCRIBED_FIELDS.join(",");
       const updated = await prisma.instagramAccount.update({
-        where: { userId },
+        where: { id: account.id },
         data: {
           webhookSubscribedAt: now,
           webhookSubscribedFields: fieldsCsv,
@@ -644,7 +675,7 @@ export const instagramIntegrationService = {
       );
     }
 
-    const refreshed = await prisma.instagramAccount.findUnique({ where: { userId } });
+    const refreshed = await prisma.instagramAccount.findFirst({ where: { userId }, orderBy: { connectedAt: "asc" } });
     return {
       // Token successfully called subscribed_apps — Graph access is active.
       ...formatAccountResponse(refreshed ?? account, {
@@ -655,9 +686,10 @@ export const instagramIntegrationService = {
     };
   },
 
-  async disconnect(userId: string) {
-    const account = await prisma.instagramAccount.findUnique({
-      where: { userId },
+  async disconnect(userId: string, accountId?: string) {
+    const account = await prisma.instagramAccount.findFirst({
+      where: { userId, ...(accountId ? { id: accountId } : {}) },
+      orderBy: { connectedAt: "asc" },
     });
 
     if (!account || account.connectionStatus !== "connected") {
@@ -665,7 +697,7 @@ export const instagramIntegrationService = {
     }
 
     await prisma.instagramAccount.delete({
-      where: { userId },
+      where: { id: account.id },
     });
 
     await activityService.log(userId, {
@@ -686,7 +718,7 @@ export const instagramIntegrationService = {
    * Never returns the access token.
    */
   async listMedia(userId: string, limit = 25) {
-    const account = await prisma.instagramAccount.findUnique({ where: { userId } });
+    const account = await prisma.instagramAccount.findFirst({ where: { userId }, orderBy: { connectedAt: "asc" } });
     if (!account || account.connectionStatus !== "connected") {
       throw new AppError(404, "No connected Instagram account found");
     }
