@@ -8,11 +8,14 @@ import {
   Camera,
   CheckCircle2,
   Loader2,
+  PlayCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill } from "@/components/ui/StatusPill";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 import { useToast } from "@/components/providers/ToastProvider";
 import {
   api,
@@ -113,7 +116,7 @@ export default function InstagramSetupPage() {
         description="Connect your Instagram Professional account to automate DMs from comments."
       />
 
-      {oauthNotice && (
+      <VideoGuideCard {...VIDEO_GUIDES.accountSetup} />\n\n      {oauthNotice && (
         <Card padding="md">
           <p className="text-sm font-medium text-slate-900">
             {oauthStatus === "success" ? "Instagram connected" : "Instagram connection update"}

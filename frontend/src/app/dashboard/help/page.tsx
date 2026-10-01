@@ -6,6 +6,8 @@ import { ChevronDown, MessageCircle, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Button } from "@/components/ui/Button";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 import { faqItems, gettingStartedSteps } from "@/lib/help";
 
 export default function HelpPage() {
@@ -14,8 +16,8 @@ export default function HelpPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Help Center"
-        description="Simple help for getting started with Comment2DM."
+        title="Help & Video Guides"
+        description="Quick guides for setting up and using Comment2DM."
       />
 
       <Card title="Getting Started">
@@ -48,6 +50,20 @@ export default function HelpPage() {
           <Link href="/dashboard/integrations">
             <Button variant="secondary">Connect Instagram</Button>
           </Link>
+        </div>
+      </Card>
+
+      <Card title="Video Instructions" description="Open any guide when you need it.">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <VideoGuideCard {...VIDEO_GUIDES.accountSetup} />
+          <VideoGuideCard {...VIDEO_GUIDES.keywordTriggers} />
+          <VideoGuideCard {...VIDEO_GUIDES.postReelTargeting} />
+          <VideoGuideCard {...VIDEO_GUIDES.automaticDms} />
+          <VideoGuideCard {...VIDEO_GUIDES.publicReplies} />
+          <VideoGuideCard {...VIDEO_GUIDES.followToUnlock} />
+          <VideoGuideCard {...VIDEO_GUIDES.analytics} />
+          <VideoGuideCard {...VIDEO_GUIDES.activity} />
+          <VideoGuideCard {...VIDEO_GUIDES.billing} />
         </div>
       </Card>
 

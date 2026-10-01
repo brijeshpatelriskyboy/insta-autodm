@@ -12,6 +12,8 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { KeywordRuleForm } from "@/components/rules/KeywordRuleForm";
 import { KeywordRulesTable } from "@/components/rules/KeywordRulesTable";
 import { TestFirstAutomationPanel } from "@/components/dashboard/TestFirstAutomationPanel";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 import { api, ApiError, type KeywordRule } from "@/lib/api";
 import { getStoredUser, getToken } from "@/lib/auth";
 import {
@@ -187,6 +189,19 @@ export default function RulesPage() {
           ) : undefined
         }
       />
+
+      <details className="rounded-2xl border border-purple-200 bg-purple-50/50">
+        <summary className="cursor-pointer list-none px-5 py-4 font-semibold text-slate-900">
+          Video instructions · 5 quick guides
+        </summary>
+        <div className="grid gap-4 border-t border-purple-100 p-4 lg:grid-cols-2">
+          <VideoGuideCard {...VIDEO_GUIDES.keywordTriggers} />
+          <VideoGuideCard {...VIDEO_GUIDES.postReelTargeting} />
+          <VideoGuideCard {...VIDEO_GUIDES.automaticDms} />
+          <VideoGuideCard {...VIDEO_GUIDES.publicReplies} />
+          <VideoGuideCard {...VIDEO_GUIDES.followToUnlock} />
+        </div>
+      </details>
 
       <div className="rounded-xl border border-brand-200/80 bg-brand-50/50 px-4 py-3 text-sm text-brand-900">
         Rules are ready and will become active once Instagram is connected.
