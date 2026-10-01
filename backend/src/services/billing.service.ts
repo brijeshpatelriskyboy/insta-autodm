@@ -466,11 +466,8 @@ export const billingService = {
     if (userClaim || instagramClaim) {
       throw new AppError(409, "The one-month Lite offer has already been used");
     }
-    if (
-      existingSubscription?.stripeSubscriptionId &&
-      (existingSubscription.status === "active" || existingSubscription.status === "trialing")
-    ) {
-      throw new AppError(409, "You already have an active paid subscription");
+    if (existingSubscription?.stripeCustomerId || existingSubscription?.stripeSubscriptionId) {
+      throw new AppError(409, "Lite is available only to first-time users who have not previously started paid billing");
     }
 
     const activatedAt = new Date();
