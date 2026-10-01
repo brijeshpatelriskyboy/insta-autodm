@@ -19,6 +19,8 @@ import { useToast } from "@/components/providers/ToastProvider";
 import { api, type BillingHistoryItem, type SubscriptionInfo } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { BILLING_PLANS } from "@/lib/billing-plans";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 
 function formatMoney(cents: number, currency = "usd"): string {
   return new Intl.NumberFormat("en-US", {
@@ -152,14 +154,13 @@ export default function BillingPage() {
         description="Manage your subscription, plans, and payment history."
       />
 
-      {!subscription?.stripeConfigured && (
+      <VideoGuideCard {...VIDEO_GUIDES.billing} />\n\n      {!subscription?.stripeConfigured && (
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
           <div>
-            <p className="text-sm font-semibold text-amber-900">Stripe not configured</p>
+            <p className="text-sm font-semibold text-amber-900">Billing temporarily unavailable</p>
             <p className="mt-1 text-sm text-amber-800">
-              Add Stripe API keys and price IDs to backend .env to enable live checkout.
-              The billing UI is ready when you connect Stripe.
+              Please try again shortly or contact support if you need help.
             </p>
           </div>
         </div>
