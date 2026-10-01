@@ -46,7 +46,7 @@ export const BILLING_PLANS = [
     features: [
       "15 Instagram accounts",
       "Unlimited keyword rules",
-      "25,000 DMs / month",
+      "100,000 DMs / month",
       "Analytics dashboard",
       "Activity log",
       "Email support via the contact form",
