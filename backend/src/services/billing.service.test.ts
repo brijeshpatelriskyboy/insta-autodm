@@ -52,6 +52,7 @@ describe("billing checkout configuration", () => {
         introductoryMonths: 3,
         priceId: "price_9_usd_monthly",
         couponId: "coupon_4_usd_three_months",
+        limits: { instagramAccounts: 1, keywordRules: 5, monthlyDms: 1_000 },
       },
     });
 
@@ -119,10 +120,13 @@ describe("billing checkout configuration", () => {
           slug: "starter",
           name: "Starter",
           price: 5,
+          annualPrice: 86.4,
+          annualPriceId: undefined,
           standardPrice: 9,
           introductoryMonths: 3,
           priceId: "price_9_usd_monthly",
           couponId: undefined,
+          limits: { instagramAccounts: 1, keywordRules: 5, monthlyDms: 1_000 },
         },
       }),
     ).not.toThrow();
@@ -142,6 +146,7 @@ describe("billing checkout configuration", () => {
         annualPriceId: undefined,
         priceId: "price_creator_monthly",
         couponId: undefined,
+        limits: { instagramAccounts: 3, keywordRules: null, monthlyDms: 10_000 },
       },
     });
 
