@@ -124,3 +124,86 @@
     box-shadow: 0 0 0 0 rgb(139 92 246 / 0);
   }
 }
+
+
+/* Claude-inspired Comment2DM marketing motion */
+.claude-grid {
+  background-image:
+    linear-gradient(rgb(133 69 239 / 0.28) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(133 69 239 / 0.28) 1px, transparent 1px);
+  background-size: 42px 42px;
+  transform: perspective(420px) rotateX(68deg) scale(1.25);
+  transform-origin: bottom center;
+  mask-image: linear-gradient(to top, rgb(0 0 0 / 0.85), transparent 85%);
+}
+
+.claude-marquee {
+  display: inline-flex;
+  min-width: max-content;
+  animation: claudeMarquee 24s linear infinite;
+}
+
+.claude-reel-card {
+  transform-style: preserve-3d;
+  animation: claudeCardIn 0.65s ease-out both;
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+.claude-reel-card:hover {
+  transform: perspective(900px) rotateX(3deg) rotateY(-4deg) translateY(-6px);
+  box-shadow:
+    0 8px 0 #4b1fa0,
+    0 30px 60px -20px rgb(75 31 160 / 0.55);
+}
+
+.animate-claude-float {
+  animation: claudeFloat 6s ease-in-out infinite;
+}
+
+.animate-claude-float-slow {
+  animation: claudeFloat 8s ease-in-out infinite reverse;
+}
+
+.animate-claude-orbit {
+  animation: claudeOrbit 10s ease-in-out infinite;
+}
+
+@keyframes claudeMarquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes claudeCardIn {
+  from {
+    opacity: 0;
+    transform: perspective(900px) rotateX(8deg) translateY(24px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
+  }
+}
+
+@keyframes claudeFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-14px) scale(1.03); }
+}
+
+@keyframes claudeOrbit {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(22px, -12px) rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claude-marquee,
+  .claude-reel-card,
+  .animate-claude-float,
+  .animate-claude-float-slow,
+  .animate-claude-orbit {
+    animation: none;
+  }
+
+  .claude-reel-card:hover {
+    transform: none;
+  }
+}

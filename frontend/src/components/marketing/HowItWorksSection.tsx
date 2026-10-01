@@ -1,73 +1,55 @@
-import { MessageCircle, Search, Send, UserCheck } from "lucide-react";
-import { howItWorksSteps } from "@/lib/marketing-data";
-import { AnimateIn } from "./AnimateIn";
-import { SectionHeading } from "./SectionHeading";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 
-const stepIcons = [MessageCircle, Search, Send, UserCheck];
+const reels = [
+  VIDEO_GUIDES.accountSetup,
+  VIDEO_GUIDES.keywordTriggers,
+  VIDEO_GUIDES.postReelTargeting,
+  VIDEO_GUIDES.automaticDms,
+  VIDEO_GUIDES.publicReplies,
+  VIDEO_GUIDES.followToUnlock,
+  VIDEO_GUIDES.analytics,
+  VIDEO_GUIDES.activity,
+  VIDEO_GUIDES.billing,
+];
 
 export function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="py-20 sm:py-28">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHeading
-          eyebrow="How it works"
-          title="From comment to conversion in seconds"
-          description="Four simple steps. Zero manual work. Your audience gets instant value, and you capture every lead."
-        />
+    <section id="how-it-works" className="relative overflow-hidden bg-[#f6f3ff] py-20 sm:py-28">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -left-20 top-24 h-44 w-44 rounded-full bg-[#8545ef]/15 blur-2xl" />
+        <div className="absolute -right-20 bottom-20 h-52 w-52 rounded-full bg-[#6a2fd0]/20 blur-2xl" />
+        <div className="absolute inset-x-0 bottom-0 h-52 claude-grid opacity-50" />
+      </div>
 
-        <div className="relative mt-16">
-          <div className="absolute left-8 top-8 hidden h-[calc(100%-4rem)] w-px bg-gradient-to-b from-brand-300 via-accent-400 to-brand-300 lg:left-1/2 lg:block" />
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+          <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-[#8545ef]">
+            How it works
+          </p>
+          <h2 className="mt-3 text-3xl font-extrabold tracking-[-0.035em] text-[#151c30] sm:text-5xl">
+            Watch Comment2DM in action
+          </h2>
+        </div>
 
-          <div className="space-y-12 lg:space-y-0">
-            {howItWorksSteps.map((step, i) => {
-              const Icon = stepIcons[i];
-              const isEven = i % 2 === 0;
-
-              return (
-                <AnimateIn key={step.step} delay={i * 120}>
-                  <div
-                    className={`relative flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-12 ${
-                      isEven ? "lg:flex-row" : "lg:flex-row-reverse"
-                    }`}
-                  >
-                    <div className={`flex-1 ${isEven ? "lg:text-right" : "lg:text-left"}`}>
-                      <div
-                        className={`inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 ${
-                          isEven ? "lg:ml-auto" : ""
-                        }`}
-                      >
-                        Step {step.step}
-                      </div>
-                      <h3 className="mt-3 text-xl font-semibold text-slate-900">
-                        {step.title}
-                      </h3>
-                      <p className="mt-2 text-slate-600">
-                        {step.highlight ? (
-                          <>
-                            {step.description.split(step.highlight)[0]}
-                            <span className="rounded-md bg-brand-100 px-1.5 py-0.5 font-mono text-sm font-semibold text-brand-700">
-                              {step.highlight}
-                            </span>
-                            {step.description.split(step.highlight)[1]}
-                          </>
-                        ) : (
-                          step.description
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="relative z-10 flex shrink-0 justify-center lg:w-16">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-accent-500 text-white shadow-lg shadow-brand-500/25">
-                        <Icon className="h-6 w-6" />
-                      </div>
-                    </div>
-
-                    <div className="hidden flex-1 lg:block" />
-                  </div>
-                </AnimateIn>
-              );
-            })}
-          </div>
+        <div className="mt-12 grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+          {reels.map((reel, index) => (
+            <div
+              key={reel.src}
+              className="claude-reel-card group relative overflow-hidden rounded-[26px] border-2 border-[#8545ef] bg-[#eee6ff] p-2 shadow-[0_8px_0_#4b1fa0,0_24px_50px_-22px_rgba(75,31,160,.55)]"
+              style={{ animationDelay: `${index * 90}ms` }}
+            >
+              <video
+                className="aspect-[9/16] w-full rounded-[20px] bg-[#f6f3ff] object-cover"
+                controls
+                preload="metadata"
+                playsInline
+                aria-label={reel.title}
+              >
+                <source src={reel.src} type="video/mp4" />
+                Your browser does not support video playback.
+              </video>
+            </div>
+          ))}
         </div>
       </div>
     </section>
