@@ -110,7 +110,6 @@ export default function IntegrationsPage() {
   const commentActive = Boolean(status?.webhookSubscribedAt);
   const dmActive = connected && status?.graphApiStatus === "active";
   const connectReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
-  const displayName = status?.username ? `@${status.username}` : "Instagram";
 
   return (
     <div className="space-y-8">
