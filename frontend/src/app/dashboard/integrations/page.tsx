@@ -13,6 +13,7 @@ import {
   api,
   ApiError,
   type InstagramIntegrationStatus,
+  type InstagramAccountsResponse,
   type MetaOAuthConfig,
 } from "@/lib/api";
 import { getToken, getStoredUser } from "@/lib/auth";
@@ -23,6 +24,7 @@ export default function IntegrationsPage() {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<InstagramIntegrationStatus | null>(null);
   const [metaConfig, setMetaConfig] = useState<MetaOAuthConfig | null>(null);
+  const [accountsInfo, setAccountsInfo] = useState<InstagramAccountsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [connectLoading, setConnectLoading] = useState(false);
@@ -35,12 +37,14 @@ export default function IntegrationsPage() {
       return;
     }
 
-    const [statusResult, configResult] = await Promise.allSettled([
+    const [statusResult, accountsResult, configResult] = await Promise.allSettled([
       api.getInstagramIntegrationStatus(token),
+      api.getInstagramAccounts(token),
       api.getMetaOAuthConfig(),
     ]);
 
     if (statusResult.status === "fulfilled") setStatus(statusResult.value);
+    if (accountsResult.status === "fulfilled") setAccountsInfo(accountsResult.value);
     if (configResult.status === "fulfilled") setMetaConfig(configResult.value);
     setLoading(false);
   }, []);
@@ -83,13 +87,13 @@ export default function IntegrationsPage() {
     }
   }
 
-  async function handleDisconnect() {
+  async function handleDisconnect(accountId?: string) {
     const token = getToken();
     if (!token) return;
 
     setActionLoading(true);
     try {
-      await api.disconnectInstagram(token);
+      await api.disconnectInstagram(token, accountId);
       await loadStatus();
       toast.success("Instagram disconnected");
     } catch (error) {
@@ -101,7 +105,8 @@ export default function IntegrationsPage() {
     }
   }
 
-  const connected = status?.connected ?? false;
+  const connected = (accountsInfo?.used ?? 0) > 0 || (status?.connected ?? false);
+  const canAddAccount = Boolean(accountsInfo && accountsInfo.remaining > 0);
   const commentActive = Boolean(status?.webhookSubscribedAt);
   const dmActive = connected && status?.graphApiStatus === "active";
   const connectReady = Boolean(metaConfig?.oauthEnabled && metaConfig?.configured);
@@ -123,64 +128,83 @@ export default function IntegrationsPage() {
         </div>
       )}
 
-      <Card padding="lg">
+      <Card
+        title="Instagram accounts"
+        description={
+          accountsInfo
+            ? `${accountsInfo.used} of ${accountsInfo.limit} connected on your ${accountsInfo.plan} plan.`
+            : "Connect an Instagram Business or Creator account."
+        }
+        padding="lg"
+      >
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
             Loading...
           </div>
         ) : (
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              {status?.profilePictureUrl ? (
-                <img
-                  src={status.profilePictureUrl}
-                  alt={displayName}
-                  className="h-14 w-14 rounded-2xl object-cover shadow-sm"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white shadow-sm">
-                  <Camera className="h-7 w-7" />
+          <div className="space-y-4">
+            {(accountsInfo?.accounts ?? []).map((account) => (
+              <div
+                key={account.id}
+                className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  {account.profilePictureUrl ? (
+                    <img
+                      src={account.profilePictureUrl}
+                      alt={`@${account.username}`}
+                      className="h-12 w-12 rounded-xl object-cover shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white">
+                      <Camera className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-slate-900">@{account.username}</p>
+                      <StatusPill status={account.connectionStatus === "connected" ? "connected" : "disconnected"} />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {account.accountType} · {account.webhookSubscribedAt ? "Comment automation active" : "Checking automation"}
+                    </p>
+                  </div>
                 </div>
-              )}
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {connected ? displayName : "Instagram account"}
-                  </h3>
-                  <StatusPill status={connected ? "connected" : "disconnected"} />
-                </div>
-                <p className="mt-1 text-sm text-slate-500">
-                  {connected
-                    ? "Your Instagram Professional account is connected."
-                    : "Connect an Instagram Business or Creator account to start automating DMs."}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              {!connected ? (
                 <Button
-                  onClick={handleConnectInstagram}
-                  disabled={!connectReady || connectLoading}
+                  variant="secondary"
+                  onClick={() => handleDisconnect(account.id)}
+                  disabled={actionLoading}
                 >
-                  {connectLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Connect Instagram
+                  {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Disconnect
                 </Button>
-              ) : (
-                <>
-                  <Link href="/dashboard/integrations/instagram-setup">
-                    <Button variant="secondary">Manage</Button>
-                  </Link>
-                  <Button
-                    variant="secondary"
-                    onClick={handleDisconnect}
-                    disabled={actionLoading}
-                  >
-                    {actionLoading && <Loader2 className="h-4 w-4 animate-spin" />}
-                    Disconnect
-                  </Button>
-                </>
+              </div>
+            ))}
+
+            {accountsInfo?.accounts.length === 0 && (
+              <p className="text-sm text-slate-500">
+                Connect an Instagram Business or Creator account to start automating DMs.
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                onClick={handleConnectInstagram}
+                disabled={!connectReady || connectLoading || (accountsInfo ? !canAddAccount : false)}
+              >
+                {connectLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                {connected ? "Connect another Instagram" : "Connect Instagram"}
+              </Button>
+              {accountsInfo && !canAddAccount && (
+                <p className="text-sm text-amber-700">
+                  Your {accountsInfo.plan} plan has reached its {accountsInfo.limit}-account limit.
+                </p>
+              )}
+              {connected && (
+                <Link href="/dashboard/integrations/instagram-setup">
+                  <Button variant="secondary">Setup details</Button>
+                </Link>
               )}
             </div>
           </div>
