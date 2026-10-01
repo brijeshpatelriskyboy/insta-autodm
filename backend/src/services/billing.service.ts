@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { env, isStripeConfigured } from "../config/env";
-import { getPlan, type PlanSlug } from "../config/plans";
+import { getPlan, type BillingInterval, type PlanSlug } from "../config/plans";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 
@@ -8,6 +8,8 @@ export function buildCheckoutSessionParams(params: {
   customerId: string;
   userId: string;
   plan: NonNullable<ReturnType<typeof getPlan>>;
+  priceId: string;
+  billingInterval: BillingInterval;
   frontendUrl: string;
   allowPromotionCodes?: boolean;
   launchOfferInstagramUserId?: string;
@@ -17,19 +19,17 @@ export function buildCheckoutSessionParams(params: {
     customerId,
     userId,
     plan,
+    priceId,
+    billingInterval,
     frontendUrl,
     allowPromotionCodes = false,
     launchOfferInstagramUserId,
     expiresAt,
   } = params;
-  if (!plan.priceId) {
-    throw new AppError(503, "Stripe price is not configured");
-  }
-
   return {
     customer: customerId,
     mode: "subscription",
-    line_items: [{ price: plan.priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     allow_promotion_codes: allowPromotionCodes,
     client_reference_id: userId,
     success_url: `${frontendUrl}/dashboard/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
@@ -37,6 +37,7 @@ export function buildCheckoutSessionParams(params: {
     metadata: {
       userId,
       plan: plan.slug,
+      billingInterval,
       ...(launchOfferInstagramUserId
         ? { launchOfferInstagramUserId }
         : {}),
@@ -45,6 +46,7 @@ export function buildCheckoutSessionParams(params: {
       metadata: {
         userId,
         plan: plan.slug,
+        billingInterval,
         ...(launchOfferInstagramUserId
           ? { launchOfferInstagramUserId }
           : {}),
@@ -58,15 +60,14 @@ export function buildPlanChangeParams(params: {
   itemId: string;
   userId: string;
   plan: NonNullable<ReturnType<typeof getPlan>>;
+  priceId: string;
+  billingInterval: BillingInterval;
 }): Stripe.SubscriptionUpdateParams {
-  const { itemId, userId, plan } = params;
-  if (!plan.priceId) {
-    throw new AppError(503, "Stripe price is not configured for this plan");
-  }
+  const { itemId, userId, plan, priceId, billingInterval } = params;
 
   return {
-    items: [{ id: itemId, price: plan.priceId, quantity: 1 }],
-    metadata: { userId, plan: plan.slug },
+    items: [{ id: itemId, price: priceId, quantity: 1 }],
+    metadata: { userId, plan: plan.slug, billingInterval },
     cancel_at_period_end: false,
     proration_behavior: "always_invoice",
     payment_behavior: "error_if_incomplete",
@@ -91,6 +92,46 @@ function getStripe(): Stripe {
     throw new AppError(503, "Stripe is not configured. Add STRIPE_SECRET_KEY to backend .env");
   }
   return new Stripe(env.STRIPE_SECRET_KEY);
+}
+
+async function resolvePlanPriceId(
+  stripe: Stripe,
+  plan: NonNullable<ReturnType<typeof getPlan>>,
+  billingInterval: BillingInterval,
+): Promise<string> {
+  if (billingInterval === "monthly") {
+    if (!plan.priceId) throw new AppError(503, "Monthly Stripe price is not configured");
+    return plan.priceId;
+  }
+
+  if (plan.annualPriceId) return plan.annualPriceId;
+  if (!plan.priceId) throw new AppError(503, "Monthly Stripe price is not configured");
+
+  const monthlyPrice = await stripe.prices.retrieve(plan.priceId);
+  const productId = stripeId(monthlyPrice.product);
+  if (!productId) throw new AppError(503, "Stripe product could not be resolved for annual billing");
+
+  const unitAmount = Math.round(plan.annualPrice * 100);
+  const prices = await stripe.prices.list({ product: productId, active: true, type: "recurring", limit: 100 });
+  const existing = prices.data.find((price) =>
+    price.currency === "usd" &&
+    price.unit_amount === unitAmount &&
+    price.recurring?.interval === "year" &&
+    (price.recurring?.interval_count ?? 1) === 1
+  );
+  if (existing) return existing.id;
+
+  const created = await stripe.prices.create({
+    product: productId,
+    currency: "usd",
+    unit_amount: unitAmount,
+    recurring: { interval: "year" },
+    metadata: {
+      comment2dmPlan: plan.slug,
+      comment2dmBillingInterval: "annual",
+    },
+  });
+  return created.id;
 }
 
 async function getOrCreateSubscriptionRecord(userId: string) {
@@ -118,8 +159,15 @@ async function prepareLaunchOfferCheckout(
   userId: string,
   stripe: Stripe,
 ): Promise<LaunchOfferCheckout> {
-  const account = await prisma.instagramAccount.findUnique({
-    where: { userId },
+  const alreadyRedeemed = await prisma.launchOfferClaim.findFirst({
+    where: { userId, status: "redeemed" },
+    select: { id: true },
+  });
+  if (alreadyRedeemed) return { eligible: false };
+
+  const account = await prisma.instagramAccount.findFirst({
+    where: { userId, connectionStatus: "connected" },
+    orderBy: { connectedAt: "asc" },
     select: {
       instagramUserId: true,
       connectionStatus: true,
@@ -354,6 +402,9 @@ async function reconcileStripeBilling(userId: string) {
       ...(subscription.metadata?.plan
         ? { plan: subscription.metadata.plan as PlanSlug }
         : {}),
+      ...(subscription.metadata?.billingInterval
+        ? { billingInterval: subscription.metadata.billingInterval as BillingInterval }
+        : {}),
     },
   });
 
@@ -383,6 +434,8 @@ export const billingService = {
       plan: sub?.plan ?? null,
       planName: plan?.name ?? null,
       price: plan?.price ?? null,
+      annualPrice: plan?.annualPrice ?? null,
+      billingInterval: (sub?.billingInterval as BillingInterval | undefined) ?? "monthly",
       standardPrice: plan?.standardPrice ?? null,
       introductoryMonths: plan?.introductoryMonths ?? null,
       status: sub?.status ?? "inactive",
@@ -411,7 +464,12 @@ export const billingService = {
     }));
   },
 
-  async createCheckoutSession(userId: string, email: string, planSlug: string) {
+  async createCheckoutSession(
+    userId: string,
+    email: string,
+    planSlug: string,
+    billingInterval: BillingInterval = "monthly",
+  ) {
     const billingUser = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true, profileCompletedAt: true },
@@ -433,6 +491,7 @@ export const billingService = {
     }
 
     const stripe = getStripe();
+    const priceId = await resolvePlanPriceId(stripe, plan, billingInterval);
     const record = await getOrCreateSubscriptionRecord(userId);
 
     if (
@@ -455,7 +514,9 @@ export const billingService = {
       });
     }
 
-    const launchOffer = await prepareLaunchOfferCheckout(userId, stripe);
+    const launchOffer = billingInterval === "monthly"
+      ? await prepareLaunchOfferCheckout(userId, stripe)
+      : { eligible: false } as LaunchOfferCheckout;
     if (launchOffer.existingUrl) {
       return {
         url: launchOffer.existingUrl,
@@ -470,6 +531,8 @@ export const billingService = {
           customerId,
           userId,
           plan,
+          priceId,
+          billingInterval,
           frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
           allowPromotionCodes: launchOffer.eligible,
           launchOfferInstagramUserId: launchOffer.eligible
@@ -511,6 +574,8 @@ export const billingService = {
             customerId,
             userId,
             plan,
+            priceId,
+            billingInterval,
             frontendUrl: env.FRONTEND_URL.replace(/\/$/, ""),
             allowPromotionCodes: false,
           }),
@@ -527,13 +592,15 @@ export const billingService = {
     return {
       url: session.url,
       launchOfferEligible: launchOffer.eligible,
-      ...(launchOffer.eligible
+      ...(billingInterval === "annual"
+        ? { launchOfferMessage: "Annual billing already includes 20% off and does not stack with the launch offer." }
+        : launchOffer.eligible
         ? {}
         : {
             launchOfferMessage: launchOffer.instagramUserId
               ? "This Instagram account has already used the 50% launch offer. You can continue at the standard price."
               : "Connect your Instagram account to use the 50% launch offer. You can continue at the standard price.",
-          }),
+          })),
     };
   },
 
@@ -589,7 +656,7 @@ export const billingService = {
     return { message: "Subscription resumed successfully" };
   },
 
-  async changePlan(userId: string, planSlug: string) {
+  async changePlan(userId: string, planSlug: string, billingInterval: BillingInterval = "monthly") {
     if (!isStripeConfigured()) {
       throw new AppError(503, "Stripe billing is not configured");
     }
@@ -606,11 +673,12 @@ export const billingService = {
     ) {
       throw new AppError(400, "No active subscription to change");
     }
-    if (record.plan === plan.slug) {
-      throw new AppError(409, `You are already on the ${plan.name} plan`);
+    if (record.plan === plan.slug && record.billingInterval === billingInterval) {
+      throw new AppError(409, `You are already on the ${plan.name} ${billingInterval} plan`);
     }
 
     const stripe = getStripe();
+    const priceId = await resolvePlanPriceId(stripe, plan, billingInterval);
     const current = await stripe.subscriptions.retrieve(record.stripeSubscriptionId);
     const item = current.items.data[0];
     if (!item) {
@@ -619,13 +687,14 @@ export const billingService = {
 
     const updated = await stripe.subscriptions.update(
       record.stripeSubscriptionId,
-      buildPlanChangeParams({ itemId: item.id, userId, plan }),
+      buildPlanChangeParams({ itemId: item.id, userId, plan, priceId, billingInterval }),
     );
 
     await prisma.subscription.update({
       where: { userId },
       data: {
         plan: plan.slug,
+        billingInterval,
         status: updated.status,
         cancelAtPeriodEnd: updated.cancel_at_period_end,
         currentPeriodEnd: subscriptionPeriodEnd(updated),
@@ -633,7 +702,7 @@ export const billingService = {
     });
 
     return {
-      message: `Plan changed to ${plan.name} successfully`,
+      message: `Plan changed to ${plan.name} (${billingInterval}) successfully`,
       plan: plan.slug,
       status: updated.status,
     };
@@ -661,6 +730,7 @@ export const billingService = {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
         const plan = session.metadata?.plan as PlanSlug | undefined;
+        const billingInterval = (session.metadata?.billingInterval as BillingInterval | undefined) ?? "monthly";
         const subscriptionId =
           typeof session.subscription === "string"
             ? session.subscription
@@ -708,6 +778,7 @@ export const billingService = {
                 typeof session.customer === "string" ? session.customer : session.customer?.id,
               stripeSubscriptionId: subscriptionId,
               plan: plan ?? "starter",
+              billingInterval,
               status: stripeSubscription.status,
               currentPeriodEnd: subscriptionPeriodEnd(stripeSubscription),
               cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
@@ -716,6 +787,7 @@ export const billingService = {
               stripeCustomerId: stripeId(session.customer),
               stripeSubscriptionId: subscriptionId,
               plan: plan ?? "starter",
+              billingInterval,
               status: stripeSubscription.status,
               currentPeriodEnd: subscriptionPeriodEnd(stripeSubscription),
               cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
@@ -738,6 +810,9 @@ export const billingService = {
             currentPeriodEnd: subscriptionPeriodEnd(subscription),
             ...(subscription.metadata?.plan
               ? { plan: subscription.metadata.plan as PlanSlug }
+              : {}),
+            ...(subscription.metadata?.billingInterval
+              ? { billingInterval: subscription.metadata.billingInterval as BillingInterval }
               : {}),
           },
         });
