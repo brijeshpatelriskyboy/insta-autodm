@@ -195,7 +195,7 @@ describe("billing plan changes", () => {
           annualPriceId: undefined,
           priceId: undefined,
           couponId: undefined,
-          limits: { instagramAccounts: 15, keywordRules: null, monthlyDms: 25_000 },
+          limits: { instagramAccounts: 15, keywordRules: null, monthlyDms: 100_000 },
         },
       }),
     ).toThrow("Stripe price is not configured for this plan");
