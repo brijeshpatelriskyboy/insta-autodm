@@ -48,6 +48,8 @@ export default function BillingPage() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
   const [canceling, setCanceling] = useState(false);
   const [resuming, setResuming] = useState(false);
+  const [liteCode, setLiteCode] = useState("");
+  const [activatingLite, setActivatingLite] = useState(false);
 
   const load = useCallback(async () => {
     const token = getToken();
@@ -81,7 +83,7 @@ export default function BillingPage() {
     const token = getToken();
     if (!token) return;
 
-    if (isActive) {
+    if (isPaidActive) {
       const planName = BILLING_PLANS.find((item) => item.slug === plan)?.name ?? plan;
       const confirmed = window.confirm(
         `Change to the ${planName} ${billingInterval} plan? Stripe will apply any prorated charge or credit now.`,
@@ -91,7 +93,7 @@ export default function BillingPage() {
 
     setCheckoutPlan(plan);
     try {
-      if (isActive) {
+      if (isPaidActive) {
         const result = await api.changePlan(token, plan, billingInterval);
         toast.success(result.message);
         await load();
@@ -111,6 +113,23 @@ export default function BillingPage() {
       toast.error(err instanceof Error ? err.message : "Checkout failed");
     } finally {
       setCheckoutPlan(null);
+    }
+  }
+
+  async function handleActivateLite() {
+    const token = getToken();
+    if (!token) return;
+
+    setActivatingLite(true);
+    try {
+      const result = await api.activateLite(token, liteCode);
+      toast.success(result.message);
+      setLiteCode("");
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Lite activation failed");
+    } finally {
+      setActivatingLite(false);
     }
   }
 
@@ -148,6 +167,7 @@ export default function BillingPage() {
 
   const isActive =
     subscription?.status === "active" || subscription?.status === "trialing";
+  const isPaidActive = isActive && subscription?.plan !== "lite";
 
   return (
     <div className="space-y-8">
@@ -195,13 +215,15 @@ export default function BillingPage() {
               </div>
               {subscription?.price != null && (
                 <p className="mt-1 text-sm text-slate-500">
-                  {subscription.billingInterval === "annual"
-                    ? `USD $${subscription.annualPrice?.toFixed(2) ?? "0.00"}/year`
-                    : subscription.introductoryMonths && subscription.standardPrice
-                      ? `USD $${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD $${subscription.standardPrice}/month`
-                      : `USD $${subscription.price}/month`}
+                  {subscription.plan === "lite"
+                    ? "Free for 30 days · 1 Instagram · 2 keywords · 200 DMs"
+                    : subscription.billingInterval === "annual"
+                      ? `USD ${subscription.annualPrice?.toFixed(2) ?? "0.00"}/year`
+                      : subscription.introductoryMonths && subscription.standardPrice
+                        ? `USD ${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD ${subscription.standardPrice}/month`
+                        : `USD ${subscription.price}/month`}
                   {subscription.currentPeriodEnd &&
-                    ` · Renews ${formatDate(subscription.currentPeriodEnd)}`}
+                    ` · ${subscription.plan === "lite" ? "Ends" : "Renews"} ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
               )}
               {subscription?.cancelAtPeriodEnd && (
@@ -210,14 +232,14 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {isActive && subscription?.cancelAtPeriodEnd ? (
+            {isPaidActive && subscription?.cancelAtPeriodEnd ? (
               <Button
                 onClick={handleResume}
                 disabled={resuming || !subscription?.stripeConfigured}
               >
                 {resuming ? "Resuming..." : "Resume subscription"}
               </Button>
-            ) : isActive ? (
+            ) : isPaidActive ? (
               <Button
                 variant="secondary"
                 onClick={handleCancel}
@@ -228,6 +250,50 @@ export default function BillingPage() {
             ) : null}
           </div>
         )}
+      </Card>
+
+      <Card
+        title="Lite — free for 30 days"
+        description="First-time users can try Comment2DM with no card or payment details."
+      >
+        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <div>
+            <div className="mb-3 flex flex-wrap gap-2 text-sm text-slate-600">
+              <span className="rounded-full bg-slate-100 px-3 py-1">1 Instagram account</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">2 keyword rules</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">200 DMs</span>
+              <span className="rounded-full bg-slate-100 px-3 py-1">30 days</span>
+            </div>
+            <p className="text-sm text-slate-600">
+              Follow @comment2dm.ai and comment <strong>LITE</strong> on the Lite offer post to receive code <strong>LITEFREE</strong>.
+              Connect your Instagram account first, then enter the code below. This offer can be used once per user and Instagram account.
+            </p>
+            <input
+              value={liteCode}
+              onChange={(event) => setLiteCode(event.target.value)}
+              placeholder="Enter LITEFREE"
+              className="mt-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none ring-brand-200 focus:ring-2 lg:max-w-sm"
+              disabled={activatingLite || isActive}
+            />
+          </div>
+          <Button
+            onClick={handleActivateLite}
+            disabled={activatingLite || isActive || !liteCode.trim()}
+          >
+            {activatingLite ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Activating...
+              </>
+            ) : isActive && subscription?.plan === "lite" ? (
+              "Lite active"
+            ) : isActive ? (
+              "Plan already active"
+            ) : (
+              "Activate Lite free"
+            )}
+          </Button>
+        </div>
       </Card>
 
       <div>
@@ -258,7 +324,7 @@ export default function BillingPage() {
               isActive &&
               subscription?.plan === plan.slug &&
               subscription?.billingInterval === billingInterval;
-            const planOrder = { starter: 0, creator: 1, pro: 2 } as const;
+            const planOrder = { lite: -1, starter: 0, creator: 1, pro: 2 } as const;
             const currentPlanOrder = subscription?.plan
               ? planOrder[subscription.plan]
               : -1;
@@ -319,7 +385,7 @@ export default function BillingPage() {
                 {checkoutPlan === plan.slug ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {isActive ? "Changing plan..." : "Redirecting..."}
+                    {isPaidActive ? "Changing plan..." : "Redirecting..."}
                   </>
                 ) : isCurrentPlan ? (
                   "Current plan"
