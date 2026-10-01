@@ -113,6 +113,40 @@ describe("plan limits", () => {
     });
   });
 
+
+  it("enforces Lite limits and expiry", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({
+      plan: "lite",
+      status: "active",
+      currentPeriodEnd: new Date(Date.now() + 60_000),
+    });
+    mockKeywordCount.mockResolvedValue(2);
+
+    await expect(assertCanCreateKeywordRule("user-1")).rejects.toMatchObject({
+      statusCode: 403,
+      message: expect.stringContaining("up to 2 keyword rules"),
+    });
+
+    mockUsageUpdateMany.mockResolvedValue({ count: 1 });
+    await expect(reserveMonthlyDm("user-1")).resolves.toEqual({
+      allowed: true,
+      plan: "lite",
+      limit: 200,
+    });
+
+    mockSubscriptionFindUnique.mockResolvedValue({
+      plan: "lite",
+      status: "active",
+      currentPeriodEnd: new Date(Date.now() - 60_000),
+    });
+    await expect(reserveMonthlyDm("user-1")).resolves.toEqual({
+      allowed: false,
+      plan: "lite",
+      limit: 200,
+      reason: "inactive_subscription",
+    });
+  });
+
   it("atomically reserves an available monthly DM", async () => {
     mockUsageUpdateMany.mockResolvedValue({ count: 1 });
     await expect(reserveMonthlyDm("user-1")).resolves.toEqual({
