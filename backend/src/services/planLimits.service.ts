@@ -5,10 +5,14 @@ import { AppError } from "../utils/errors";
 async function getSubscriptionState(userId: string) {
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
-    select: { plan: true, status: true },
+    select: { plan: true, status: true, currentPeriodEnd: true },
   });
   const plan = getPlan(subscription?.plan ?? "starter") ?? getPlan("starter")!;
-  const active = subscription?.status === "active" || subscription?.status === "trialing";
+  const statusActive = subscription?.status === "active" || subscription?.status === "trialing";
+  const liteExpired =
+    plan.slug === "lite" &&
+    (!subscription?.currentPeriodEnd || subscription.currentPeriodEnd.getTime() <= Date.now());
+  const active = Boolean(statusActive && !liteExpired);
   return { plan, active };
 }
 
