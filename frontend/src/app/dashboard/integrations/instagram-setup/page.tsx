@@ -8,6 +8,7 @@ import {
   Camera,
   CheckCircle2,
   Loader2,
+  PlayCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -112,6 +113,42 @@ export default function InstagramSetupPage() {
         title="Instagram Setup"
         description="Connect your Instagram Professional account to automate DMs from comments."
       />
+
+      <Card
+        padding="lg"
+        className="overflow-hidden border-purple-200 bg-gradient-to-br from-[#f6f3ff] via-white to-[#eee6ff]"
+      >
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+              <PlayCircle className="h-4 w-4" />
+              26-sec setup guide
+            </div>
+            <h2 className="mt-4 text-xl font-semibold text-slate-900">
+              Watch how to connect Instagram
+            </h2>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">
+              A quick visual guide showing the account type and your Comment2DM workspace before you connect.
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border-2 border-[#8545ef] bg-[#f6f3ff] shadow-[0_6px_0_#6a2fd0]">
+            <video
+              className="aspect-[9/16] w-full bg-[#f6f3ff] object-cover"
+              controls
+              preload="metadata"
+              playsInline
+              aria-label="Comment2DM Instagram setup video guide"
+            >
+              <source
+                src="https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/27089484-5ae9-4356-b30e-1ae872a1b1b5.mp4"
+                type="video/mp4"
+              />
+              Your browser does not support video playback.
+            </video>
+          </div>
+        </div>
+      </Card>
 
       {oauthNotice && (
         <Card padding="md">
