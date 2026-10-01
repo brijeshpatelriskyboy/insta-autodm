@@ -39,6 +39,8 @@ const envSchema = z.object({
   META_REDIRECT_URI: z.string().optional(),
   META_VERIFY_TOKEN: z.string().optional(),
   META_OAUTH_ENABLED: z.string().optional(),
+  /** Private one-month Lite campaign code. Keep in Railway only; never expose client-side. */
+  LITE_ACCESS_CODE: z.string().min(4).optional(),
 });
 
 const parsed = envSchema.parse(process.env);
@@ -55,6 +57,7 @@ export const env = {
   RESEND_API_KEY: parsed.RESEND_API_KEY?.trim() || undefined,
   EMAIL_FROM: parsed.EMAIL_FROM?.trim() || undefined,
   SUPPORT_EMAIL: parsed.SUPPORT_EMAIL?.trim() || undefined,
+  LITE_ACCESS_CODE: parsed.LITE_ACCESS_CODE?.trim() || undefined,
 };
 
 export function isMetaOAuthEnabled(): boolean {
