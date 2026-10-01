@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { InstagramMediaDisplay } from "@/components/rules/InstagramMediaDisplay";
 import {
   api,
+  type InstagramAccountSummary,
   type InstagramMediaItem,
   type KeywordRule,
 } from "@/lib/api";
@@ -72,6 +73,8 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
   const [instagramMediaId, setInstagramMediaId] = useState<string | null>(
     initial?.instagramMediaId ?? null,
   );
+  const [instagramAccounts, setInstagramAccounts] = useState<InstagramAccountSummary[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [mediaItems, setMediaItems] = useState<InstagramMediaItem[]>([]);
   const [mediaLoading, setMediaLoading] = useState(false);
   const [mediaError, setMediaError] = useState("");
@@ -107,10 +110,34 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     if (!token) return;
 
     let cancelled = false;
+    api
+      .getInstagramAccounts(token)
+      .then((res) => {
+        if (cancelled) return;
+        setInstagramAccounts(res.accounts);
+        setSelectedAccountId((current) => current || res.accounts[0]?.id || "");
+      })
+      .catch(() => {
+        if (!cancelled) setInstagramAccounts([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token || !selectedAccountId) {
+      setMediaItems([]);
+      return;
+    }
+
+    let cancelled = false;
     setMediaLoading(true);
     setMediaError("");
     api
-      .getInstagramMedia(token, 25)
+      .getInstagramMedia(token, 25, selectedAccountId)
       .then((res) => {
         if (!cancelled) setMediaItems(res.media);
       })
@@ -130,7 +157,7 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [selectedAccountId]);
 
   const selectedMedia =
     instagramMediaId == null
@@ -218,15 +245,31 @@ export function KeywordRuleForm({ initial, onSubmit, onCancel }: KeywordRuleForm
       <div className="space-y-2">
         <label className="block text-sm font-medium text-slate-700">Instagram post</label>
         <p className="text-xs text-slate-500">
-          Apply this trigger to one post/Reel, or keep it global for all posts.
+          Apply this trigger to one post/Reel, or keep it global across your connected accounts.
         </p>
+        {instagramAccounts.length > 1 && (
+          <select
+            value={selectedAccountId}
+            onChange={(e) => {
+              setSelectedAccountId(e.target.value);
+              setInstagramMediaId(null);
+            }}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+          >
+            {instagramAccounts.map((account) => (
+              <option key={account.id} value={account.id}>
+                @{account.username}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={instagramMediaId ?? ""}
           onChange={(e) => setInstagramMediaId(e.target.value ? e.target.value : null)}
           className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           disabled={mediaLoading}
         >
-          <option value="">All posts (global)</option>
+          <option value="">All posts across connected accounts (global)</option>
           {mediaItems.map((item) => (
             <option key={item.id} value={item.id}>
               {formatMediaOptionLabel(item.mediaType, item.caption, item.id)}
