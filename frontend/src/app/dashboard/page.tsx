@@ -5,12 +5,10 @@ import { Zap, Send, Users, Percent } from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { KpiCardSkeleton } from "@/components/ui/Skeleton";
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
 import { InstagramConnectionCard } from "@/components/dashboard/InstagramConnectionCard";
 import { KeywordLeaderboard } from "@/components/dashboard/KeywordLeaderboard";
 import { QuickStartChecklist } from "@/components/dashboard/QuickStartChecklist";
 import { TestFirstAutomationPanel } from "@/components/dashboard/TestFirstAutomationPanel";
-import { BetaBadge } from "@/components/trust/BetaBadge";
 import { api, type AnalyticsSummary, type User } from "@/lib/api";
 import { getStoredUser, getToken } from "@/lib/auth";
 import { useOnboardingProgress } from "@/hooks/useOnboardingProgress";
@@ -61,20 +59,14 @@ export default function DashboardPage() {
       return;
     }
 
-    const shouldShow = shouldShowTestAutomationPanel({
-      hasKeywordRule: progress.hasKeywordRule,
-      hasSuccessfulDm: progress.hasSuccessfulDm,
-      dismissed: isTestAutomationPanelDismissed(user.id),
-    });
-
-    setShowTestPanel(shouldShow);
+    setShowTestPanel(
+      shouldShowTestAutomationPanel({
+        hasKeywordRule: progress.hasKeywordRule,
+        hasSuccessfulDm: progress.hasSuccessfulDm,
+        dismissed: isTestAutomationPanelDismissed(user.id),
+      }),
+    );
   }, [progress, user?.id]);
-
-  const greeting = progress.loading
-    ? "Welcome"
-    : progress.isReturning
-      ? "Welcome back"
-      : "Welcome";
 
   function handleDismissTestPanel() {
     if (user?.id) dismissTestAutomationPanel(user.id);
@@ -84,29 +76,16 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title={
-          <span className="inline-flex flex-wrap items-center gap-2">
-            {greeting}
-            {user?.name ? `, ${user.name}` : ""}
-            <BetaBadge />
-          </span>
-        }
-        description="Comment2DM is in beta. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions."
+        title={user?.name ? `Welcome, ${user.name}` : "Welcome"}
+        description="Manage your Instagram automations and see your results."
       />
-
-      <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-4 py-3 text-sm text-amber-900">
-        <span className="font-semibold">Beta:</span> Live Instagram connect and DMs work.
-        Overview numbers reflect your account only — not sample data.
-      </div>
 
       {showTestPanel && (
         <TestFirstAutomationPanel onDismiss={handleDismissTestPanel} />
       )}
 
       <div>
-        <div className="mb-3 flex items-center gap-2">
-          <h2 className="text-sm font-semibold text-slate-700">Performance overview</h2>
-        </div>
+        <h2 className="mb-3 text-sm font-semibold text-slate-700">Overview</h2>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {loading ? (
             <>
@@ -127,22 +106,21 @@ export default function DashboardPage() {
               <KpiCard
                 label="Monthly DMs"
                 value={`${formatNumber(summary?.monthlyDmUsed ?? 0)} / ${formatNumber(summary?.monthlyDmLimit ?? 1_000)}`}
-                detail={`${formatNumber(summary?.monthlyDmRemaining ?? 1_000)} remaining this month`}
+                detail={`${formatNumber(summary?.monthlyDmRemaining ?? 1_000)} remaining`}
                 icon={Send}
                 accent="pink"
                 delay={80}
               />
               <KpiCard
-                label="Leads Generated"
+                label="Leads"
                 value={formatNumber(summary?.totalLeads ?? 0)}
                 icon={Users}
                 accent="emerald"
                 delay={160}
               />
               <KpiCard
-                label="Conversion Rate"
+                label="Conversion"
                 value={summary?.totalKeywordMatches ? `${summary.conversionRate}%` : "—"}
-                detail="Unique leads from keyword matches"
                 icon={Percent}
                 accent="blue"
                 delay={240}
@@ -152,15 +130,12 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <div className="animate-slide-up space-y-6 xl:col-span-2" style={{ animationDelay: "200ms" }}>
-          <ActivityFeed />
-          <KeywordLeaderboard />
-        </div>
-        <div className="animate-slide-up space-y-6" style={{ animationDelay: "300ms" }}>
+      <div className="space-y-6">
+        {!progress.loading && (!progress.instagramConnected || !progress.hasKeywordRule || !progress.hasSuccessfulDm) && (
           <QuickStartChecklist />
-          <InstagramConnectionCard />
-        </div>
+        )}
+        <InstagramConnectionCard />
+        <KeywordLeaderboard />
       </div>
     </div>
   );
