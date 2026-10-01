@@ -202,6 +202,25 @@ export interface InstagramIntegrationStatus {
     | { success: false; error: string };
 }
 
+export interface InstagramAccountSummary {
+  id: string;
+  username: string;
+  instagramUserId: string;
+  accountType: string;
+  profilePictureUrl: string | null;
+  connectionStatus: string;
+  connectedAt: string | null;
+  webhookSubscribedAt: string | null;
+}
+
+export interface InstagramAccountsResponse {
+  accounts: InstagramAccountSummary[];
+  used: number;
+  limit: number;
+  remaining: number;
+  plan: "starter" | "creator" | "pro";
+}
+
 export interface ActivityEventRecord {
   id: string;
   type: string;
@@ -239,6 +258,8 @@ export interface SubscriptionInfo {
   plan: "starter" | "creator" | "pro" | null;
   planName: string | null;
   price: number | null;
+  annualPrice: number | null;
+  billingInterval: "monthly" | "annual";
   standardPrice: number | null;
   introductoryMonths: number | null;
   status: string;
@@ -408,9 +429,12 @@ export const api = {
       token,
     ),
 
-  disconnectInstagram: (token: string) =>
+  getInstagramAccounts: (token: string) =>
+    request<InstagramAccountsResponse>("/api/integrations/instagram/accounts", {}, token),
+
+  disconnectInstagram: (token: string, accountId?: string) =>
     request<{ disconnected: boolean }>(
-      "/api/integrations/instagram/disconnect",
+      `/api/integrations/instagram/disconnect${accountId ? `?accountId=${encodeURIComponent(accountId)}` : ""}`,
       { method: "DELETE" },
       token,
     ),
@@ -448,20 +472,28 @@ export const api = {
   getBillingHistory: (token: string) =>
     request<BillingHistoryItem[]>("/api/billing/history", {}, token),
 
-  createCheckout: (token: string, plan: "starter" | "creator" | "pro") =>
+  createCheckout: (
+    token: string,
+    plan: "starter" | "creator" | "pro",
+    billingInterval: "monthly" | "annual" = "monthly",
+  ) =>
     request<{
       url: string | null;
       launchOfferEligible?: boolean;
       launchOfferMessage?: string;
     }>("/api/billing/checkout", {
       method: "POST",
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, billingInterval }),
     }, token),
 
-  changePlan: (token: string, plan: "starter" | "creator" | "pro") =>
+  changePlan: (
+    token: string,
+    plan: "starter" | "creator" | "pro",
+    billingInterval: "monthly" | "annual" = "monthly",
+  ) =>
     request<{ message: string; plan: string; status: string }>("/api/billing/change-plan", {
       method: "POST",
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, billingInterval }),
     }, token),
 
   cancelSubscription: (token: string) =>
