@@ -504,32 +504,15 @@ async function ensureInternalLitePromoRule(account: { userId: string; username: 
     `Your Comment2DM Lite access code is ${env.LITE_ACCESS_CODE}. ` +
     "Use it in Comment2DM to activate 30 days free with 1 Instagram account, 2 keyword rules and 200 DMs. No payment details required.";
 
-  const existing = await prisma.keywordRule.findFirst({
+  await prisma.keywordRule.upsert({
     where: {
-      userId: account.userId,
-      keyword: "LITE",
-      mediaScopeKey: "__GLOBAL__",
+      userId_keyword_mediaScopeKey: {
+        userId: account.userId,
+        keyword: "LITE",
+        mediaScopeKey: "__GLOBAL__",
+      },
     },
-  });
-
-  if (existing) {
-    if (!existing.isActive || existing.dmMessage !== dmMessage || existing.requireFollow) {
-      await prisma.keywordRule.update({
-        where: { id: existing.id },
-        data: {
-          dmMessage,
-          isActive: true,
-          requireFollow: false,
-          publicReplyEnabled: false,
-          publicReplyMessage: null,
-        },
-      });
-    }
-    return;
-  }
-
-  await prisma.keywordRule.create({
-    data: {
+    create: {
       userId: account.userId,
       keyword: "LITE",
       dmMessage,
@@ -539,6 +522,13 @@ async function ensureInternalLitePromoRule(account: { userId: string; username: 
       publicReplyMessage: null,
       instagramMediaId: null,
       mediaScopeKey: "__GLOBAL__",
+    },
+    update: {
+      dmMessage,
+      isActive: true,
+      requireFollow: false,
+      publicReplyEnabled: false,
+      publicReplyMessage: null,
     },
   });
 }
