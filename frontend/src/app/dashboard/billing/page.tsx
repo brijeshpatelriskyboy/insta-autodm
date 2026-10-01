@@ -218,10 +218,10 @@ export default function BillingPage() {
                   {subscription.plan === "lite"
                     ? "Free for 30 days · 1 Instagram · 2 keywords · 200 DMs"
                     : subscription.billingInterval === "annual"
-                      ? `USD ${subscription.annualPrice?.toFixed(2) ?? "0.00"}/year`
+                      ? `USD $${subscription.annualPrice?.toFixed(2) ?? "0.00"}/year`
                       : subscription.introductoryMonths && subscription.standardPrice
-                        ? `USD ${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD ${subscription.standardPrice}/month`
-                        : `USD ${subscription.price}/month`}
+                        ? `USD $${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD $${subscription.standardPrice}/month`
+                        : `USD $${subscription.price}/month`}
                   {subscription.currentPeriodEnd &&
                     ` · ${subscription.plan === "lite" ? "Ends" : "Renews"} ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
