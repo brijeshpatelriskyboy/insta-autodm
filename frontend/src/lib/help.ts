@@ -7,7 +7,7 @@ export const faqItems = [
   {
     question: "Do I need a Business Instagram account?",
     answer:
-      "Yes. Meta requires an Instagram Business or Creator account to use the Messaging API and webhooks. Comment2DM supports Instagram Login for professional accounts. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
+      "Yes. Comment2DM works with Instagram Professional accounts — Business or Creator.",
   },
   {
     question: "Can I use multiple keywords?",
@@ -27,7 +27,7 @@ export const faqItems = [
   {
     question: "Is Comment2DM in beta?",
     answer:
-      "Yes. Comment2DM is still in beta as a product. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
+      "Comment2DM is live for Instagram Business and Creator accounts. We continue improving the product based on user feedback.",
   },
 ];
 
@@ -45,7 +45,7 @@ export const gettingStartedSteps = [
   {
     step: 3,
     title: "Connect Instagram",
-    description: "Link your Business or Creator account via Meta OAuth from the Integrations page.",
+    description: "Connect your Instagram Business or Creator account from the Instagram page.",
   },
   {
     step: 4,
