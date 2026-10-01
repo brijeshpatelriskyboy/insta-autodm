@@ -541,8 +541,9 @@ export const instagramIntegrationService = {
    * Re-probe Meta for a Facebook Page ID on an already-connected Instagram Login account.
    */
   async syncFacebookPageId(userId: string) {
-    const account = await prisma.instagramAccount.findUnique({
+    const account = await prisma.instagramAccount.findFirst({
       where: { userId },
+      orderBy: { connectedAt: "asc" },
     });
 
     if (!account || account.connectionStatus !== "connected") {
@@ -622,8 +623,9 @@ export const instagramIntegrationService = {
    * Needed when OAuth completed before subscribed_apps was implemented.
    */
   async subscribeWebhooks(userId: string) {
-    const account = await prisma.instagramAccount.findUnique({
+    const account = await prisma.instagramAccount.findFirst({
       where: { userId },
+      orderBy: { connectedAt: "asc" },
     });
 
     if (!account || account.connectionStatus !== "connected") {
@@ -717,8 +719,11 @@ export const instagramIntegrationService = {
    * Recent Instagram media for the connected account (Rules post picker).
    * Never returns the access token.
    */
-  async listMedia(userId: string, limit = 25) {
-    const account = await prisma.instagramAccount.findFirst({ where: { userId }, orderBy: { connectedAt: "asc" } });
+  async listMedia(userId: string, limit = 25, accountId?: string) {
+    const account = await prisma.instagramAccount.findFirst({
+      where: { userId, ...(accountId ? { id: accountId } : {}) },
+      orderBy: { connectedAt: "asc" },
+    });
     if (!account || account.connectionStatus !== "connected") {
       throw new AppError(404, "No connected Instagram account found");
     }
