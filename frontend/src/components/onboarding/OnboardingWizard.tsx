@@ -141,7 +141,7 @@ export function OnboardingWizard() {
       }
 
       if (!oauth.url) {
-        toast.error(oauth.message || "Meta setup required");
+        toast.error("Instagram connection is temporarily unavailable. Please try again shortly.");
         router.push("/dashboard/integrations");
         return;
       }
@@ -150,7 +150,7 @@ export function OnboardingWizard() {
       persist({ currentStep: 3, keyword, dmMessage, instagramConnected });
       window.location.href = oauth.url;
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to start Meta OAuth";
+      const message = err instanceof Error ? err.message : "Failed to connect Instagram";
       toast.error(message);
       router.push("/dashboard/integrations");
     } finally {
@@ -433,7 +433,7 @@ export function OnboardingWizard() {
                       Connected
                     </>
                   ) : connectingInstagram ? (
-                    "Redirecting to Meta…"
+                    "Connecting…"
                   ) : (
                     "Connect Instagram"
                   )}

@@ -29,7 +29,7 @@ const mainNav = [
 ];
 
 const platformNav = [
-  { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
+  { href: "/dashboard/integrations", label: "Instagram", icon: Plug },
   { href: "/dashboard/billing", label: "Billing", icon: CreditCard },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
   { href: "/dashboard/help", label: "Help Center", icon: HelpCircle },

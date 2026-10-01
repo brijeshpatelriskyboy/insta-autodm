@@ -79,7 +79,7 @@ export default function ConnectInstagramPage() {
       }
 
       if (!oauth.url) {
-        toast.error(oauth.message || "Meta setup required");
+        toast.error("Instagram connection is temporarily unavailable. Please try again shortly.");
         router.push("/dashboard/integrations");
         return;
       }
@@ -87,7 +87,7 @@ export default function ConnectInstagramPage() {
       window.location.href = oauth.url;
     } catch (error) {
       toast.error(
-        error instanceof ApiError ? error.message : "Failed to start Meta OAuth",
+        error instanceof ApiError ? error.message : "Failed to connect Instagram",
       );
       router.push("/dashboard/integrations");
     } finally {
@@ -122,7 +122,7 @@ export default function ConnectInstagramPage() {
                 <Camera className="h-8 w-8" />
               </div>
               <h1 className="mt-6 text-2xl font-semibold text-slate-900">
-                Connect Instagram Business
+                Connect Instagram
               </h1>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
                 Authorize Comment2DM with Meta OAuth to monitor comments and send
@@ -133,7 +133,7 @@ export default function ConnectInstagramPage() {
                 {[
                   "Read comments on your posts & Reels",
                   "Send DMs when keywords are matched",
-                  "Secure OAuth via Meta",
+                  "Secure Instagram connection",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 text-sm text-slate-600">
                     <Shield className="h-4 w-4 shrink-0 text-brand-600" />
@@ -151,7 +151,7 @@ export default function ConnectInstagramPage() {
                 {starting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Redirecting to Meta…
+                    Connecting…
                   </>
                 ) : (
                   <>

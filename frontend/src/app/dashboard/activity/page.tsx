@@ -119,7 +119,9 @@ export default function ActivityPage() {
       .getActivityEvents(token)
       .then((events) => {
         setApiEvents(
-          events.map((event) => ({
+          events
+            .filter((event) => event.type !== "webhook_subscribed")
+            .map((event) => ({
             id: event.id,
             // Keep unknown backend types as-is; ActivityItem falls back safely.
             type: event.type as ActivityType,
