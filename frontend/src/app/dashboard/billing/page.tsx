@@ -265,13 +265,12 @@ export default function BillingPage() {
               <span className="rounded-full bg-slate-100 px-3 py-1">30 days</span>
             </div>
             <p className="text-sm text-slate-600">
-              Follow @comment2dm.ai and comment <strong>LITE</strong> on the Lite offer post to receive code <strong>LITEFREE</strong>.
-              Connect your Instagram account first, then enter the code below. This offer can be used once per user and Instagram account.
+              Follow @comment2dm.ai and comment <strong>LITE</strong> on the Lite offer post. We will send your private Lite access code directly to your Instagram DM. Connect your Instagram account first, then enter that private code below. This offer can be used once per user and Instagram account.
             </p>
             <input
               value={liteCode}
               onChange={(event) => setLiteCode(event.target.value)}
-              placeholder="Enter LITEFREE"
+              placeholder="Enter your private Lite code"
               className="mt-4 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none ring-brand-200 focus:ring-2 lg:max-w-sm"
               disabled={activatingLite || isActive}
             />
