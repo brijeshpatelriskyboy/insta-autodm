@@ -7,6 +7,7 @@ type VideoGuideCardProps = {
   description: string;
   src: string;
   duration?: string;
+  poster?: string;
 };
 
 export function VideoGuideCard({
@@ -14,6 +15,7 @@ export function VideoGuideCard({
   description,
   src,
   duration,
+  poster,
 }: VideoGuideCardProps) {
   return (
     <details className="group overflow-hidden rounded-2xl border-2 border-[#8545ef] bg-gradient-to-br from-[#f6f3ff] via-white to-[#eee6ff] shadow-[0_5px_0_#6a2fd0]">
@@ -38,6 +40,7 @@ export function VideoGuideCard({
           <video
             className="aspect-[9/16] w-full bg-[#f6f3ff] object-cover"
             controls
+            poster={poster}
             preload="metadata"
             playsInline
             aria-label={title}

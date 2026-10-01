@@ -47,12 +47,14 @@ export const VIDEO_GUIDES = {
   keywordOnePostOrReel: {
     title: "Keyword for one post or Reel",
     description: "See how to use a keyword on one selected post or Reel.",
-    src: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/447c81ec-3353-4784-8ac5-6e6b72519d53.mp4",
+    src: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/128a505c-a02f-4eac-b168-4541a1c5fa44.mp4",
+    poster: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/6e0fd26e-c4d7-4901-b66c-e453dd60953a.png",
   },
   keywordOneReelVoice: {
     title: "Keyword for one Reel",
     description: "See the Reel-specific keyword setup with narration.",
-    src: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/e9e14f99-e69e-483f-b85c-73da15926c36.mp4",
+    src: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/ab2e0cb3-56cc-4748-9688-13e57b68fd85.mp4",
+    poster: "https://d2ol7oe51mr4n9.cloudfront.net/user_3B6Kv6FlGA9y1qZSlTnzMINV0FS/7eab7cef-14ee-44f6-ad3e-cc18e61f8007.png",
   },
   readKeywordRule: {
     title: "Read your keyword rule",
