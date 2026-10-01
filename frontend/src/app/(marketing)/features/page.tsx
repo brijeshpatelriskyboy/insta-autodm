@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/Button";
 export const metadata: Metadata = {
   title: "Features",
   description:
-    "Keyword rules, automated private replies, activity records, and Instagram Business and Creator comment-to-DM automation through Meta's approved production permissions.",
+    "Keyword rules, automated DMs, activity tracking, and Instagram comment-to-DM automation.",
 };
 
 const deepFeatures = [
@@ -21,7 +21,7 @@ const deepFeatures = [
   {
     title: "Configured private replies",
     description:
-      "When a comment matches, Comment2DM can send the message you wrote as an Instagram private reply. Delivery depends on the comment webhook and Meta private-reply eligibility.",
+      "When a comment matches your keyword, Comment2DM sends the message you configured.",
   },
   {
     title: "Activity records",
