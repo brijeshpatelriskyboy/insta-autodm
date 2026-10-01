@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { api, type AnalyticsSummary } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { formatNumber } from "@/lib/demo-data";
+import { VideoGuideCard } from "@/components/help/VideoGuideCard";
+import { VIDEO_GUIDES } from "@/lib/video-guides";
 import { MessageSquare, Users, Percent, Zap, BarChart3 } from "lucide-react";
 
 export default function AnalyticsPage() {
@@ -57,7 +59,7 @@ export default function AnalyticsPage() {
         description="Performance from your live Instagram automations."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <VideoGuideCard {...VIDEO_GUIDES.analytics} />\n\n      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {loading ? (
           <>
             <KpiCardSkeleton />
