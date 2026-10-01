@@ -37,8 +37,7 @@ export function PricingSection({ showHeading = true }: PricingSectionProps) {
                 Start with no card and no payment details
               </h3>
               <p className="mt-2 text-sm text-slate-600">
-                Follow @comment2dm.ai and comment <strong>LITE</strong> on our Lite offer post to receive code <strong>LITEFREE</strong>.
-                First-time users get 1 Instagram account, 2 keyword rules and 200 DMs for 30 days.
+                Follow @comment2dm.ai and comment <strong>LITE</strong> on our Lite offer post. We will send your private Lite access code directly to your Instagram DM. First-time users get 1 Instagram account, 2 keyword rules and 200 DMs for 30 days.
               </p>
               <p className="mt-2 text-xs text-slate-500">
                 One Lite month per Comment2DM user and Instagram account. After 30 days, upgrade to continue automations.
