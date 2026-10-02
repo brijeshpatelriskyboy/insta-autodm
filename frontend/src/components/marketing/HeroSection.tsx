@@ -32,6 +32,7 @@ function PromoCard({
   );
 }
 
+// Four-card promotional hero approved for production.
 export function HeroSection() {
   const promo =
     "Meta-approved · Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions. · Follow @comment2DM on Instagram and get your first three months half price.";
