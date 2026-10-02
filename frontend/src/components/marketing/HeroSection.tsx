@@ -1,34 +1,25 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Ban,
-  Gift,
-  Instagram,
-  Play,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, Play, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { audiences } from "@/lib/marketing-data";
 
 function PromoCard({
-  icon,
+  symbol,
   title,
   emphasis,
   className = "",
 }: {
-  icon: ReactNode;
+  symbol: string;
   title: string;
   emphasis: string;
   className?: string;
 }) {
   return (
     <div
-      className={`rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-[0_24px_70px_rgba(75,31,160,.13)] backdrop-blur-xl ${className}`}
+      className={`rounded-[2rem] border border-white/80 bg-white/85 p-5 shadow-[0_24px_70px_rgba(75,31,160,0.13)] backdrop-blur-xl ${className}`}
     >
-      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#6a2fd0] shadow-sm">
-        {icon}
+      <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#efe7ff] text-2xl font-bold text-[#6a2fd0] shadow-sm">
+        {symbol}
       </div>
       <p className="text-[1.35rem] font-extrabold leading-[1.02] tracking-[-0.04em] text-[#151c30]">
         {title}
@@ -49,8 +40,8 @@ export function HeroSection() {
     <section className="relative overflow-hidden bg-[#f6f3ff]">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-[4%] top-24 h-28 w-28 animate-claude-orbit rounded-full bg-gradient-to-br from-white via-[#d9c5ff] to-[#6a2fd0] opacity-70 blur-[1px]" />
-        <div className="absolute right-[4%] top-20 h-16 w-16 animate-claude-float rounded-full bg-gradient-to-br from-white via-[#e8dcff] to-[#7a3fe0] opacity-80 shadow-[0_20px_45px_rgba(75,31,160,.24)]" />
-        <div className="absolute bottom-14 left-[3%] h-20 w-20 animate-claude-float-slow rounded-full bg-[#6a2fd0] opacity-15 blur-[2px]" />
+        <div className="absolute right-[4%] top-20 h-16 w-16 animate-claude-float rounded-full bg-gradient-to-br from-white via-[#e8dcff] to-[#7a3fe0] opacity-80 shadow-[0_20px_45px_rgba(75,31,160,0.24)]" />
+        <div className="absolute bottom-14 left-[3%] h-20 w-20 animate-claude-float-slow rounded-full bg-[#6a2fd0] opacity-20 blur-[2px]" />
         <div className="absolute bottom-14 right-[3%] h-24 w-24 animate-claude-float-slow rounded-full bg-[#4b1fa0] opacity-20 blur-[2px]" />
         <div className="absolute inset-x-0 bottom-0 h-44 claude-grid opacity-60" />
       </div>
@@ -109,26 +100,10 @@ export function HeroSection() {
           </div>
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:hidden">
-            <PromoCard
-              icon={<Gift className="h-6 w-6" />}
-              title="Completely free"
-              emphasis="for ONE month"
-            />
-            <PromoCard
-              icon={<Ban className="h-6 w-6" />}
-              title="NO card details"
-              emphasis="needed"
-            />
-            <PromoCard
-              icon={<ShieldCheck className="h-6 w-6" />}
-              title="Meta"
-              emphasis="Approved"
-            />
-            <PromoCard
-              icon={<Instagram className="h-6 w-6" />}
-              title="Direct Login with"
-              emphasis="Insta Account"
-            />
+            <PromoCard symbol="✦" title="Completely free" emphasis="for ONE month" />
+            <PromoCard symbol="⊘" title="NO card details" emphasis="needed" />
+            <PromoCard symbol="✓" title="Meta" emphasis="Approved" />
+            <PromoCard symbol="◎" title="Direct Login with" emphasis="Insta Account" />
           </div>
         </div>
 
@@ -136,13 +111,13 @@ export function HeroSection() {
           <div className="mx-auto flex max-w-[1650px] justify-between px-2">
             <div className="w-[250px] space-y-5 2xl:w-[275px]">
               <PromoCard
-                icon={<Gift className="h-6 w-6" />}
+                symbol="✦"
                 title="Completely free"
                 emphasis="for ONE month"
                 className="-rotate-[4deg]"
               />
               <PromoCard
-                icon={<Ban className="h-6 w-6" />}
+                symbol="⊘"
                 title="NO card details"
                 emphasis="needed"
                 className="rotate-[3deg]"
@@ -151,13 +126,13 @@ export function HeroSection() {
 
             <div className="w-[250px] space-y-5 2xl:w-[275px]">
               <PromoCard
-                icon={<ShieldCheck className="h-6 w-6" />}
+                symbol="✓"
                 title="Meta"
                 emphasis="Approved"
                 className="rotate-[4deg]"
               />
               <PromoCard
-                icon={<Instagram className="h-6 w-6" />}
+                symbol="◎"
                 title="Direct Login with"
                 emphasis="Insta Account"
                 className="-rotate-[3deg]"
