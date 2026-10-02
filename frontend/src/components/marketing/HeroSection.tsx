@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -17,7 +18,7 @@ function PromoCard({
   emphasis,
   className = "",
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   emphasis: string;
   className?: string;
