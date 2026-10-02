@@ -168,6 +168,7 @@ export default function BillingPage() {
   const isActive =
     subscription?.status === "active" || subscription?.status === "trialing";
   const isPaidActive = isActive && subscription?.plan !== "lite";
+  const liteExpired = subscription?.plan === "lite" && subscription?.status === "expired";
 
   return (
     <div className="space-y-8">
@@ -209,8 +210,11 @@ export default function BillingPage() {
                       ? "active"
                       : subscription?.status === "canceled"
                         ? "disconnected"
-                        : "pending"
+                        : subscription?.status === "expired"
+                          ? "disconnected"
+                          : "pending"
                   }
+                  label={subscription?.status === "expired" ? "Expired — upgrade required" : undefined}
                 />
               </div>
               {subscription?.price != null && (
@@ -251,6 +255,15 @@ export default function BillingPage() {
           </div>
         )}
       </Card>
+
+      {liteExpired && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4">
+          <p className="text-sm font-semibold text-amber-900">Your Lite month has ended</p>
+          <p className="mt-1 text-sm text-amber-800">
+            Lite is a one-time 30-day offer and cannot be renewed or used again. Your automations are paused. Choose Starter, Creator, or Pro below to continue using Comment2DM.
+          </p>
+        </div>
+      )}
 
       <Card
         title="Lite — free for 30 days"
