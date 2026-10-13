@@ -14,13 +14,21 @@ export default function TermsPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Terms of Service
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: September 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: 13 October 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
             These terms describe how you may use {siteConfig.name}. By creating an
             account or using the service, you agree to them. If you do not agree,
             do not use the service.
+          </p>
+
+          <p>
+            {siteConfig.name} is operated by {siteConfig.legalName} (ABN{" "}
+            {siteConfig.abn}, ACN {siteConfig.acn}). References to
+            &ldquo;Comment2DM&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo; or
+            &ldquo;our&rdquo; in these terms refer to {siteConfig.legalName} in
+            connection with the Comment2DM service.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">1. The service</h2>
@@ -60,6 +68,11 @@ export default function TermsPage() {
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">4. Billing</h2>
+          <p>
+            Paid Comment2DM subscriptions are supplied by {siteConfig.legalName}
+            (ABN {siteConfig.abn}, ACN {siteConfig.acn}) and processed through
+            Stripe when billing is enabled.
+          </p>
           <p>
             Creating an account does not start a paid subscription. Billing begins
             only after you select a paid plan and complete Stripe checkout. An
