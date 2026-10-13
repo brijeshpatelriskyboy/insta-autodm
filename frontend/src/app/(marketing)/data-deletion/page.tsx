@@ -14,13 +14,19 @@ export default function DataDeletionPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Data Deletion Instructions
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: September 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: 13 October 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
             {siteConfig.name} lets you request deletion of your account and
             personal data associated with the service, including data obtained
             through Instagram / Meta login.
+          </p>
+
+          <p>
+            {siteConfig.name} is operated by {siteConfig.legalName} (ABN{" "}
+            {siteConfig.abn}, ACN {siteConfig.acn}). Verified deletion requests are
+            handled by {siteConfig.legalName} for the Comment2DM service.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">How to request deletion</h2>
