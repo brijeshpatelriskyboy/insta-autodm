@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AnimateIn } from "@/components/marketing/AnimateIn";
 import { ContactForm } from "@/components/marketing/ContactForm";
 import { SectionHeading } from "@/components/marketing/SectionHeading";
+import { siteConfig } from "@/lib/marketing-data";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -39,6 +40,10 @@ export default function ContactPage() {
                 Data Deletion
               </a>
               .
+            </p>
+            <p className="mt-4 text-sm leading-relaxed text-slate-600">
+              {siteConfig.name} is operated by {siteConfig.legalName} · ABN{" "}
+              {siteConfig.abn} · ACN {siteConfig.acn}.
             </p>
           </div>
 
