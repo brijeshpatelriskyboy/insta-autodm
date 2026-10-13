@@ -21,6 +21,7 @@ import { getToken } from "@/lib/auth";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { VideoGuideCard } from "@/components/help/VideoGuideCard";
 import { VIDEO_GUIDES } from "@/lib/video-guides";
+import { siteConfig } from "@/lib/marketing-data";
 
 function formatMoney(cents: number, currency = "usd"): string {
   return new Intl.NumberFormat("en-US", {
@@ -487,12 +488,18 @@ export default function BillingPage() {
         )}
       </Card>
 
-      <p className="text-center text-xs text-slate-400">
-        Questions about billing?{" "}
-        <Link href="/contact" className="text-brand-600 hover:text-brand-700">
-          Contact support
-        </Link>
-      </p>
+      <div className="space-y-2 text-center text-xs text-slate-400">
+        <p>
+          Paid Comment2DM subscriptions are supplied by {siteConfig.legalName} · ABN{" "}
+          {siteConfig.abn} · ACN {siteConfig.acn}.
+        </p>
+        <p>
+          Questions about billing?{" "}
+          <Link href="/contact" className="text-brand-600 hover:text-brand-700">
+            Contact support
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }
