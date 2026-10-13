@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CTASection } from "@/components/marketing/CTASection";
 import { PricingSection } from "@/components/marketing/PricingSection";
 import { SectionHeading } from "@/components/marketing/SectionHeading";
-import { billingDisclosure } from "@/lib/marketing-data";
+import { billingDisclosure, siteConfig } from "@/lib/marketing-data";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -40,6 +40,12 @@ export default function PricingPage() {
             title="Compare plans"
             description="Follow @comment2dm.ai and comment GREAT on our pinned Instagram post to receive 50% off any plan for your first 3 months. Cancelling ends the promotion and it cannot be restored or reused."
           />
+          <p className="mt-8 text-center text-xs leading-relaxed text-slate-500">
+            Paid Comment2DM subscriptions are supplied by {siteConfig.legalName} · ABN{" "}
+            {siteConfig.abn} · ACN {siteConfig.acn}. Payments are processed through
+            Stripe when billing is enabled.
+          </p>
+
           <div className="mt-12 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-sm">
             <table className="w-full min-w-[600px] text-left text-sm">
               <thead>
