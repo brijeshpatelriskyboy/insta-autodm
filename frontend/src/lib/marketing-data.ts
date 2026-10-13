@@ -5,6 +5,10 @@ export const siteConfig = {
   tagline: "Turn Instagram Comments Into Conversations Automatically",
   description:
     "Automatically DM people who comment a keyword on your posts or reels. Instagram Business and Creator comment-to-DM automation is available through Meta's approved production permissions.",
+  legalName: "AMAZING AI PTY LTD",
+  abn: "61 703 179 739",
+  acn: "703 179 739",
+  legalOperator: "Comment2DM is operated by AMAZING AI PTY LTD",
   get url() {
     return getSiteUrl();
   },
