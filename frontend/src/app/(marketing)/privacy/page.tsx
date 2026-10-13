@@ -14,13 +14,20 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Privacy Policy
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: September 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: 13 October 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
             This policy describes the information {siteConfig.name} collects and
             how it is used to operate comment-to-DM automation. We do not sell
             your personal information.
+          </p>
+
+          <p>
+            {siteConfig.name} is operated by {siteConfig.legalName} (ABN{" "}
+            {siteConfig.abn}, ACN {siteConfig.acn}). {siteConfig.legalName} is the
+            entity responsible for operating the Comment2DM service and handling
+            personal information described in this policy.
           </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Information we collect</h2>
