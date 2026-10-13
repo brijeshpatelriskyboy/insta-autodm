@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { useToast } from "@/components/providers/ToastProvider";
-import { api, type BillingHistoryItem, type SubscriptionInfo } from "@/lib/api";
+import { api, type BillingHistoryItem, type SubscriptionInfo, type User } from "@/lib/api";
 import { getToken } from "@/lib/auth";
 import { BILLING_PLANS } from "@/lib/billing-plans";
 import { VideoGuideCard } from "@/components/help/VideoGuideCard";
@@ -44,6 +44,7 @@ export default function BillingPage() {
   const searchParams = useSearchParams();
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [history, setHistory] = useState<BillingHistoryItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState<string | null>(null);
   const [billingInterval, setBillingInterval] = useState<"monthly" | "annual">("monthly");
@@ -56,13 +57,15 @@ export default function BillingPage() {
     const token = getToken();
     if (!token) return;
 
-    const [sub, hist] = await Promise.all([
+    const [sub, hist, me] = await Promise.all([
       api.getSubscription(token),
       api.getBillingHistory(token),
+      api.me(token),
     ]);
     setSubscription(sub);
     setBillingInterval(sub.billingInterval ?? "monthly");
     setHistory(hist);
+    setUser(me);
     setLoading(false);
   }, []);
 
@@ -164,6 +167,75 @@ export default function BillingPage() {
     } finally {
       setResuming(false);
     }
+  }
+
+  function openSampleInvoice() {
+    const now = new Date();
+    const end = new Date(now);
+    const annual = subscription?.billingInterval === "annual";
+    if (annual) end.setFullYear(end.getFullYear() + 1);
+    else end.setMonth(end.getMonth() + 1);
+
+    const escapeHtml = (value: unknown) =>
+      String(value ?? "").replace(/[&<>'"]/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "'": "&#39;",
+        '"': "&quot;",
+      })[char] ?? char);
+
+    const longDate = (date: Date) =>
+      date.toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" });
+    const shortDate = (date: Date) =>
+      date.toLocaleDateString("en-AU", { day: "2-digit", month: "short", year: "numeric" });
+
+    const planName = subscription?.planName ?? "Creator";
+    const amount = annual
+      ? subscription?.annualPrice ?? 0
+      : subscription?.price ?? 0;
+    const billingLabel = annual ? "Annual Subscription" : "Monthly Subscription";
+    const formattedAmount = `USD ${Number(amount).toFixed(2)}`;
+
+    const invoiceHtml = `<!doctype html><html><head><meta charset="utf-8"><title>Comment2DM Sample Invoice</title><style>
+      *{box-sizing:border-box}body{margin:0;background:#f4f6f8;color:#1f2937;font-family:Arial,Helvetica,sans-serif}
+      .wrap{max-width:820px;margin:36px auto;background:#fff;padding:48px;box-shadow:0 14px 44px rgba(15,23,42,.10)}
+      .brand{text-align:center;border-top:2px solid #202632;border-bottom:2px solid #202632;padding:18px 0 16px}
+      .brand h1{margin:0;font-size:24px;letter-spacing:.05em}.legal{margin-top:8px;font-size:12px;color:#4b5563;line-height:1.6}
+      .invoice-title{text-align:center;font-size:15px;font-weight:800;letter-spacing:.18em;margin:28px 0}
+      .meta{display:grid;grid-template-columns:1fr 1fr;gap:6px 28px;font-size:13px}.meta b{display:inline-block;min-width:95px}
+      .bill{margin-top:28px}.label{font-size:11px;font-weight:800;letter-spacing:.12em;color:#4b5563}.bill p{margin:7px 0 0;line-height:1.5}
+      .table{margin-top:28px;border-top:1px solid #202632;border-bottom:1px solid #202632}
+      .head,.row,.total{display:grid;grid-template-columns:1fr 180px;gap:18px}.head{padding:12px 0;border-bottom:1px solid #d1d5db;font-size:11px;font-weight:800;letter-spacing:.08em}
+      .row{padding:22px 0}.row strong{display:block}.row small{display:block;margin-top:8px;color:#6b7280;line-height:1.5}.amount{text-align:right;font-weight:700}
+      .totals{margin-top:18px;margin-left:auto;width:330px}.total{grid-template-columns:1fr 150px;padding:5px 0}.total strong:last-child{text-align:right}.grand{border-top:1px solid #d1d5db;margin-top:5px;padding-top:10px;font-size:15px}
+      .gst{margin-top:18px;font-size:12px;color:#4b5563}.payment{margin-top:26px;border-top:1px solid #e5e7eb;padding-top:18px;font-size:13px;line-height:1.9}
+      .sample{text-align:right;font-size:10px;font-weight:800;letter-spacing:.14em;color:#7c3aed;margin-bottom:8px}
+      .actions{margin-top:30px;text-align:center}.actions button{border:0;border-radius:9px;background:#202632;color:#fff;padding:10px 18px;font-weight:700;cursor:pointer}
+      @media print{body{background:#fff}.wrap{margin:0;box-shadow:none;max-width:none}.actions{display:none}}
+    </style></head><body><div class="wrap">
+      <div class="sample">SAMPLE INVOICE FORMAT</div>
+      <div class="brand"><h1>Comment2DM</h1><div class="legal">Operated by AMAZING AI PTY LTD<br>ABN 61 703 179 739 | ACN 703 179 739</div></div>
+      <div class="invoice-title">INVOICE</div>
+      <div class="meta"><div><b>Invoice No:</b> C2D-000001</div><div><b>Invoice Date:</b> ${escapeHtml(longDate(now))}</div><div><b>Due Date:</b> ${escapeHtml(longDate(now))}</div></div>
+      <div class="bill"><div class="label">BILL TO</div><p><strong>${escapeHtml(user?.name || "Alex Creator")}</strong><br>${escapeHtml(user?.email || "alex@example.com")}</p></div>
+      <div class="table"><div class="head"><div>DESCRIPTION</div><div style="text-align:right">AMOUNT</div></div>
+        <div class="row"><div><strong>Comment2DM ${escapeHtml(planName)} Plan</strong><small>${escapeHtml(billingLabel)}<br><br>Billing period:<br>${escapeHtml(shortDate(now))} – ${escapeHtml(shortDate(end))}</small></div><div class="amount">${escapeHtml(formattedAmount)}</div></div>
+      </div>
+      <div class="totals"><div class="total"><span>Subtotal</span><strong>${escapeHtml(formattedAmount)}</strong></div><div class="total grand"><strong>TOTAL</strong><strong>${escapeHtml(formattedAmount)}</strong></div></div>
+      <div class="gst">GST not included.</div>
+      <div class="payment"><strong>Payment status:</strong> PAID<br><strong>Payment method:</strong> Mastercard •••• 4444<br><strong>Transaction reference:</strong> C2D-EXAMPLE-001</div>
+      <div class="actions"><button onclick="window.print()">Print sample invoice</button></div>
+    </div></body></html>`;
+
+    const win = window.open("", "_blank", "width=900,height=1000");
+    if (!win) {
+      toast.error("Allow pop-ups to preview the sample invoice.");
+      return;
+    }
+    win.document.open();
+    win.document.write(invoiceHtml);
+    win.document.close();
   }
 
   const isActive =
@@ -488,7 +560,13 @@ export default function BillingPage() {
         )}
       </Card>
 
-      <div className="space-y-2 text-center text-xs text-slate-400">
+      <div className="space-y-3 text-center text-xs text-slate-400">
+        <div>
+          <Button variant="secondary" onClick={openSampleInvoice}>
+            <Receipt className="h-4 w-4" />
+            Preview sample invoice
+          </Button>
+        </div>
         <p>
           Paid Comment2DM subscriptions are supplied by {siteConfig.legalName} · ABN{" "}
           {siteConfig.abn} · ACN {siteConfig.acn}.
