@@ -85,6 +85,50 @@ export function createApp() {
     }
   });
 
+  // Internal SHC professional email relay. Recipient addresses come from the
+  // SHC database; the shared server token prevents public use of this endpoint.
+  app.post("/api/internal/shc-email", async (req, res, next) => {
+    try {
+      const expected = process.env.SHC_NOTIFICATION_TOKEN || "";
+      const provided = String(req.header("x-shc-notification-token") || "");
+      if (!expected || !provided) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+      const a = Buffer.from(expected);
+      const b = Buffer.from(provided);
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const to = String(req.body?.to || "").trim().toLowerCase().slice(0, 254);
+      const subject = String(req.body?.subject || "").trim().slice(0, 180);
+      const text = String(req.body?.text || "").trim().slice(0, 12000);
+      const html = String(req.body?.html || "").trim().slice(0, 30000);
+      if (!to || !to.includes("@") || to.includes(",") || !subject || (!text && !html)) {
+        res.status(400).json({ error: "Invalid SHC email" });
+        return;
+      }
+
+      await sendEmail({
+        kind: "security_notification",
+        to,
+        subject,
+        text: text || "Student Help Centre membership update",
+        html:
+          html ||
+          `<pre style="white-space:pre-wrap;font-family:Arial,sans-serif">${text.replace(
+            /[&<>]/g,
+            (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c] as string),
+          )}</pre>`,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Public Instagram OAuth callback — no auth; must stay registered in all envs.
   // Final production path: GET /api/meta/callback
   app.use("/api/meta", metaRoutes);
