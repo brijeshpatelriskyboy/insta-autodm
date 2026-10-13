@@ -76,7 +76,8 @@ export function MarketingFooter() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200/80 pt-8 sm:flex-row">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} {siteConfig.name}. All rights reserved.
+            © {new Date().getFullYear()} {siteConfig.name}. Operated by{" "}
+            {siteConfig.legalName} · ABN {siteConfig.abn} · ACN {siteConfig.acn}. All rights reserved.
           </p>
           <div className="flex gap-6">
             {navLinks.map((link) => (
