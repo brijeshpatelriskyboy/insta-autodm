@@ -14,7 +14,7 @@ export default function PrivacyPage() {
         <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
           Privacy Policy
         </h1>
-        <p className="mt-4 text-sm text-slate-500">Last updated: 13 October 2026</p>
+        <p className="mt-4 text-sm text-slate-500">Last updated: 22 October 2026</p>
 
         <div className="prose prose-slate mt-10 max-w-none space-y-6 text-sm leading-relaxed text-slate-600">
           <p>
@@ -78,6 +78,25 @@ export default function PrivacyPage() {
             <li>An email provider (Resend) when transactional email is configured, for password-reset and contact-form messages.</li>
             <li>Stripe when billing is enabled, for checkout and subscription processing.</li>
           </ul>
+
+          <h2 className="text-lg font-semibold text-slate-900">Security and international processing</h2>
+          <p>
+            We use reasonable technical and organisational safeguards, including
+            restricted service access and encrypted storage of Instagram access
+            tokens. No online service can guarantee absolute security. Information
+            may be processed by our service providers in countries outside
+            Australia, including where Meta, payment, hosting, or email services
+            operate.
+          </p>
+
+          <h2 className="text-lg font-semibold text-slate-900">Instagram access and disconnecting</h2>
+          <p>
+            You can disconnect an Instagram account from your dashboard or revoke
+            Comment2DM access in your Meta or Instagram settings. Disconnecting
+            stops future automation through that connection but does not by itself
+            erase historical account and billing records. To request deletion,
+            use the contact form or data deletion instructions below.
+          </p>
 
           <h2 className="text-lg font-semibold text-slate-900">Retention</h2>
           <p>
