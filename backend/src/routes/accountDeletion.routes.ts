@@ -36,7 +36,11 @@ router.delete("/", authenticate, async (req, res, next) => {
         await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
       }
     }
-    await prisma.user.delete({ where: { id: user.id } });
+    await prisma.$transaction(async (tx) => {
+      // Launch-offer claims have SetNull rather than cascade, so remove them explicitly.
+      await tx.launchOfferClaim.deleteMany({ where: { userId: user.id } });
+      await tx.user.delete({ where: { id: user.id } });
+    });
     res.setHeader("Cache-Control", "no-store");
     res.json({ deleted: true });
   } catch (error) { next(error); }
