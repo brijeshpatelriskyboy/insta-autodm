@@ -5,6 +5,7 @@ import { corsOptions } from "./config/cors";
 import { errorHandler } from "./middleware/errorHandler";
 import { metaWebhookSignatureMiddleware } from "./middleware/metaWebhookSignature";
 import authRoutes from "./routes/auth.routes";
+import accountDeletionRoutes from "./routes/accountDeletion.routes";
 import adminRoutes from "./routes/admin.routes";
 import keywordRuleRoutes from "./routes/keywordRule.routes";
 import analyticsRoutes from "./routes/analytics.routes";
@@ -135,6 +136,7 @@ export function createApp() {
   app.use("/api/meta", metaRoutes);
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/account", accountDeletionRoutes);
   app.use("/api/admin", adminRoutes);
   app.use("/api/contact", contactRoutes);
   app.use("/api/keyword-rules", keywordRuleRoutes);
