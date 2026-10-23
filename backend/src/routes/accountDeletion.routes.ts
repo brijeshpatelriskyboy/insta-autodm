@@ -62,7 +62,18 @@ router.delete("/", authenticate, async (req, res, next) => {
       await tx.billingEvent.deleteMany({ where: { userId: user.id } });
       await tx.subscription.deleteMany({ where: { userId: user.id } });
       await tx.liteOfferClaim.deleteMany({ where: { userId: user.id } });
-      await tx.launchOfferClaim.deleteMany({ where: { userId: user.id } });
+      // Keep only the detached launch-offer eligibility marker so deleting an
+      // account cannot be used to claim the one-time discount again. The User
+      // relation is SetNull, so no Comment2DM account/profile remains attached.
+      await tx.launchOfferClaim.updateMany({
+        where: { userId: user.id },
+        data: {
+          userId: null,
+          checkoutSessionId: null,
+          stripeSubscriptionId: null,
+          reservedUntil: null,
+        },
+      });
       await tx.user.delete({ where: { id: user.id } });
     });
     res.setHeader("Cache-Control", "no-store");
