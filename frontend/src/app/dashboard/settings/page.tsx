@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/providers/ToastProvider";
 import { api, ApiError } from "@/lib/api";
-import { getStoredUser, getToken } from "@/lib/auth";
+import { clearAuth, getStoredUser, getToken } from "@/lib/auth";
 import { validateChangePasswordForm } from "@/lib/auth-forms";
 
 const tabs = [
@@ -21,6 +21,31 @@ const tabs = [
 export default function SettingsPage() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState("profile");
+  const [deletionPassword, setDeletionPassword] = useState("");
+  const [deletionConfirmation, setDeletionConfirmation] = useState("");
+  const [deletionBusy, setDeletionBusy] = useState(false);
+  const [deletionError, setDeletionError] = useState("");
+  async function handleAccountDeletion(e: React.FormEvent) {
+    e.preventDefault();
+    if (deletionBusy || deletionConfirmation !== "DELETE MY ACCOUNT") return;
+    const token = getToken();
+    if (!token) { setDeletionError("Please sign in again."); return; }
+    setDeletionBusy(true); setDeletionError("");
+    try {
+      const response = await fetch("/api/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: deletionPassword, confirmation: deletionConfirmation }),
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || "Could not delete account");
+      }
+      clearAuth();
+      window.location.assign("/");
+    } catch (err) { setDeletionError(err instanceof Error ? err.message : "Could not delete account"); }
+    finally { setDeletionBusy(false); }
+  }
 
   // Stable empty defaults for SSR/hydration; hydrate from localStorage after mount.
   const [name, setName] = useState("");
@@ -137,6 +162,22 @@ export default function SettingsPage() {
         </Card>
       )}
 
+      {activeTab === "profile" && (
+        <section className="mt-8 rounded-xl border border-red-300 bg-red-50 p-6">
+          <h2 className="text-lg font-semibold text-red-900">Delete account permanently</h2>
+          <p className="my-3 text-sm text-red-800">This permanently deletes your Comment2DM account, automation rules, Instagram connections, leads and activity. Active billing will be cancelled immediately. Payment-provider records may be retained where legally required. This cannot be undone.</p>
+          <form onSubmit={handleAccountDeletion} className="max-w-lg space-y-4">
+            <label className="block text-sm text-red-900">Confirm your password
+              <input type="password" autoComplete="current-password" required value={deletionPassword} onChange={e => setDeletionPassword(e.target.value)} className="mt-1 w-full rounded-md border border-red-300 bg-white p-3 text-slate-900"/>
+            </label>
+            <label className="block text-sm text-red-900">Type DELETE MY ACCOUNT
+              <input required value={deletionConfirmation} onChange={e => setDeletionConfirmation(e.target.value)} className="mt-1 w-full rounded-md border border-red-300 bg-white p-3 text-slate-900"/>
+            </label>
+            {deletionError && <p role="alert" className="text-sm text-red-700">{deletionError}</p>}
+            <button disabled={deletionBusy || deletionConfirmation !== "DELETE MY ACCOUNT" || !deletionPassword} type="submit" className="rounded-md bg-red-700 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">{deletionBusy ? "Deleting..." : "Permanently delete my account"}</button>
+          </form>
+        </section>
+      )}
       {activeTab === "password" && (
         <Card title="Password" description="Update your password to keep your account secure.">
           <form onSubmit={handlePasswordSave} className="max-w-lg space-y-5">
