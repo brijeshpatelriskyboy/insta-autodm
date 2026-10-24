@@ -278,18 +278,18 @@ export default function BillingPage() {
                 <h3 className="text-xl font-semibold text-slate-900">
                   {subscription?.planName ?? "No plan"}
                 </h3>
-                <StatusPill
-                  status={
-                    isActive
-                      ? "active"
-                      : subscription?.status === "canceled"
-                        ? "disconnected"
-                        : subscription?.status === "expired"
+                {subscription?.status !== "billing_review" && (
+                  <StatusPill
+                    status={
+                      isActive
+                        ? "active"
+                        : subscription?.status === "canceled" || subscription?.status === "expired"
                           ? "disconnected"
                           : "pending"
-                  }
-                  label={subscription?.status === "billing_review" ? "Billing review required" : subscription?.status === "expired" ? "Expired — upgrade required" : undefined}
-                />
+                    }
+                    label={subscription?.status === "expired" ? "Expired — upgrade required" : undefined}
+                  />
+                )}
               </div>
               {subscription?.price != null && (
                 <p className="mt-1 text-sm text-slate-500">
