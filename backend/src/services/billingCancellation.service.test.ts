@@ -15,9 +15,9 @@ vi.mock("../config/env", () => ({
 vi.mock("stripe", () => {
   class StripeInvalidRequestError extends Error {
     code: string;
-    constructor(code: string) {
+    constructor(raw: { code?: string }) {
       super("No such subscription");
-      this.code = code;
+      this.code = raw.code ?? "";
     }
   }
   class MockStripe {
@@ -44,7 +44,7 @@ describe("billing cancellation with live and historical subscriptions", () => {
 
   it("returns 409 and preserves the database for a missing Stripe subscription", async () => {
     stripeUpdate.mockRejectedValueOnce(
-      new Stripe.errors.StripeInvalidRequestError("resource_missing"),
+      new Stripe.errors.StripeInvalidRequestError({ code: "resource_missing" } as any),
     );
     await expect(billingService.cancelSubscription("user-1")).rejects.toMatchObject({
       statusCode: 409,
