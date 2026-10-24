@@ -719,10 +719,25 @@ export const billingService = {
     }
 
     const stripe = getStripe();
-    await stripe.subscriptions.update(
-      sub.stripeSubscriptionId,
-      buildCancelSubscriptionParams(),
-    );
+    try {
+      await stripe.subscriptions.update(
+        sub.stripeSubscriptionId,
+        buildCancelSubscriptionParams(),
+      );
+    } catch (error) {
+      if (
+        error instanceof Stripe.errors.StripeInvalidRequestError &&
+        error.code === "resource_missing"
+      ) {
+        // A legacy/test-mode subscription may be absent from the current live
+        // Stripe account. Do not change the local record or report cancellation.
+        throw new AppError(
+          409,
+          "This subscription is not available in the current billing account. Please contact support to review your subscription.",
+        );
+      }
+      throw error;
+    }
 
     await prisma.subscription.update({
       where: { userId },
