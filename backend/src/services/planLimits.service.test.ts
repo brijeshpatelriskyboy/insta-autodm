@@ -8,6 +8,7 @@ const {
   mockUsageFindUnique,
   mockInstagramCount,
   mockInstagramFindUnique,
+  mockStripeRetrieve,
 } = vi.hoisted(() => ({
   mockSubscriptionFindUnique: vi.fn(),
   mockKeywordCount: vi.fn(),
@@ -16,8 +17,16 @@ const {
   mockUsageFindUnique: vi.fn(),
   mockInstagramCount: vi.fn(),
   mockInstagramFindUnique: vi.fn(),
+  mockStripeRetrieve: vi.fn(),
 }));
 
+vi.mock("../config/env", () => ({ env: { STRIPE_SECRET_KEY: "sk_live_test_not_real" } }));
+vi.mock("stripe", () => ({
+  default: class MockStripe {
+    subscriptions = { retrieve: mockStripeRetrieve };
+    static errors = { StripeInvalidRequestError: class StripeInvalidRequestError extends Error {} };
+  },
+}));
 vi.mock("../lib/prisma", () => ({
   prisma: {
     subscription: { findUnique: mockSubscriptionFindUnique },
@@ -46,7 +55,8 @@ import {
 describe("plan limits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active" });
+    mockStripeRetrieve.mockResolvedValue({ status: "active" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active", stripeSubscriptionId: "sub_live" });
     mockInstagramCount.mockResolvedValue(0);
     mockInstagramFindUnique.mockResolvedValue(null);
   });
@@ -79,19 +89,19 @@ describe("plan limits", () => {
   });
 
   it("allows unlimited Creator keyword rules", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active", stripeSubscriptionId: "sub_live" });
     await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
     expect(mockKeywordCount).not.toHaveBeenCalled();
   });
 
   it("allows unlimited Pro keyword rules", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active", stripeSubscriptionId: "sub_live" });
     await expect(assertCanCreateKeywordRule("user-1")).resolves.toBeUndefined();
     expect(mockKeywordCount).not.toHaveBeenCalled();
   });
 
   it("allows Creator to connect up to 3 Instagram accounts", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "creator", status: "active", stripeSubscriptionId: "sub_live" });
     mockInstagramCount.mockResolvedValue(2);
 
     await expect(assertCanConnectInstagramAccount("user-1", "ig-new")).resolves.toBeUndefined();
@@ -104,7 +114,7 @@ describe("plan limits", () => {
   });
 
   it("blocks another Instagram account when the Pro 15-account limit is reached", async () => {
-    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active" });
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "pro", status: "active", stripeSubscriptionId: "sub_live" });
     mockInstagramCount.mockResolvedValue(15);
 
     await expect(assertCanConnectInstagramAccount("user-1", "ig-new")).rejects.toMatchObject({
@@ -194,5 +204,28 @@ describe("plan limits", () => {
       used: 0,
       remaining: 1_000,
     });
+  });
+});
+
+
+describe("live Stripe entitlement checks", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active", stripeSubscriptionId: "sub_historical" });
+    mockStripeRetrieve.mockResolvedValue({ status: "active" });
+  });
+  it("does not reserve DMs for a historical subscription missing from live Stripe", async () => {
+    mockStripeRetrieve.mockRejectedValueOnce(new Error("No such subscription"));
+    await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: false, reason: "inactive_subscription" });
+    expect(mockUsageUpsert).not.toHaveBeenCalled();
+  });
+  it("preserves paid access for live verified active subscriptions", async () => {
+    mockUsageUpdateMany.mockResolvedValue({ count: 1 });
+    await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: true });
+    expect(mockStripeRetrieve).toHaveBeenCalledWith("sub_historical");
+  });
+  it("rejects a locally active subscription cancelled in live Stripe", async () => {
+    mockStripeRetrieve.mockResolvedValue({ status: "canceled" });
+    await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: false });
   });
 });
