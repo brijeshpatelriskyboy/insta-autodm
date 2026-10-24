@@ -228,4 +228,13 @@ describe("live Stripe entitlement checks", () => {
     mockStripeRetrieve.mockResolvedValue({ status: "canceled" });
     await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: false });
   });
+  it("reuses recent positive verification during a brief Stripe outage", async () => {
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active", stripeSubscriptionId: "sub_outage_grace" });
+    mockUsageUpdateMany.mockResolvedValue({ count: 1 });
+    await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: true });
+    mockStripeRetrieve.mockRejectedValue(new Error("Stripe unavailable"));
+    await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: true });
+    expect(mockStripeRetrieve).toHaveBeenCalledTimes(1);
+  });
+
 });
