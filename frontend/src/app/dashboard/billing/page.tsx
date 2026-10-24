@@ -310,7 +310,18 @@ export default function BillingPage() {
                 </p>
               )}
             </div>
-            {isPaidActive && subscription?.cancelAtPeriodEnd ? (
+            {subscription?.status === "billing_review" ? (
+              <Button
+                variant="secondary"
+                onClick={async () => {
+                  if (!window.confirm("Close this historical subscription record in Comment2DM? This does not cancel a subscription in another Stripe account or sandbox.")) return;
+                  await handleCancel();
+                }}
+                disabled={canceling || !subscription?.stripeConfigured}
+              >
+                {canceling ? "Closing..." : "Close old subscription"}
+              </Button>
+            ) : isPaidActive && subscription?.cancelAtPeriodEnd ? (
               <Button
                 onClick={handleResume}
                 disabled={resuming || !subscription?.stripeConfigured}
