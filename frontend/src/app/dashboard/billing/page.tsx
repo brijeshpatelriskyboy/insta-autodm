@@ -253,22 +253,17 @@ export default function BillingPage() {
       <VideoGuideCard {...VIDEO_GUIDES.billing} />
 
       {!subscription?.stripeConfigured && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-slate-600" />
           <div>
-            <p className="text-sm font-semibold text-amber-900">Billing temporarily unavailable</p>
-            <p className="mt-1 text-sm text-amber-800">
+            <p className="text-sm font-semibold text-slate-900">Billing temporarily unavailable</p>
+            <p className="mt-1 text-sm text-slate-700">
               Please try again shortly or contact support if you need help.
             </p>
           </div>
         </div>
       )}
 
-      {subscription?.status === "billing_review" && (
-        <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          This subscription belongs to a previous billing environment and requires review. Please contact hello@comment2dm.ai. No new charge has been made.
-        </p>
-      )}
 
       <Card title="Current subscription" description="Your plan and billing status.">
         {loading ? (
