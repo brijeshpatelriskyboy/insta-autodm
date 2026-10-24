@@ -399,10 +399,10 @@ async function reconcileStripeBilling(userId: string) {
   if (!local?.stripeSubscriptionId || !local.stripeCustomerId) return;
 
   const stripe = getStripe();
-  const [subscription, invoices] = await Promise.all([
-    stripe.subscriptions.retrieve(local.stripeSubscriptionId),
-    stripe.invoices.list({ customer: local.stripeCustomerId, limit: 24 }),
-  ]);
+  // Verify the subscription before looking up invoices. Historical test-mode
+  // subscription IDs are not present in the live Stripe account.
+  const subscription = await stripe.subscriptions.retrieve(local.stripeSubscriptionId);
+  const invoices = await stripe.invoices.list({ customer: local.stripeCustomerId, limit: 24 });
 
   await prisma.subscription.update({
     where: { userId },
@@ -429,16 +429,19 @@ async function reconcileStripeBillingForDashboard(userId: string): Promise<boole
   } catch (error) {
     // Keep the dashboard available during a temporary Stripe outage. Webhooks or
     // a later dashboard read will retry the reconciliation.
-    console.error("[billing] Stripe reconciliation failed", {
-      userId,
-      error: error instanceof Error ? error.message : "Unknown Stripe error",
-    });
-    // Historical test subscriptions cannot be verified by the live Stripe account.
-    // Never display them as confirmed active or offer live cancellation actions.
-    return !(
+    const isMissing = (
       error instanceof Stripe.errors.StripeInvalidRequestError &&
       error.code === "resource_missing"
     );
+    if (!isMissing) {
+      console.error("[billing] Stripe reconciliation failed", {
+        userId,
+        error: error instanceof Error ? error.message : "Unknown Stripe error",
+      });
+    }
+    // Historical test subscriptions cannot be verified by the live Stripe account.
+    // Never display them as confirmed active or offer live cancellation actions.
+    return !isMissing;
   }
 }
 
