@@ -225,6 +225,8 @@ describe("live Stripe entitlement checks", () => {
     expect(mockStripeRetrieve).toHaveBeenCalledWith("sub_historical");
   });
   it("rejects a locally active subscription cancelled in live Stripe", async () => {
+    // Keep this test independent from the verified-active cache used by other cases.
+    mockSubscriptionFindUnique.mockResolvedValue({ plan: "starter", status: "active", stripeSubscriptionId: "sub_cancelled_live" });
     mockStripeRetrieve.mockResolvedValue({ status: "canceled" });
     await expect(reserveMonthlyDm("user-1")).resolves.toMatchObject({ allowed: false });
   });
