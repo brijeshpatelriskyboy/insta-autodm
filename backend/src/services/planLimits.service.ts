@@ -1,18 +1,59 @@
 import { getPlan, type PlanSlug } from "../config/plans";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
+import Stripe from "stripe";
+import { env } from "../config/env";
+
+// Cache only Stripe-verified results briefly to avoid a remote call for every DM.
+// Never use a cached entitlement after its verification window expires.
+const stripeEntitlementCache = new Map<string, { active: boolean; verifiedAt: number }>();
+const ENTITLEMENT_CACHE_MS = 60_000;
+const OUTAGE_GRACE_MS = 300_000;
 
 async function getSubscriptionState(userId: string) {
   const subscription = await prisma.subscription.findUnique({
     where: { userId },
-    select: { plan: true, status: true, currentPeriodEnd: true },
+    select: { plan: true, status: true, currentPeriodEnd: true, stripeSubscriptionId: true },
   });
   const plan = getPlan(subscription?.plan ?? "starter") ?? getPlan("starter")!;
   const statusActive = subscription?.status === "active" || subscription?.status === "trialing";
   const liteExpired =
     plan.slug === "lite" &&
     (!subscription?.currentPeriodEnd || subscription.currentPeriodEnd.getTime() <= Date.now());
-  const active = Boolean(statusActive && !liteExpired);
+  let active = Boolean(statusActive && !liteExpired);
+  // Local billing rows may refer to a historical test-mode Stripe account.
+  // A paid subscription must exist and be active in the configured live Stripe
+  // account before its limits can authorize automation or DM delivery.
+  if (active && plan.slug !== "lite") {
+    active = false;
+    const id = subscription?.stripeSubscriptionId;
+    if (id && env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) {
+      const cached = stripeEntitlementCache.get(id);
+      const age = cached ? Date.now() - cached.verifiedAt : Infinity;
+      if (cached && age < ENTITLEMENT_CACHE_MS) {
+        active = cached.active;
+      } else {
+        try {
+          const stripe = new Stripe(env.STRIPE_SECRET_KEY);
+          const remote = await stripe.subscriptions.retrieve(id);
+          active = remote.status === "active" || remote.status === "trialing";
+          stripeEntitlementCache.set(id, { active, verifiedAt: Date.now() });
+        } catch (error) {
+          const missing = error instanceof Stripe.errors.StripeInvalidRequestError && error.code === "resource_missing";
+          if (missing) {
+            stripeEntitlementCache.delete(id);
+          } else if (cached?.active && age < OUTAGE_GRACE_MS) {
+            // Briefly preserve a recently confirmed paid entitlement on transient errors.
+            active = true;
+          }
+          console.warn("[billing] Unable to verify paid entitlement", {
+            userId,
+            errorType: missing ? "subscription_missing" : "stripe_unavailable",
+          });
+        }
+      }
+    }
+  }
   return { plan, active };
 }
 
