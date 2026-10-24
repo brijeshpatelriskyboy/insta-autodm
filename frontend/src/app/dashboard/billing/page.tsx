@@ -309,7 +309,7 @@ export default function BillingPage() {
                     ` · ${subscription.plan === "lite" ? "Ends" : "Renews"} ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
               )}
-              {subscription?.cancelAtPeriodEnd && (
+              {subscription?.cancelAtPeriodEnd && subscription?.status !== "billing_review" && (
                 <p className="mt-2 text-sm text-amber-700">
                   Cancels at end of billing period
                 </p>
