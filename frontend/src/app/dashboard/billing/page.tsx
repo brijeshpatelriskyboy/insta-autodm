@@ -264,7 +264,13 @@ export default function BillingPage() {
         </div>
       )}
 
-      <Card title="Current subscription" description="Your active plan and renewal date.">
+      {subscription?.status === "billing_review" && (
+        <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          This subscription belongs to a previous billing environment and requires review. Please contact hello@comment2dm.ai. No new charge has been made.
+        </p>
+      )}
+
+      <Card title="Current subscription" description="Your plan and billing status.">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -287,7 +293,7 @@ export default function BillingPage() {
                           ? "disconnected"
                           : "pending"
                   }
-                  label={subscription?.status === "expired" ? "Expired — upgrade required" : undefined}
+                  label={subscription?.status === "billing_review" ? "Billing review required" : subscription?.status === "expired" ? "Expired — upgrade required" : undefined}
                 />
               </div>
               {subscription?.price != null && (
@@ -299,7 +305,7 @@ export default function BillingPage() {
                       : subscription.introductoryMonths && subscription.standardPrice
                         ? `USD $${subscription.price}/month for the first ${subscription.introductoryMonths} months, then USD $${subscription.standardPrice}/month`
                         : `USD $${subscription.price}/month`}
-                  {subscription.currentPeriodEnd &&
+                  {subscription.currentPeriodEnd && subscription.status !== "billing_review" &&
                     ` · ${subscription.plan === "lite" ? "Ends" : "Renews"} ${formatDate(subscription.currentPeriodEnd)}`}
                 </p>
               )}
