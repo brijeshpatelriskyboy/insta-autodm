@@ -10,7 +10,7 @@ vi.mock("../lib/prisma", () => ({
   prisma: { subscription: { findUnique, update } },
 }));
 vi.mock("../config/env", () => ({
-  env: { STRIPE_SECRET_KEY: "sk_test_mock_only" },
+  env: { STRIPE_SECRET_KEY: "sk_live_mock_only" },
 }));
 vi.mock("stripe", () => {
   class StripeInvalidRequestError extends Error {
@@ -42,16 +42,18 @@ describe("billing cancellation with live and historical subscriptions", () => {
     update.mockResolvedValue({});
   });
 
-  it("returns 409 and preserves the database for a missing Stripe subscription", async () => {
+  it("closes the old local record but never claims live Stripe cancellation", async () => {
     stripeUpdate.mockRejectedValueOnce(
       new Stripe.errors.StripeInvalidRequestError({ code: "resource_missing" } as any),
     );
-    await expect(billingService.cancelSubscription("user-1")).rejects.toMatchObject({
-      statusCode: 409,
-      message: expect.stringContaining("current billing account"),
+    await expect(billingService.cancelSubscription("user-1")).resolves.toEqual({
+      message: "Old subscription record closed in Comment2DM. No live Stripe subscription was cancelled.",
     });
     expect(stripeUpdate).toHaveBeenCalledOnce();
-    expect(update).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: { status: "canceled", cancelAtPeriodEnd: false },
+    });
   });
 
   it("schedules cancellation and records it for a valid subscription", async () => {

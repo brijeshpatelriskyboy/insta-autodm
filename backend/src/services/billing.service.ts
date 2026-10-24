@@ -738,12 +738,20 @@ export const billingService = {
         error instanceof Stripe.errors.StripeInvalidRequestError &&
         error.code === "resource_missing"
       ) {
-        // A legacy/test-mode subscription may be absent from the current live
-        // Stripe account. Do not change the local record or report cancellation.
-        throw new AppError(
-          409,
-          "This subscription is not available in the current billing account. Please contact support to review your subscription.",
-        );
+        // The subscription doesn't exist in this live Stripe account.
+        // Close only the local historical entitlement, preserving the Stripe ID
+        // and the full billing history for audit. This does NOT cancel any
+        // subscription belonging to a different Stripe/test environment.
+        if (!env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) {
+          throw new AppError(409, "Billing account could not be verified. Contact support.");
+        }
+        await prisma.subscription.update({
+          where: { userId },
+          data: { status: "canceled", cancelAtPeriodEnd: false },
+        });
+        return {
+          message: "Old subscription record closed in Comment2DM. No live Stripe subscription was cancelled.",
+        };
       }
       throw error;
     }
