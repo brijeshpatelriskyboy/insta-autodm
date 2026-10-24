@@ -422,9 +422,10 @@ async function reconcileStripeBilling(userId: string) {
   await Promise.all(invoices.data.map((invoice) => storeInvoice(userId, invoice)));
 }
 
-async function reconcileStripeBillingForDashboard(userId: string) {
+async function reconcileStripeBillingForDashboard(userId: string): Promise<boolean> {
   try {
     await reconcileStripeBilling(userId);
+    return true;
   } catch (error) {
     // Keep the dashboard available during a temporary Stripe outage. Webhooks or
     // a later dashboard read will retry the reconciliation.
@@ -432,6 +433,12 @@ async function reconcileStripeBillingForDashboard(userId: string) {
       userId,
       error: error instanceof Error ? error.message : "Unknown Stripe error",
     });
+    // Historical test subscriptions cannot be verified by the live Stripe account.
+    // Never display them as confirmed active or offer live cancellation actions.
+    return !(
+      error instanceof Stripe.errors.StripeInvalidRequestError &&
+      error.code === "resource_missing"
+    );
   }
 }
 
@@ -529,14 +536,16 @@ export const billingService = {
   },
 
   async getSubscription(userId: string) {
-    await reconcileStripeBillingForDashboard(userId);
+    const verified = await reconcileStripeBillingForDashboard(userId);
     const sub = await prisma.subscription.findUnique({ where: { userId } });
     const plan = getPlan(sub?.plan ?? "starter");
 
     const liteExpired =
       sub?.plan === "lite" &&
       Boolean(sub.currentPeriodEnd && sub.currentPeriodEnd.getTime() <= Date.now());
-    const effectiveStatus = liteExpired ? "expired" : sub?.status ?? "inactive";
+    const effectiveStatus = !verified && sub?.stripeSubscriptionId
+      ? "billing_review"
+      : liteExpired ? "expired" : sub?.status ?? "inactive";
 
     return {
       plan: sub?.plan ?? null,
