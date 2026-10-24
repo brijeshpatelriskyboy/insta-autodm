@@ -8,6 +8,7 @@ const {
   mockUpdate,
   mockDelete,
   mockFindUniqueAccount,
+  mockFindFirstAccount,
   mockGetMediaById,
   mockDecryptToken,
   mockSubscribe,
@@ -19,6 +20,7 @@ const {
   mockUpdate: vi.fn(),
   mockDelete: vi.fn(),
   mockFindUniqueAccount: vi.fn(),
+  mockFindFirstAccount: vi.fn(),
   mockGetMediaById: vi.fn(),
   mockDecryptToken: vi.fn(),
   mockSubscribe: vi.fn(),
@@ -36,6 +38,7 @@ vi.mock("../lib/prisma", () => ({
     },
     instagramAccount: {
       findUnique: mockFindUniqueAccount,
+      findFirst: mockFindFirstAccount,
       update: mockAccountUpdate,
     },
   },
@@ -87,6 +90,7 @@ describe("keywordRuleService media scope CRUD", () => {
     vi.clearAllMocks();
     mockDecryptToken.mockReturnValue("token");
     mockFindUniqueAccount.mockResolvedValue(connectedAccount);
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockGetMediaById.mockImplementation(async ({ mediaId }: { mediaId: string }) => ({
       id: mediaId,
       caption: `Caption for ${mediaId}`,
@@ -295,6 +299,7 @@ describe("follow requirement settings", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFindUniqueAccount.mockResolvedValue(connectedAccount);
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockSubscribe.mockResolvedValue({ fields: ["comments", "live_comments", "messages", "messaging_postbacks"] });
     mockAccountUpdate.mockResolvedValue({});
     mockFindFirst.mockResolvedValue({ id: "r1", userId: "user-1", keyword: "__ANY_COMMENT__" });
