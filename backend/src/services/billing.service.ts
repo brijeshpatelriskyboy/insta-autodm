@@ -756,7 +756,6 @@ export const billingService = {
             cancelAtPeriodEnd: false,
             stripeSubscriptionId: null,
             stripeCustomerId: null,
-            checkoutSessionId: null,
           },
         });
         return {
