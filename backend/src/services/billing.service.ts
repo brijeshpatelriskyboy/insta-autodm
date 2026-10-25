@@ -392,11 +392,63 @@ async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
  * reconcile with Stripe. This repairs a missed or out-of-order webhook without
  * making the customer repeat Checkout.
  */
+export async function recoverActiveCheckoutSubscription(userId: string): Promise<boolean> {
+  if (!isStripeConfigured() || !env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) return false;
+  const local = await prisma.subscription.findUnique({ where: { userId } });
+  if (local?.stripeSubscriptionId && (local.status === "active" || local.status === "trialing")) return false;
+
+  // Stripe is authoritative: recover only subscriptions explicitly tagged for
+  // this authenticated user, never a matching email or unrelated customer.
+  const stripe = getStripe();
+  const matches = await stripe.subscriptions.search({
+    query: `metadata['userId']:'${userId}' AND status:'active'`,
+    limit: 10,
+  });
+  const live = matches.data
+    .filter((sub) => sub.metadata?.userId === userId && sub.status === "active")
+    .sort((a, b) => b.created - a.created)[0];
+  if (!live) return false;
+  const customerId = stripeId(live.customer);
+  if (!customerId) return false;
+
+  const plan = live.metadata?.plan;
+  const interval = live.metadata?.billingInterval;
+  if (plan !== "starter" && plan !== "creator" && plan !== "pro") return false;
+  if (interval !== "monthly" && interval !== "annual") return false;
+
+  await prisma.subscription.upsert({
+    where: { userId },
+    create: {
+      userId,
+      stripeSubscriptionId: live.id,
+      stripeCustomerId: customerId,
+      plan,
+      billingInterval: interval,
+      status: live.status,
+      currentPeriodEnd: subscriptionPeriodEnd(live),
+      cancelAtPeriodEnd: live.cancel_at_period_end,
+    },
+    update: {
+      stripeSubscriptionId: live.id,
+      stripeCustomerId: customerId,
+      plan,
+      billingInterval: interval,
+      status: live.status,
+      currentPeriodEnd: subscriptionPeriodEnd(live),
+      cancelAtPeriodEnd: live.cancel_at_period_end,
+    },
+  });
+  return true;
+}
+
 async function reconcileStripeBilling(userId: string) {
   if (!isStripeConfigured()) return;
 
   const local = await prisma.subscription.findUnique({ where: { userId } });
-  if (!local?.stripeSubscriptionId || !local.stripeCustomerId) return;
+  if (!local?.stripeSubscriptionId || !local.stripeCustomerId) {
+    await recoverActiveCheckoutSubscription(userId);
+    return;
+  }
 
   const stripe = getStripe();
   // Verify the subscription before looking up invoices. Historical test-mode
