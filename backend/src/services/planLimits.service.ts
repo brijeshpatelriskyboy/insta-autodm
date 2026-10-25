@@ -40,7 +40,7 @@ async function getSubscriptionState(userId: string) {
   if (active && plan.slug !== "lite") {
     active = false;
     const id = subscription?.stripeSubscriptionId;
-    if (id && env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) {
+    if (id && env.STRIPE_SECRET_KEY) {
       const cached = stripeEntitlementCache.get(id);
       const age = cached ? Date.now() - cached.verifiedAt : Infinity;
       if (cached && age < ENTITLEMENT_CACHE_MS) {
