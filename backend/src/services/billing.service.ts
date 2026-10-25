@@ -1014,7 +1014,9 @@ export const billingService = {
         if (!userId) break;
 
         await prisma.subscription.updateMany({
-          where: { userId },
+          // A delayed event from a replaced subscription must not overwrite
+          // the customer's current plan or permissions.
+          where: { userId, stripeSubscriptionId: subscription.id },
           data: {
             status: subscription.status,
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
@@ -1036,7 +1038,7 @@ export const billingService = {
         if (!userId) break;
 
         await prisma.subscription.updateMany({
-          where: { userId },
+          where: { userId, stripeSubscriptionId: subscription.id },
           data: {
             status: "canceled",
             cancelAtPeriodEnd: false,

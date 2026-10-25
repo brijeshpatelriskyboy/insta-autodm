@@ -135,11 +135,19 @@ export class AuthService {
     input: { email: string; password: string; name?: string },
   ): Promise<AuthResult> {
     assertPasswordPolicy(input.password);
+    const account = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, profileCompletedAt: true, authProvider: true },
+    });
+    if (!account) throw new AppError(404, "User not found");
+    if (account.profileCompletedAt || account.authProvider !== "instagram") {
+      throw new AppError(409, "Profile is already complete. Use account settings to change your password.");
+    }
     const existing = await prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
     if (existing && existing.id !== userId) throw new AppError(409, "Email already registered");
     const passwordHash = await bcrypt.hash(input.password, 10);
     const user = await prisma.user.update({
-      where: { id: userId },
+      where: { id: userId, profileCompletedAt: null, authProvider: "instagram" },
       data: {
         email: input.email.toLowerCase(),
         name: input.name?.trim() || undefined,

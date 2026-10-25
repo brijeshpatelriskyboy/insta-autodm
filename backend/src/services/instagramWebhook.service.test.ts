@@ -396,6 +396,25 @@ describe("processWebhookPayload private reply flow", () => {
     expect(mockActivityLog).not.toHaveBeenCalled();
   });
 
+  it("keeps the duplicate guard and quota when persistence fails after Meta confirms delivery", async () => {
+    mockFindFirstAccount.mockResolvedValue(connectedAccount);
+    mockFindManyRules.mockResolvedValue([activeRule]);
+    stubSuccessfulClaim();
+    mockDecryptToken.mockReturnValue("test-token");
+    mockSendPrivateReply.mockResolvedValue({ recipientId: "recipient-1", messageId: "message-1" });
+    mockDmUpdate.mockImplementation(async ({ data }) => {
+      if (data.status === DmEventStatus.sent) throw new Error("Database temporarily unavailable");
+      return {};
+    });
+    const { releaseMonthlyDm } = await import("./planLimits.service");
+    const result = await instagramWebhookService.processWebhookPayload(sampleWebhook);
+    expect(result.sent).toBe(1);
+    expect(result.failed).toBe(0);
+    expect(mockSendPrivateReply).toHaveBeenCalledTimes(1);
+    expect(releaseMonthlyDm).not.toHaveBeenCalled();
+    expect(mockDmUpdate.mock.calls.some(([arg]) => arg.data.duplicateTriggerKey === null)).toBe(false);
+  });
+
   it("records a blank comment as ignored and sends no DM", async () => {
     mockFindFirstAccount.mockResolvedValue(connectedAccount);
     mockDmFindUnique.mockResolvedValue(null);

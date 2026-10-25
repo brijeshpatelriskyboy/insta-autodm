@@ -76,8 +76,9 @@ export default function TermsPage() {
           <p>
             Creating an account does not start a paid subscription. Billing begins
             only after you select a paid plan and complete Stripe checkout. An
-            active paid subscription is required for live automation sends. There
-            is no 14-day free trial. Plan names and listed prices do not by
+            active paid subscription or an unexpired Lite subscription is required for live automation sends.
+            Eligible first-time users can activate Lite for 30 days with no payment details.
+            Plan names and listed prices do not by
             themselves charge your card. Refunds, if any, are handled case by case
             and are not guaranteed.
           </p>

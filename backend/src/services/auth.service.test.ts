@@ -119,6 +119,25 @@ describe("authService", () => {
     expect(getMemoryEmailProvider().sent).toHaveLength(1);
   });
 
+  it("does not let profile completion replace credentials on an existing account", async () => {
+    mockUserFindUnique.mockResolvedValue({ ...userRow, profileCompletedAt: new Date() });
+    await expect(authService.completeInstagramProfile("user-1", {
+      email: "replacement@example.com", password: "replacement-password",
+    })).rejects.toMatchObject({ statusCode: 409 });
+    expect(mockUserUpdate).not.toHaveBeenCalled();
+  });
+
+  it("completes an unfinished Instagram profile once", async () => {
+    mockUserFindUnique.mockResolvedValueOnce({ ...userRow, authProvider: "instagram", profileCompletedAt: null })
+      .mockResolvedValueOnce(null);
+    mockUserUpdate.mockResolvedValue({ ...userRow, profileCompletedAt: new Date() });
+    const result = await authService.completeInstagramProfile("user-1", {
+      email: "ada@example.com", password: "new-password-9",
+    });
+    expect(result.user.needsProfileCompletion).toBe(false);
+    expect(mockUserUpdate).toHaveBeenCalledTimes(1);
+  });
+
   it("sends one reset email for an existing account using FRONTEND_URL", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     mockUserFindUnique.mockResolvedValue({ id: "user-1", email: "ada@example.com" });
