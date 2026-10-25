@@ -48,7 +48,7 @@ export function HeroSection() {
       </div>
 
       <div className="relative mx-auto max-w-[1700px] px-4 pb-16 pt-16 sm:px-6 sm:pb-20 sm:pt-24 lg:px-8">
-        <div className="relative mx-auto max-w-5xl text-center xl:min-h-[560px]">
+        <div className="relative mx-auto max-w-5xl text-center">
           <div className="animate-fade-in inline-flex items-center gap-2 rounded-full border border-[#d8c8ff] bg-white/80 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#6a2fd0] shadow-sm backdrop-blur">
             <Sparkles className="h-3.5 w-3.5" />
             Instagram DM automation
@@ -100,7 +100,7 @@ export function HeroSection() {
             ))}
           </div>
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:hidden">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <PromoCard symbol="✦" title="Completely free" emphasis="for ONE month" />
             <PromoCard symbol="⊘" title="NO card details" emphasis="needed" />
             <PromoCard symbol="✓" title="Meta" emphasis="Approved" />
@@ -108,39 +108,6 @@ export function HeroSection() {
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 top-40 hidden xl:block">
-          <div className="mx-auto flex max-w-[1650px] justify-between px-2">
-            <div className="w-[250px] space-y-5 2xl:w-[275px]">
-              <PromoCard
-                symbol="✦"
-                title="Completely free"
-                emphasis="for ONE month"
-                className="-rotate-[4deg]"
-              />
-              <PromoCard
-                symbol="⊘"
-                title="NO card details"
-                emphasis="needed"
-                className="rotate-[3deg]"
-              />
-            </div>
-
-            <div className="w-[250px] space-y-5 2xl:w-[275px]">
-              <PromoCard
-                symbol="✓"
-                title="Meta"
-                emphasis="Approved"
-                className="rotate-[4deg]"
-              />
-              <PromoCard
-                symbol="◎"
-                title="Direct Login with"
-                emphasis="Insta Account"
-                className="-rotate-[3deg]"
-              />
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

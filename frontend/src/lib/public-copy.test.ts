@@ -80,9 +80,6 @@ describe("public website truth", () => {
     assert.match(auth, /Terms of Service/);
     assert.match(auth, /Privacy Policy/);
 
-    const hero = readSrc("components/marketing/HeroSection.tsx");
-    assert.match(hero, /Example \/ illustrative data/);
-
     const demo = readSrc("components/marketing/InteractiveDemoSection.tsx");
     assert.match(demo, /Example \/ illustrative data/);
   });

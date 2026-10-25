@@ -200,7 +200,7 @@ export const faqs = [
   {
     question: "Is there a free trial?",
     answer:
-      "There is no 14-day free trial. You can create an account before subscribing, but live automations require an active paid subscription.",
+      "Eligible first-time users can activate Lite for 30 days with no payment details: 1 Instagram account, 2 keyword rules and 200 DMs. Follow @comment2dm.ai and comment LITE on our Lite offer post to receive your private access code. After Lite expires, an active paid subscription is required to continue automations.",
   },
   {
     question: "Can I track leads and conversions?",

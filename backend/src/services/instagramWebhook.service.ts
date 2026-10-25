@@ -818,6 +818,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
     return { matched: true, sent: false, failed: true, duplicate: false, eventsCreated: eventsCreated + 1 };
   }
 
+  let deliveryConfirmed = false;
   try {
     /**
      * Private reply (not unrestricted outbound DM).
@@ -831,6 +832,7 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
       messageText: matchedRule.requireFollow ? followRequest(account.username) : matchedRule.dmMessage,
       ...(matchedRule.requireFollow ? { followGatePayload: `${FOLLOW_GATE_PREFIX}${claim.dmEventId}` } : {}),
     });
+    deliveryConfirmed = true;
 
     await prisma.dmEvent.update({
       where: { id: claim.dmEventId },
@@ -912,6 +914,15 @@ async function matchAndProcessComment(comment: ParsedComment): Promise<{
 
     return { matched: true, sent: true, failed: false, duplicate: false, eventsCreated: eventsCreated + 1 };
   } catch (error) {
+    if (deliveryConfirmed) {
+      // Delivery and bookkeeping are separate outcomes. Keep the existing claim
+      // and quota so a database/activity failure cannot enable a duplicate send.
+      console.error("[webhook] DM delivered; bookkeeping requires review", {
+        dmEventId: claim.dmEventId,
+        errorSummary: sanitizeErrorSummary(error),
+      });
+      return { matched: true, sent: true, failed: false, duplicate: false, eventsCreated };
+    }
     await releaseMonthlyDm(account.userId);
     const details = getMetaErrorDetails(error);
     const metaErrorCode = details.metaCode;
