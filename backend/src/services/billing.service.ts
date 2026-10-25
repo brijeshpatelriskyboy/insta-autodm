@@ -745,12 +745,18 @@ export const billingService = {
         // Close only the local historical entitlement, preserving the Stripe ID
         // and the full billing history for audit. This does NOT cancel any
         // subscription belonging to a different Stripe/test environment.
-        if (!env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) {
-          throw new AppError(409, "Billing account could not be verified. Contact support.");
-        }
+        // Stripe confirms the ID is missing from the configured account.
+        // Detach this obsolete billing reference so it cannot block checkout or
+        // make the dashboard show billing_review again. Stored invoice records
+        // remain intact; no charge or cancellation is issued in another account.
         await prisma.subscription.update({
           where: { userId },
-          data: { status: "canceled", cancelAtPeriodEnd: false },
+          data: {
+            status: "canceled",
+            cancelAtPeriodEnd: false,
+            stripeSubscriptionId: null,
+            stripeCustomerId: null,
+          },
         });
         return {
           message: "Old subscription record closed in Comment2DM. No live Stripe subscription was cancelled.",

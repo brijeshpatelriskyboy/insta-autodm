@@ -52,7 +52,12 @@ describe("billing cancellation with live and historical subscriptions", () => {
     expect(stripeUpdate).toHaveBeenCalledOnce();
     expect(update).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      data: { status: "canceled", cancelAtPeriodEnd: false },
+      data: {
+        status: "canceled",
+        cancelAtPeriodEnd: false,
+        stripeSubscriptionId: null,
+        stripeCustomerId: null,
+      },
     });
   });
 
