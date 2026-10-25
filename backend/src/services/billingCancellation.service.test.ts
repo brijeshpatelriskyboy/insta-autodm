@@ -57,7 +57,6 @@ describe("billing cancellation with live and historical subscriptions", () => {
         cancelAtPeriodEnd: false,
         stripeSubscriptionId: null,
         stripeCustomerId: null,
-        checkoutSessionId: null,
       },
     });
   });
