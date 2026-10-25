@@ -393,7 +393,7 @@ async function storeInvoice(userId: string, invoice: Stripe.Invoice) {
  * making the customer repeat Checkout.
  */
 export async function recoverActiveCheckoutSubscription(userId: string): Promise<boolean> {
-  if (!isStripeConfigured() || !env.STRIPE_SECRET_KEY?.startsWith("sk_live_")) return false;
+  if (!isStripeConfigured()) return false;
   const local = await prisma.subscription.findUnique({ where: { userId } });
   if (local?.stripeSubscriptionId && (local.status === "active" || local.status === "trialing")) return false;
 
