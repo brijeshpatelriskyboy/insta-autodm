@@ -11,6 +11,10 @@ const schema = z.object({
   confirmation: z.literal("DELETE MY ACCOUNT"),
 });
 
+function isMissingStripeResource(error: unknown): boolean {
+  return error instanceof Stripe.errors.StripeInvalidRequestError && error.code === "resource_missing";
+}
+
 // Fail safely if billing cannot be cancelled; never erase records while a subscription
 // could still renew. Prisma cascade removes all user-owned rows in one transaction.
 router.delete("/", authenticate, async (req, res, next) => {
@@ -29,24 +33,35 @@ router.delete("/", authenticate, async (req, res, next) => {
       return void res.status(403).json({ error: "Incorrect password" });
     }
     const subscriptionId = user.subscription?.stripeSubscriptionId;
-    if (subscriptionId) {
-      if (!process.env.STRIPE_SECRET_KEY) {
-        return void res.status(503).json({ error: "Billing unavailable; account was not deleted" });
-      }
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      // Stripe deletion is idempotent for inactive subscriptions; verify status first.
-      const sub = await stripe.subscriptions.retrieve(subscriptionId);
-      if (!["canceled", "incomplete_expired"].includes(sub.status)) {
-        await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
+    const customerId = user.subscription?.stripeCustomerId;
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if ((subscriptionId || customerId) && !stripeKey) {
+      return void res.status(503).json({ error: "Billing unavailable; account was not deleted" });
+    }
+    const stripe = stripeKey && (subscriptionId || customerId) ? new Stripe(stripeKey) : null;
+    if (subscriptionId && stripe) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subscriptionId);
+        if (!["canceled", "incomplete_expired"].includes(sub.status)) {
+          await stripe.subscriptions.cancel(subscriptionId, { prorate: false });
+        }
+      } catch (error) {
+        // Historical test-mode IDs and already-removed subscriptions cannot
+        // renew in the configured Stripe account. Other failures must stop erasure.
+        if (!isMissingStripeResource(error)) {
+          return void res.status(503).json({ error: "Billing unavailable; account was not deleted" });
+        }
       }
     }
-    const customerId = user.subscription?.stripeCustomerId;
-    if (customerId && process.env.STRIPE_SECRET_KEY) {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    if (customerId && stripe) {
       try {
         await stripe.customers.del(customerId);
-      } catch {
-        return void res.status(503).json({ error: "Billing profile could not be removed; account was not deleted" });
+      } catch (error) {
+        // A prior attempt may have removed billing before the DB transaction
+        // failed. A missing customer is safe to retry; an outage is not.
+        if (!isMissingStripeResource(error)) {
+          return void res.status(503).json({ error: "Billing profile could not be removed; account was not deleted" });
+        }
       }
     }
     await prisma.$transaction(async (tx) => {
