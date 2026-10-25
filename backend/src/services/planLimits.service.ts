@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AppError } from "../utils/errors";
 import Stripe from "stripe";
 import { env } from "../config/env";
+import { recoverActiveCheckoutSubscription } from "./billing.service";
 
 // Cache only Stripe-verified results briefly to avoid a remote call for every DM.
 // Never use a cached entitlement after its verification window expires.
@@ -11,10 +12,22 @@ const ENTITLEMENT_CACHE_MS = 60_000;
 const OUTAGE_GRACE_MS = 300_000;
 
 async function getSubscriptionState(userId: string) {
-  const subscription = await prisma.subscription.findUnique({
+  let subscription = await prisma.subscription.findUnique({
     where: { userId },
     select: { plan: true, status: true, currentPeriodEnd: true, stripeSubscriptionId: true },
   });
+  if (!subscription?.stripeSubscriptionId || (subscription.status !== "active" && subscription.status !== "trialing")) {
+    try {
+      if (await recoverActiveCheckoutSubscription(userId)) {
+        subscription = await prisma.subscription.findUnique({
+          where: { userId },
+          select: { plan: true, status: true, currentPeriodEnd: true, stripeSubscriptionId: true },
+        });
+      }
+    } catch (error) {
+      console.warn("[billing] Checkout recovery unavailable", { userId });
+    }
+  }
   const plan = getPlan(subscription?.plan ?? "starter") ?? getPlan("starter")!;
   const statusActive = subscription?.status === "active" || subscription?.status === "trialing";
   const liteExpired =
