@@ -381,7 +381,7 @@ export const instagramIntegrationService = {
     });
 
     if (!user) {
-      throw new AppError(404, "User not found for OAuth state");
+      throw new AppError(401, "Your account session is no longer valid. Please sign in again before connecting Instagram.");
     }
 
     const shortLived = resolved?.shortLived ?? await metaGraphService.exchangeCodeForToken(code);

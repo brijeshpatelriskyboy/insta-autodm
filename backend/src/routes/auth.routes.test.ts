@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AUTH_RATE_LIMITS, AUTH_RATE_LIMIT_MESSAGE, GENERIC_FORGOT_PASSWORD_MESSAGE } from "../config/authSecurity";
 import { resetAuthRateLimitForTests } from "../middleware/authRateLimit";
 
+vi.mock("../lib/prisma", () => ({ prisma: { user: { findUnique: vi.fn().mockResolvedValue({ id: "user-1" }) } } }));
+
 const {
   login,
   register,

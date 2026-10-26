@@ -3,19 +3,39 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
-import { getToken } from "@/lib/auth";
+import { clearAuth, getToken } from "@/lib/auth";
+import { api, ApiError } from "@/lib/api";
 import { Sidebar } from "./Sidebar";
 import { Button } from "@/components/ui/Button";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
-    if (!getToken()) {
+    const token = getToken();
+    if (!token) {
       router.replace("/login");
+      return;
     }
+    let active = true;
+    api.me(token).then(() => {
+      if (active) setSessionChecked(true);
+    }).catch((error) => {
+      if (!active || getToken() !== token) return;
+      if (error instanceof ApiError && (error.status === 401 || error.status === 404)) {
+        clearAuth();
+        router.replace("/login");
+      } else {
+        // Keep account state during a transient outage; server auth still gates actions.
+        setSessionChecked(true);
+      }
+    });
+    return () => { active = false; };
   }, [router]);
+
+  if (!sessionChecked) return <p role="status" className="p-6 text-slate-600">Checking your session…</p>;
 
   return (
     <div className="flex min-h-screen bg-surface-muted">
