@@ -3,6 +3,7 @@ import {
   normalizeBackendUrl,
   resolveBackendUrl,
 } from "./backend-url";
+import { clearAuth, getToken } from "./auth";
 
 export function getApiBaseUrl(): string {
   return resolveBackendUrl();
@@ -70,6 +71,12 @@ async function request<T>(
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
+    if (response.status === 401 && body.code === "SESSION_INVALID" && token &&
+        typeof window !== "undefined" && getToken() === token) {
+      // Do not let an old request clear a newer successful login.
+      clearAuth();
+      window.location.replace("/login");
+    }
     const message =
       body.error ??
       body.message ??
