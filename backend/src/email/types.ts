@@ -12,6 +12,8 @@ export interface EmailMessage {
   html: string;
   text: string;
   replyTo?: string;
+  /** Set only by the authenticated SHC relay, never copied from request bodies. */
+  brand?: "student_help_centre";
 }
 
 export interface EmailProvider {
@@ -28,3 +30,4 @@ export class EmailDeliveryError extends Error {
     this.name = "EmailDeliveryError";
   }
 }
+
