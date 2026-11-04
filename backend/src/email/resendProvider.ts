@@ -10,14 +10,19 @@ export class ResendEmailProvider implements EmailProvider {
     private readonly apiKey: string,
     private readonly from: string,
     private readonly fetchImpl: typeof fetch = fetch,
+    private readonly shcFromAddress?: string,
   ) {}
 
   async send(message: EmailMessage): Promise<void> {
     let from = this.from;
     if (message.brand === "student_help_centre") {
-      // Change only the display name; retain the existing verified sender address.
-      const address = (this.from.match(/<([^<>]+)>\s*$/)?.[1] || this.from).trim();
-      if (/[\r\n\0]/.test(this.from) || !/^[^\s<>@,]+@[^\s<>@,]+$/.test(address)) {
+      // Only server-configured SHC messages may use the separately verified domain.
+      // Until configured, keep the existing working sender address.
+      const configuredSender = this.shcFromAddress?.trim() ? this.shcFromAddress : this.from;
+      const address = this.shcFromAddress?.trim()
+        ? this.shcFromAddress.trim()
+        : (this.from.match(/<([^<>]+)>\s*$/)?.[1] || this.from).trim();
+      if (/[\r\n\0]/.test(configuredSender) || !/^[^\s<>@,]+@[^\s<>@,]+$/.test(address)) {
         throw new EmailDeliveryError("invalid_config");
       }
       from = `Student Help Centre <${address}>`;
