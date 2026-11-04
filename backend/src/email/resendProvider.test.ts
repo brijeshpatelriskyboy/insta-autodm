@@ -3,6 +3,38 @@ import { EmailDeliveryError } from "./types";
 import { ResendEmailProvider } from "./resendProvider";
 
 describe("ResendEmailProvider", () => {
+  it.each(["Comment2DM <noreply@example.test>", "noreply@example.test"])(
+    "uses SHC branding without changing the verified address for %s",
+    async (configuredFrom) => {
+      const bodies: Array<Record<string, unknown>> = [];
+      const fetchImpl = vi.fn(async (_url: unknown, init: RequestInit) => {
+        bodies.push(JSON.parse(String(init.body)));
+        return new Response("{}", { status: 200 });
+      }) as unknown as typeof fetch;
+      const provider = new ResendEmailProvider("re_test_placeholder", configuredFrom, fetchImpl);
+      const message = { kind: "security_notification" as const, to: "student@example.test", subject: "Enquiry saved", text: "Saved", html: "<p>Saved</p>" };
+      await provider.send({ ...message, brand: "student_help_centre" });
+      await provider.send(message);
+      await provider.send({ ...message, kind: "password_reset" });
+      expect(bodies[0].from).toBe("Student Help Centre <noreply@example.test>");
+      expect(bodies[0].to).toEqual(["student@example.test"]);
+      expect(bodies[1].from).toBe(configuredFrom);
+      expect(bodies[2].from).toBe(configuredFrom);
+      expect(bodies[0]).not.toHaveProperty("brand");
+    },
+  );
+
+  it.each(["Comment2DM <sender@example.test>\r\nBcc: other@example.test", "not-an-address", "one@example.test,two@example.test"])(
+    "rejects malformed SHC sender configuration before contacting the provider",
+    async (configuredFrom) => {
+      const fetchImpl = vi.fn() as unknown as typeof fetch;
+      const provider = new ResendEmailProvider("re_test_placeholder", configuredFrom, fetchImpl);
+      await expect(provider.send({ kind: "security_notification", brand: "student_help_centre", to: "student@example.test", subject: "Enquiry", html: "x", text: "x" }))
+        .rejects.toMatchObject({ code: "invalid_config" });
+      expect(fetchImpl).not.toHaveBeenCalled();
+    },
+  );
+
   it("POSTs to Resend with from/to/subject and does not put secrets in thrown errors", async () => {
     const fetchImpl = vi.fn(async () => new Response("{}", { status: 200 })) as unknown as typeof fetch;
     const provider = new ResendEmailProvider(
@@ -71,3 +103,4 @@ describe("ResendEmailProvider", () => {
     }
   });
 });
+

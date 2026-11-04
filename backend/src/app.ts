@@ -76,6 +76,7 @@ export function createApp() {
 
       await sendEmail({
         kind: "security_notification",
+        brand: "student_help_centre",
         to,
         subject,
         text: text || "SHC notification",
@@ -115,6 +116,7 @@ export function createApp() {
 
       await sendEmail({
         kind: "security_notification",
+        brand: "student_help_centre",
         to,
         subject,
         text: text || "Student Help Centre membership update",
@@ -153,3 +155,4 @@ export function createApp() {
 
   return app;
 }
+

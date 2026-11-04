@@ -13,6 +13,15 @@ export class ResendEmailProvider implements EmailProvider {
   ) {}
 
   async send(message: EmailMessage): Promise<void> {
+    let from = this.from;
+    if (message.brand === "student_help_centre") {
+      // Change only the display name; retain the existing verified sender address.
+      const address = (this.from.match(/<([^<>]+)>\s*$/)?.[1] || this.from).trim();
+      if (/[\r\n\0]/.test(this.from) || !/^[^\s<>@,]+@[^\s<>@,]+$/.test(address)) {
+        throw new EmailDeliveryError("invalid_config");
+      }
+      from = `Student Help Centre <${address}>`;
+    }
     const response = await this.fetchImpl(RESEND_EMAILS_URL, {
       method: "POST",
       headers: {
@@ -20,7 +29,7 @@ export class ResendEmailProvider implements EmailProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: this.from,
+        from,
         to: [message.to],
         subject: message.subject,
         html: message.html,
@@ -35,3 +44,4 @@ export class ResendEmailProvider implements EmailProvider {
     }
   }
 }
+
