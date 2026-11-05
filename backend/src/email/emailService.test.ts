@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { EmailDeliveryError } from "./types";
 import { createEmailProvider, resetEmailProviderForTests, setEmailProviderForTests } from "./emailService";
 import { DisabledEmailProvider } from "./emailProviders";
@@ -7,6 +7,23 @@ import { MemoryEmailProvider } from "./memoryProvider";
 describe("emailService provider selection", () => {
   afterEach(() => {
     resetEmailProviderForTests();
+    vi.unstubAllGlobals();
+  });
+
+  it("wires the SHC sender override from server configuration without changing the default sender", async () => {
+    const fetchImpl = vi.fn(async () => new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchImpl);
+    const provider = createEmailProvider({
+      NODE_ENV: "production", RESEND_API_KEY: "re_test_placeholder",
+      FRONTEND_URL: "https://app.example.test", EMAIL_FROM: "Comment2DM <noreply@example.test>",
+      SHC_EMAIL_FROM_ADDRESS: "admin@shc.example.test",
+    });
+    const message = { kind: "security_notification" as const, to: "student@example.test", subject: "Saved", text: "Saved", html: "<p>Saved</p>" };
+    await provider.send({ ...message, brand: "student_help_centre" });
+    await provider.send(message);
+    const calls = fetchImpl.mock.calls as unknown as Array<[string, RequestInit]>;
+    expect(JSON.parse(String(calls[0][1].body)).from).toBe("Student Help Centre <admin@shc.example.test>");
+    expect(JSON.parse(String(calls[1][1].body)).from).toBe("Comment2DM <noreply@example.test>");
   });
 
   it("uses the in-memory provider during tests", () => {

@@ -34,7 +34,12 @@ export function createEmailProvider(
   }
   if (isEmailDeliveryConfigured(processEnv)) {
     const config = readEmailRuntimeConfig(processEnv);
-    return new ResendEmailProvider(config.resendApiKey!, config.emailFrom!);
+    return new ResendEmailProvider(
+      config.resendApiKey!,
+      config.emailFrom!,
+      undefined,
+      processEnv.SHC_EMAIL_FROM_ADDRESS,
+    );
   }
   return new DisabledEmailProvider();
 }
