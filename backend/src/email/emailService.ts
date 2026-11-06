@@ -39,6 +39,7 @@ export function createEmailProvider(
       config.emailFrom!,
       undefined,
       processEnv.SHC_EMAIL_FROM_ADDRESS,
+      processEnv.SHC_RESEND_API_KEY,
     );
   }
   return new DisabledEmailProvider();

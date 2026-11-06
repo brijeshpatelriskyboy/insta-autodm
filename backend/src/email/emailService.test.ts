@@ -17,11 +17,14 @@ describe("emailService provider selection", () => {
       NODE_ENV: "production", RESEND_API_KEY: "re_test_placeholder",
       FRONTEND_URL: "https://app.example.test", EMAIL_FROM: "Comment2DM <noreply@example.test>",
       SHC_EMAIL_FROM_ADDRESS: "admin@shc.example.test",
+      SHC_RESEND_API_KEY: "re_shc_scoped_test",
     });
     const message = { kind: "security_notification" as const, to: "student@example.test", subject: "Saved", text: "Saved", html: "<p>Saved</p>" };
     await provider.send({ ...message, brand: "student_help_centre" });
     await provider.send(message);
     const calls = fetchImpl.mock.calls as unknown as Array<[string, RequestInit]>;
+    expect((calls[0][1].headers as Record<string, string>).Authorization).toBe("Bearer re_shc_scoped_test");
+    expect((calls[1][1].headers as Record<string, string>).Authorization).toBe("Bearer re_test_placeholder");
     expect(JSON.parse(String(calls[0][1].body)).from).toBe("Student Help Centre <admin@shc.example.test>");
     expect(JSON.parse(String(calls[1][1].body)).from).toBe("Comment2DM <noreply@example.test>");
   });

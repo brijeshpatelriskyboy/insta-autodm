@@ -151,3 +151,16 @@ describe("ResendEmailProvider", () => {
   });
 });
 
+
+describe("domain-scoped SHC credentials", () => {
+  it("uses the SHC key only for SHC messages and preserves the existing key for other mail", async () => {
+    const fetchImpl = vi.fn(async () => new Response("{}", { status: 200 }));
+    const provider = new ResendEmailProvider("re_original", "Comment2DM <noreply@example.test>", fetchImpl as typeof fetch, "admin@shc.example.test", "re_shc_only");
+    const message = { kind: "security_notification" as const, to: "test@example.test", subject: "Test", text: "Test", html: "<p>Test</p>" };
+    await provider.send({ ...message, brand: "student_help_centre" });
+    await provider.send(message);
+    const calls = fetchImpl.mock.calls as unknown as Array<[string, RequestInit]>;
+    expect((calls[0][1].headers as Record<string,string>).Authorization).toBe("Bearer re_shc_only");
+    expect((calls[1][1].headers as Record<string,string>).Authorization).toBe("Bearer re_original");
+  });
+});

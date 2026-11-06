@@ -11,6 +11,7 @@ export class ResendEmailProvider implements EmailProvider {
     private readonly from: string,
     private readonly fetchImpl: typeof fetch = fetch,
     private readonly shcFromAddress?: string,
+    private readonly shcApiKey?: string,
   ) {}
 
   async send(message: EmailMessage): Promise<void> {
@@ -30,7 +31,7 @@ export class ResendEmailProvider implements EmailProvider {
     const response = await this.fetchImpl(RESEND_EMAILS_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${message.brand === "student_help_centre" && this.shcApiKey?.trim() ? this.shcApiKey.trim() : this.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
